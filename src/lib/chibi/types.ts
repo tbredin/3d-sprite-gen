@@ -18,9 +18,25 @@ export type HairStyle =
   | "curls"
   | "topknot"
   | "fringe"
-  | "twinTails";
+  | "twinTails"
+  | "pixie"
+  | "messy"
+  | "dreads"
+  | "mullet"
+  | "pompadour"
+  | "sidePart"
+  | "wavy";
 
-export type HelmetStyle = "none" | "knight" | "cap" | "sciFi" | "hood";
+export type HelmetStyle =
+  | "none"
+  | "knight"
+  | "cap"
+  | "sciFi"
+  | "hood"
+  | "crown"
+  | "wizard"
+  | "bandana"
+  | "goat";
 
 export type TorsoStyle =
   | "plain"
@@ -52,7 +68,8 @@ export type LegPose =
   | "stride"
   | "crouch"
   | "lunge"
-  | "kneel";
+  | "kneel"
+  | "guard";
 
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 

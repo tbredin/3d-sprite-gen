@@ -207,7 +207,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     skin: "#c98a6a",
     leadSide: "right",
     head: { scale: 0.9 },
-    hair: { style: "undercut", color: "#2a2035", complexity: 5 },
+    hair: { style: "bald", color: "#2a2035" },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "sciFi", color: "#3a3555", visor: "#5ad4a0" },
     torso: { style: "chestplate", color: "#5ad4a0", trim: "#2a2540" },

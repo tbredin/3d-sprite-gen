@@ -50,9 +50,19 @@ const HAIR: HairStyle[] = [
   "topknot",
   "afro",
   "mohawk",
+  "pixie",
+  "pixie",
+  "messy",
+  "messy",
+  "dreads",
+  "mullet",
+  "pompadour",
+  "sidePart",
+  "wavy",
+  "wavy",
 ];
 
-/** Head-hugging shells + cap overlay — no mega-domes. */
+/** Head-hugging shells + overlays — no mega-domes. */
 const HELMET: HelmetStyle[] = [
   "none",
   "none",
@@ -61,9 +71,13 @@ const HELMET: HelmetStyle[] = [
   "none",
   "cap",
   "cap",
+  "bandana",
+  "crown",
+  "wizard",
   "hood",
   "knight",
   "sciFi",
+  "goat",
 ];
 
 const TORSO: TorsoStyle[] = [
@@ -240,11 +254,18 @@ function randomHead(skinHint?: string): HeadBits {
     },
     helmet: {
       style: helmetStyle,
-      color: helmetStyle === "none" ? pick(CLOTH) : pick(CLOTH),
+      color:
+        helmetStyle === "goat"
+          ? pick(["#5a4030", "#8b5a2b", "#433455", "#c98a6a", "#e8e4d8"])
+          : pick(CLOTH),
       visor:
         helmetStyle === "sciFi" || helmetStyle === "knight"
           ? pick(CLOTH)
-          : undefined,
+          : helmetStyle === "goat"
+            ? pick(["#e8e4d8", "#c7cfcc", "#f0d48a", "#ffe0bd"])
+            : helmetStyle === "crown" || helmetStyle === "wizard"
+              ? pick(["#f5e07a", "#e83b3b", "#c7cfcc", "#5ad4a0"])
+              : undefined,
     },
   };
 }

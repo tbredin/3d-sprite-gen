@@ -13,7 +13,15 @@ import { toon, toonDetail } from "./materials";
 import { capsuleCylinderLength, CHIBI, LAYOUT } from "./units";
 import { armJointsForPose } from "./armPoses";
 import { legJointsForPose } from "./legPoses";
-import type { ArmPose, HairStyle, HemStyle, LegPose, TorsoStyle, WeaponType } from "./types";
+import type {
+  ArmPose,
+  HairStyle,
+  HelmetStyle,
+  HemStyle,
+  LegPose,
+  TorsoStyle,
+  WeaponType,
+} from "./types";
 
 function mesh(
   geo: BufferGeometry,
@@ -526,6 +534,136 @@ export function generateHair(opts: {
     }
   }
 
+  if (opts.style === "pixie") {
+    // Short choppy crop — tight shell, irregular fringe tips
+    addHairFrame(g, mat, hi, {
+      shellR: 0.4,
+      bangs: true,
+      coverForehead: true,
+      sides: true,
+      back: false,
+    });
+    for (let i = 0; i < n + 1; i++) {
+      const t = (i / Math.max(n, 1)) * 2 - 1;
+      addSpikeTuft(
+        g,
+        mat,
+        hi,
+        t * 0.22,
+        top - 0.04,
+        0.05 + (i % 3) * 0.06,
+        0.16 + (i % 2) * 0.05,
+        t * 0.35,
+        0.4,
+      );
+    }
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.28, cy - 0.12, 0.22));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, 0.28, cy - 0.12, 0.22));
+  }
+
+  if (opts.style === "messy") {
+    addHairFrame(g, mat, hi, { shellR: 0.46, bangs: true });
+    for (let i = 0; i < n + 3; i++) {
+      const a = (i / (n + 3)) * Math.PI * 1.6 - 0.3;
+      addSpikeTuft(
+        g,
+        mat,
+        hi,
+        Math.sin(a) * 0.28,
+        top - 0.02 + (i % 3) * 0.03,
+        Math.cos(a) * 0.2 - 0.05,
+        0.2 + (i % 4) * 0.06,
+        Math.sin(a) * 0.4,
+        -0.15 + (i % 2) * 0.25,
+      );
+    }
+  }
+
+  if (opts.style === "dreads") {
+    addHairFrame(g, mat, hi, { shellR: 0.44, bangs: true });
+    for (let i = 0; i < n + 4; i++) {
+      const a = (i / (n + 4)) * Math.PI * 1.8 + 0.2;
+      const lock = new Mesh(new CapsuleGeometry(0.055, 0.38 + (i % 3) * 0.06, 3, 6), mat);
+      lock.position.set(
+        Math.sin(a) * 0.42,
+        cy - 0.18 - (i % 3) * 0.04,
+        Math.cos(a) * 0.28 - 0.15,
+      );
+      lock.rotation.x = 0.35 + (i % 2) * 0.15;
+      lock.rotation.z = Math.sin(a) * 0.25;
+      g.add(lock);
+    }
+  }
+
+  if (opts.style === "mullet") {
+    addHairFrame(g, mat, hi, {
+      shellR: 0.42,
+      bangs: true,
+      coverForehead: true,
+      back: false,
+    });
+    // Business front, party back
+    g.add(mesh(new SphereGeometry(0.22, 10, 8), mat, 0, cy - 0.08, -0.38));
+    for (const s of [-1, 1] as const) {
+      const flap = new Mesh(new CapsuleGeometry(0.12, 0.42, 4, 8), mat);
+      flap.position.set(s * 0.28, cy - 0.22, -0.32);
+      flap.rotation.x = 0.5;
+      flap.rotation.z = s * 0.15;
+      g.add(flap);
+    }
+    const tail = new Mesh(new CapsuleGeometry(0.14, 0.4, 4, 8), mat);
+    tail.position.set(0, cy - 0.28, -0.48);
+    tail.rotation.x = 0.55;
+    g.add(tail);
+  }
+
+  if (opts.style === "pompadour") {
+    addHairFrame(g, mat, hi, { shellR: 0.42, bangs: false, coverForehead: false });
+    // Forward-rolling volume — silhouette poke without a full afro balloon
+    const pomp = new Mesh(new SphereGeometry(0.28, 12, 10), mat);
+    pomp.position.set(0, cy + 0.28, 0.22);
+    pomp.scale.set(1.05, 0.85, 0.9);
+    g.add(pomp);
+    g.add(mesh(new SphereGeometry(0.16, 8, 6), hi, -0.08, cy + 0.38, 0.3));
+    g.add(mesh(new SphereGeometry(0.18, 8, 6), mat, 0, cy + 0.08, 0.4));
+  }
+
+  if (opts.style === "sidePart") {
+    addHairFrame(g, mat, hi, { shellR: 0.45, bangs: false });
+    // Swept mass to one side + thin parting gap on the left
+    g.add(mesh(new SphereGeometry(0.22, 10, 8), mat, 0.22, cy + 0.18, 0.15));
+    g.add(mesh(new SphereGeometry(0.18, 8, 6), hi, 0.28, cy + 0.22, 0.28));
+    for (let i = 0; i < 3; i++) {
+      g.add(
+        mesh(
+          new SphereGeometry(0.14, 8, 6),
+          mat,
+          0.1 + i * 0.08,
+          cy + 0.02 - i * 0.04,
+          0.38 - i * 0.04,
+        ),
+      );
+    }
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.32, cy + 0.05, 0.1));
+  }
+
+  if (opts.style === "wavy") {
+    addHairFrame(g, mat, hi, { shellR: 0.47 });
+    for (const s of [-1, 1] as const) {
+      for (let i = 0; i < 3; i++) {
+        const wave = new Mesh(new CapsuleGeometry(0.11, 0.32, 4, 8), mat);
+        wave.position.set(s * (0.36 + i * 0.04), cy - 0.12 - i * 0.14, 0.08 - i * 0.08);
+        wave.rotation.z = s * (0.2 + i * 0.08);
+        wave.rotation.x = 0.15 * i;
+        g.add(wave);
+      }
+    }
+    const back = new Mesh(new CapsuleGeometry(0.16, 0.4, 4, 8), mat);
+    back.position.set(0, cy - 0.22, -0.4);
+    back.rotation.x = 0.4;
+    g.add(back);
+  }
+
   return g;
 }
 
@@ -544,13 +682,13 @@ const SKULL_EGG = { x: 0.92, y: 1.05, z: 0.86 } as const;
 const HELMET_SHELL = 0.98;
 
 /**
- * Head gear. Closed styles (`knight`, `sciFi`) and deep cowls (`hood`) are
- * sized as *head replacements* matching `generateHead` egg proportions —
- * assembly hides the skin skull (and usually face/hair). `cap` stays an
- * overlay sitting on the crown.
+ * Head gear. Closed styles (`knight`, `sciFi`, `goat`) and deep cowls (`hood`)
+ * are sized as *head replacements* matching `generateHead` egg proportions —
+ * assembly hides the skin skull (and usually face/hair). Cap-like styles
+ * (`cap`, `crown`, `wizard`, `bandana`) overlay the crown only.
  */
 export function generateHelmet(opts: {
-  style: "none" | "knight" | "cap" | "sciFi" | "hood";
+  style: HelmetStyle;
   color: string;
   visor?: string;
   /** Match CharacterSpec.head.scale so replacements align with body. */
@@ -665,30 +803,83 @@ export function generateHelmet(opts: {
   }
 
   if (opts.style === "sciFi") {
-    // Sealed dome = head. Same tight egg shell; thin visor band.
+    // Practical sealed infantry helm — hug the egg; angular plates, not a bulb.
+    // Soldier preset. Slightly flatter / narrower than knight kettle.
+    const visorMat = toon(opts.visor ?? "#5ad4a0");
+    const dark = toon("#1a1c2c");
+
+    // Tight cranial shell — squash Y so it reads as armor hull, not balloon
     const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
     dome.position.set(skullPos.x, skullPos.y, skullPos.z);
-    dome.scale.set(shellEgg.x, shellEgg.y, shellEgg.z);
+    dome.scale.set(shellEgg.x * 0.96, shellEgg.y * 0.9, shellEgg.z * 0.96);
     g.add(dome);
 
-    const jaw = new Mesh(new SphereGeometry(r * 0.42, 12, 10), mat);
-    jaw.position.set(0, cy - r * 0.65 * tall, r * 0.18);
-    jaw.scale.set(1.2, 0.65 * tall, 0.9);
-    g.add(jaw);
+    // Flattened crown cap (bucket lid) — breaks the sphere silhouette from iso
+    const lid = new Mesh(new CylinderGeometry(r * 0.62, r * 0.78, r * 0.14, 10), mat);
+    lid.position.set(0, cy + r * 0.72 * tall, -0.02);
+    g.add(lid);
 
-    const visor = toon(opts.visor ?? "#5ad4a0");
+    // Angular brow / forehead plate proud of the egg
     g.add(
       mesh(
-        new BoxGeometry(r * 1.55, r * 0.32, 0.1),
-        visor,
+        new BoxGeometry(r * 1.55, r * 0.28, r * 0.38),
+        mat,
         0,
-        cy + 0.02 * tall,
-        r * 0.9,
+        cy + r * 0.28 * tall,
+        r * 0.48,
       ),
     );
-    // Short antenna stub (kept under top bound)
+
+    // Cheek cups — slim vertical plates hugging temples (silhouette wings)
+    for (const side of [-1, 1] as const) {
+      const cheek = new Mesh(new BoxGeometry(r * 0.22, r * 0.7, r * 0.55), mat);
+      cheek.position.set(side * r * 0.82, cy - r * 0.05 * tall, r * 0.12);
+      cheek.rotation.z = side * 0.12;
+      g.add(cheek);
+    }
+
+    // Nape / rear collar — short plate into shoulders
+    const nape = new Mesh(new BoxGeometry(r * 1.1, r * 0.35, r * 0.28), mat);
+    nape.position.set(0, cy - r * 0.55 * tall, -r * 0.55);
+    nape.rotation.x = 0.35;
+    g.add(nape);
+
+    // Tight jaw / chin cup — stays under egg, no second sphere blob
+    const chin = new Mesh(new SphereGeometry(r * 0.48, 10, 8), mat);
+    chin.position.set(0, cy - r * 0.7 * tall, r * 0.1);
+    chin.scale.set(1.05, 0.55 * tall, 0.85);
+    g.add(chin);
+
+    // Thin horizontal visor band + darker inset slit (reads at 42–48px)
+    const faceZ = r * 0.88;
     g.add(
-      mesh(new CylinderGeometry(0.025, 0.025, 0.1, 6), mat, r * 0.45, top - 0.08, -0.06),
+      mesh(
+        new BoxGeometry(r * 1.35, r * 0.22, 0.08),
+        visorMat,
+        0,
+        cy + r * 0.05 * tall,
+        faceZ,
+      ),
+    );
+    g.add(
+      mesh(
+        new BoxGeometry(r * 1.15, r * 0.08, 0.06),
+        dark,
+        0,
+        cy + r * 0.05 * tall,
+        faceZ + 0.04,
+      ),
+    );
+
+    // Short side antenna stubs — punctuation only
+    g.add(
+      mesh(
+        new CylinderGeometry(0.02, 0.028, 0.12, 6),
+        mat,
+        r * 0.55,
+        top - 0.12,
+        -0.08,
+      ),
     );
   }
 
@@ -718,6 +909,111 @@ export function generateHelmet(opts: {
     drape.position.set(0, cy - r * 0.4 * tall, -r * 0.75);
     drape.rotation.x = 0.45;
     g.add(drape);
+  }
+
+  if (opts.style === "crown") {
+    // Overlay circlet + short spikes — does not replace skull
+    const band = new Mesh(new CylinderGeometry(r * 0.95, r * 0.98, 0.08, 12), mat);
+    band.position.set(0, top - 0.14, 0);
+    g.add(band);
+    const gem = toon(opts.visor ?? "#f5e07a");
+    g.add(mesh(new SphereGeometry(0.06, 8, 6), gem, 0, top - 0.08, r * 0.85));
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2 - Math.PI * 0.5;
+      const spike = new Mesh(new ConeGeometry(0.05, 0.16, 5), mat);
+      spike.position.set(Math.cos(a) * r * 0.9, top - 0.02, Math.sin(a) * r * 0.9);
+      g.add(spike);
+    }
+  }
+
+  if (opts.style === "wizard") {
+    // Overlay pointed hat — moderate cone so AABB stays readable, not a tower
+    const brim = new Mesh(new CylinderGeometry(r * 1.2, r * 1.2, 0.04, 12), mat);
+    brim.position.set(0, top - 0.12, 0);
+    g.add(brim);
+    const cone = new Mesh(new ConeGeometry(r * 0.72, r * 1.15, 10), mat);
+    cone.position.set(0, top + r * 0.35, -0.02);
+    cone.rotation.z = 0.12;
+    cone.rotation.x = -0.08;
+    g.add(cone);
+    const trim = toon(opts.visor ?? "#f5e07a");
+    g.add(mesh(new SphereGeometry(0.055, 8, 6), trim, 0.04, top + r * 0.88, -0.02));
+  }
+
+  if (opts.style === "bandana") {
+    // Overlay kerchief wrap + rear knot
+    const wrap = new Mesh(
+      new SphereGeometry(r * 0.88, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.42),
+      mat,
+    );
+    wrap.position.set(0, cy + r * 0.5 * tall, -0.02);
+    wrap.scale.set(1.05, 0.7, 1.0);
+    g.add(wrap);
+    g.add(
+      mesh(new BoxGeometry(r * 1.5, r * 0.14, r * 0.2), mat, 0, cy + r * 0.35 * tall, r * 0.55),
+    );
+    // Knot / tails aft
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, 0, cy + r * 0.25 * tall, -r * 0.75));
+    for (const side of [-1, 1] as const) {
+      const tail = new Mesh(new CapsuleGeometry(0.04, 0.18, 3, 6), mat);
+      tail.position.set(side * 0.08, cy + r * 0.05 * tall, -r * 0.85);
+      tail.rotation.x = 0.6;
+      tail.rotation.z = side * 0.4;
+      g.add(tail);
+    }
+  }
+
+  if (opts.style === "goat") {
+    // Full animal head replacement — horns / snout / ears read at 42–48px
+    const fur = mat;
+    const horn = toon(opts.visor ?? "#e8e4d8");
+    const dark = toon("#2a2035");
+
+    const skull = new Mesh(new SphereGeometry(shellR, 14, 12), fur);
+    skull.position.set(skullPos.x, skullPos.y, skullPos.z);
+    skull.scale.set(shellEgg.x * 0.95, shellEgg.y * 0.92, shellEgg.z * 0.95);
+    g.add(skull);
+
+    // Snout block — proud forward for silhouette
+    const snout = new Mesh(new CapsuleGeometry(r * 0.28, r * 0.42, 4, 8), fur);
+    snout.position.set(0, cy - r * 0.25 * tall, r * 0.85);
+    snout.rotation.x = Math.PI / 2;
+    g.add(snout);
+    g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), fur, 0, cy - r * 0.35 * tall, r * 1.15));
+    g.add(mesh(new SphereGeometry(0.045, 6, 5), dark, -0.06, cy - r * 0.32 * tall, r * 1.28));
+    g.add(mesh(new SphereGeometry(0.045, 6, 5), dark, 0.06, cy - r * 0.32 * tall, r * 1.28));
+
+    // Curved horns — outward then up (readable forks)
+    for (const side of [-1, 1] as const) {
+      const base = new Mesh(new ConeGeometry(r * 0.14, r * 0.45, 6), horn);
+      base.position.set(side * r * 0.55, cy + r * 0.55 * tall, -r * 0.15);
+      base.rotation.z = side * 0.55;
+      base.rotation.x = -0.35;
+      g.add(base);
+      const tip = new Mesh(new ConeGeometry(r * 0.08, r * 0.35, 6), horn);
+      tip.position.set(side * r * 0.85, cy + r * 0.95 * tall, -r * 0.25);
+      tip.rotation.z = side * 0.25;
+      tip.rotation.x = -0.55;
+      g.add(tip);
+    }
+
+    // Floppy / pointed goat ears
+    for (const side of [-1, 1] as const) {
+      const ear = new Mesh(new ConeGeometry(r * 0.16, r * 0.38, 5), fur);
+      ear.position.set(side * r * 0.95, cy + r * 0.15 * tall, 0.05);
+      ear.rotation.z = side * 1.1;
+      ear.rotation.x = 0.2;
+      g.add(ear);
+    }
+
+    // Dark eye pits for animal face read without human eyes
+    g.add(mesh(new SphereGeometry(0.07, 8, 6), dark, -r * 0.32, cy + r * 0.05 * tall, r * 0.7));
+    g.add(mesh(new SphereGeometry(0.07, 8, 6), dark, r * 0.32, cy + r * 0.05 * tall, r * 0.7));
+
+    // Short beard tuft under chin
+    g.add(
+      mesh(new ConeGeometry(r * 0.1, r * 0.28, 5), fur, 0, cy - r * 0.85 * tall, r * 0.45),
+    );
   }
 
   return g;

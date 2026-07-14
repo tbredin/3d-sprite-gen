@@ -39,6 +39,24 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     showFace: true,
     notes: "Shallow brim + crown dome; keep skull/face/hair.",
   },
+  crown: {
+    style: "crown",
+    mount: "overlay",
+    showFace: true,
+    notes: "Circlet + short spikes on crown; overlay only.",
+  },
+  wizard: {
+    style: "wizard",
+    mount: "overlay",
+    showFace: true,
+    notes: "Tall conical hat on crown; keep face/hair.",
+  },
+  bandana: {
+    style: "bandana",
+    mount: "overlay",
+    showFace: true,
+    notes: "Tied kerchief over crown; slight rear knot.",
+  },
   knight: {
     style: "knight",
     mount: "replace",
@@ -50,13 +68,21 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     style: "sciFi",
     mount: "replace",
     showFace: false,
-    notes: "Sealed egg helm (~skullR×0.98) — replaces skull; thin visor band.",
+    notes:
+      "Practical sealed infantry helm hugging egg — brow plate + cheek cups + thin visor, not a sphere blob.",
   },
   hood: {
     style: "hood",
     mount: "replace",
     showFace: true,
     notes: "Head-sized cowl replaces skull; face stays in the window.",
+  },
+  goat: {
+    style: "goat",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Animal head replacement — horns, snout, goat ears; hides human skull/face.",
   },
 };
 

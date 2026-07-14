@@ -33,8 +33,8 @@ slim cheek flaps. Do **not** stack oversized sphere blobs.
 
 | Mount | Behavior | Styles |
 | --- | --- | --- |
-| `overlay` | Keep skull + face + hair; add prop on crown | `cap` |
-| `replace` + `showFace: false` | Hide skull, face, hair; gear *is* the head | `knight`, `sciFi` |
+| `overlay` | Keep skull + face + hair; add prop on crown | `cap`, `crown`, `wizard`, `bandana` |
+| `replace` + `showFace: false` | Hide skull, face, hair; gear *is* the head | `knight`, `sciFi`, `goat` |
 | `replace` + `showFace: true` | Hide skull + hair; keep face in opening | `hood` |
 | `none` | Bare head | `none` |
 
@@ -53,9 +53,13 @@ anyway, but the spec stays honest). Random also avoids `helmet: hood` +
 | --- | --- | --- |
 | `none` | — | Skull + face + hair |
 | `cap` | overlay | Shallow brim + crown dome (ranger / pirate) |
+| `crown` | overlay | Circlet + short spikes + gem |
+| `wizard` | overlay | Moderate conical hat + brim |
+| `bandana` | overlay | Kerchief wrap + rear knot |
 | `knight` | replace (closed) | DS **Elite Knight** flat-top kettle + dual slits + T-nasal |
-| `sciFi` | replace (closed) | Tight egg + thin glowing visor band |
+| `sciFi` | replace (closed) | Practical **soldier** infantry helm — flat lid, brow plate, cheek cups, thin visor |
 | `hood` | replace (open) | Head-sized aft cowl; face window open |
+| `goat` | replace (closed) | Animal head — horns, snout, ears; hides human skull/face |
 
 ### Knight rebuild (Elite Knight)
 
@@ -65,35 +69,49 @@ silhouette inspired by Dark Souls **Elite Knight** (Cathedral Knight kettle lids
 as secondary reference): flattened crown disc, broad brow band, dual horizontal
 visor slits + vertical nasal bar, fuller bevor. Still `mount: replace`.
 
+### Soldier / `sciFi` rebuild
+
+Soldier preset uses `helmet: sciFi`. Earlier sealed-egg + chunky jaw still read as
+a **bulbous sphere**. Rebuilt as a practical closed infantry helm: tighter /
+flatter cranial shell, bucket lid, angular brow plate, slim cheek cups, nape
+collar, thin glowing visor + dark slit inset. Not a glass dome.
+
 ### Related (not a helmet style)
 
 - **`torso.style === "hoodedRobe"`** — soft cowl in `generateTorso` now uses the
   same `skullR × HELMET_SHELL` egg (was a hard-coded `0.52` balloon). Still not
   wired to `helmetMode`; random avoids pairing it with `helmet: hood`.
 
+## Hair catalog additions
+
+New `HairStyle` values (wired in `generateHair` + random weights):
+
+`pixie`, `messy`, `dreads`, `mullet`, `pompadour`, `sidePart`, `wavy`
+
 ## Changes in this spike
 
-- `helmetMode.ts` — catalog + mount tags
-- `assemble.ts` — skip head / face / hair for replacements
-- `parts.ts` `generateHelmet` — egg-hug shell @ 0.98; Elite Knight kettle rebuild;
-  retuned sciFi / hood / cap; hoodedRobe torso cowl matched to skullR
-- `random.ts` — bald under replacements; no hood+hoodedRobe stack; cap weighted
+- `helmetMode.ts` — catalog + mount tags (incl. overlays + goat)
+- `assemble.ts` — skip head / face / hair for replacements; soldier bald under sciFi
+- `parts.ts` `generateHelmet` — egg-hug shell @ 0.98; Elite Knight; practical sciFi;
+  new crown / wizard / bandana / goat; retuned hood / cap; hoodedRobe cowl matched
+- `parts.ts` `generateHair` — seven new hair styles
+- `random.ts` — bald under replacements; new hair/helm weights; goat fur / horn colors
 - `index.ts` — re-exports catalog helpers
 
 ## How to verify
 
 1. `npm run build` in this worktree
 2. Load **knight** — flat-top kettle + clear dual slits at ~skull size (no tiny stub)
-3. Load **soldier** — sciFi sealed egg, slightly under prior balloon
+3. Load **soldier** — angular infantry helm (flat lid + cheek cups), not a sphere blob
 4. Load **ranger** / **pirate** — cap sits on hair/skull
-5. Reroll head until `hood` — face/eyes visible inside a tight cowl
-6. Load **mage** / **cleric** — robe cowl hugs the taller egg
-7. Part-ID outline pass: helmet group still tags as `HEAD`
+5. Reroll head until `hood` / `crown` / `wizard` / `bandana` / `goat`
+6. Reroll bare heads for new hair styles
+7. Load **mage** / **cleric** — robe cowl hugs the taller egg
+8. Part-ID outline pass: helmet group still tags as `HEAD`
 
 ## What’s left
 
 - Optionally skip torso cowl mesh when `helmetMode.mount === "replace"`
 - Optional explicit `helmet.mount` override on `CharacterSpec` for LLM /
   hand-authored exceptions
-- More styles if needed: crown, wizard hat, ceramic mask, open barbute
 - Visor slits at 32px may need a brighter / thicker accent after palette lock

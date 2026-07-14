@@ -268,7 +268,7 @@ export default function App() {
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
         <p className="tagline feature-boost-note">
-          Helmet head replacements: Elite Knight kettle + shells ≈ skullR×0.98.
+          Helmet heads: tight soldier helm, new hair / hats, and a goat head.
         </p>
       </header>
 
