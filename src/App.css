@@ -744,6 +744,32 @@ button.ghost {
   max-width: 9.5rem;
 }
 
+.bayer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.7rem;
+  margin: 0 0 0.55rem;
+  padding: 0.25rem 0;
+  border-top: 1px solid #2a3044;
+  border-bottom: 1px solid #2a3044;
+}
+
+.bayer-row .bayer-toggle {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.bayer-row .bayer-strength {
+  flex: 1 1 10rem;
+  min-width: 8rem;
+  margin: 0;
+}
+
+.bayer-row .ghost {
+  margin-left: auto;
+}
+
 .bake-meta {
   margin: 0;
   font-size: 0.58rem;

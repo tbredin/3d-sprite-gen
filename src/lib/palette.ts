@@ -37,13 +37,79 @@ export function nearestPaletteColor(
   return best;
 }
 
-/** Quantize ImageData in place; preserve fully transparent pixels. */
+/**
+ * Classic 4×4 Bayer ordered-dither matrix (values 0…15).
+ * Applied as a centered RGB bias *before* Endesga nearest-colour lock so midtones
+ * break into checker patterns instead of banding to a single swatch.
+ * See docs/SPIKE-bayer-dither.md.
+ */
+export const BAYER_4 = [
+  [0, 8, 2, 10],
+  [12, 4, 14, 6],
+  [3, 11, 1, 9],
+  [15, 7, 13, 5],
+] as const;
+
+export type BayerDitherSettings = {
+  enabled: boolean;
+  /** 0–1; scales peak RGB bias (±BAYER_BIAS_SCALE at 1). */
+  strength: number;
+};
+
+/** Peak |RGB| bias at strength=1 — enough for Endesga midtones without salt. */
+export const BAYER_BIAS_SCALE = 40;
+
+export const DEFAULT_BAYER_DITHER: BayerDitherSettings = {
+  enabled: false,
+  strength: 0.35,
+};
+
+export const BAYER_STRENGTH_MIN = 0;
+export const BAYER_STRENGTH_MAX = 1;
+export const BAYER_STRENGTH_STEP = 0.05;
+
+const BAYER_STORAGE_KEY = "3d-sprite-gen:bayer-dither-v1";
+
+export function loadBayerDitherSettings(): BayerDitherSettings {
+  try {
+    const raw = localStorage.getItem(BAYER_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_BAYER_DITHER };
+    const parsed = JSON.parse(raw) as Partial<BayerDitherSettings>;
+    const strength = Number(parsed.strength);
+    return {
+      enabled: Boolean(parsed.enabled),
+      strength: Number.isFinite(strength)
+        ? Math.min(BAYER_STRENGTH_MAX, Math.max(BAYER_STRENGTH_MIN, strength))
+        : DEFAULT_BAYER_DITHER.strength,
+    };
+  } catch {
+    return { ...DEFAULT_BAYER_DITHER };
+  }
+}
+
+export function saveBayerDitherSettings(settings: BayerDitherSettings) {
+  localStorage.setItem(BAYER_STORAGE_KEY, JSON.stringify(settings));
+}
+
+function clampByte(n: number): number {
+  return n < 0 ? 0 : n > 255 ? 255 : n | 0;
+}
+
+/**
+ * Quantize ImageData in place; preserve fully transparent pixels.
+ * Optional Bayer ordered dither runs *before* nearest-palette pick.
+ */
 export function quantizeImageData(
   data: ImageData,
   colors: string[],
+  dither?: BayerDitherSettings | null,
 ): ImageData {
   const paletteRgb = colors.map(hexToRgb);
   const px = data.data;
+  const { width } = data;
+  const useDither = Boolean(dither?.enabled && (dither.strength ?? 0) > 0);
+  const amp = useDither ? dither!.strength * BAYER_BIAS_SCALE : 0;
+
   for (let i = 0; i < px.length; i += 4) {
     if (px[i + 3] < 8) {
       px[i] = 0;
@@ -52,7 +118,21 @@ export function quantizeImageData(
       px[i + 3] = 0;
       continue;
     }
-    const [nr, ng, nb] = nearestPaletteColor(px[i], px[i + 1], px[i + 2], paletteRgb);
+    let r = px[i];
+    let g = px[i + 1];
+    let b = px[i + 2];
+    if (useDither) {
+      const p = i >> 2;
+      const x = p % width;
+      const y = (p / width) | 0;
+      // Centered threshold in ~[-0.5, 0.5]; same bias on R/G/B (ordered grain).
+      const t = (BAYER_4[y & 3][x & 3] + 0.5) / 16 - 0.5;
+      const bias = t * 2 * amp;
+      r = clampByte(r + bias);
+      g = clampByte(g + bias);
+      b = clampByte(b + bias);
+    }
+    const [nr, ng, nb] = nearestPaletteColor(r, g, b, paletteRgb);
     px[i] = nr;
     px[i + 1] = ng;
     px[i + 2] = nb;

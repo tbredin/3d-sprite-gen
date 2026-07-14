@@ -62,13 +62,20 @@ import {
   type PresetId,
 } from "./lib/chibi";
 import {
+  BAYER_STRENGTH_MAX,
+  BAYER_STRENGTH_MIN,
+  BAYER_STRENGTH_STEP,
+  DEFAULT_BAYER_DITHER,
   DEFAULT_OUTLINE_COLORS,
   DEFAULT_OUTLINE_PASS,
+  loadBayerDitherSettings,
   loadOutlineColors,
   loadOutlinePassSettings,
   loadPalette,
+  saveBayerDitherSettings,
   saveOutlineColors,
   saveOutlinePassSettings,
+  type BayerDitherSettings,
   type OutlineColors,
   type OutlinePassSettings,
   type Palette,
@@ -179,6 +186,9 @@ export default function App() {
     loadEdgeProfiles(),
   );
   const [edgeProfileName, setEdgeProfileName] = useState("");
+  const [bayerDither, setBayerDither] = useState<BayerDitherSettings>(() =>
+    loadBayerDitherSettings(),
+  );
   const [palette, setPalette] = useState<Palette | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
@@ -438,6 +448,14 @@ export default function App() {
     setEdgeOutline(next);
   };
 
+  const patchBayerDither = (patch: Partial<BayerDitherSettings>) => {
+    setBayerDither((prev) => {
+      const next = { ...prev, ...patch };
+      saveBayerDitherSettings(next);
+      return next;
+    });
+  };
+
   const persistEdgeProfiles = (next: EdgeProfile[]) => {
     saveEdgeProfiles(next);
     setEdgeProfiles(next);
@@ -551,6 +569,7 @@ export default function App() {
                     mirror={mirror}
                     rimLights={rimLights}
                     edgeOutline={edgeOutline}
+                    bayerDither={bayerDither}
                     displayPx={displayPx}
                     onCaptured={setPreview}
                   />
@@ -907,9 +926,55 @@ export default function App() {
               </button>
               <p className="meta bake-meta">
                 {palette?.name ?? "…"} · sil #{outlineColors.silhouette} · seams #
-                {outlineColors.partSeams} · Endesga · live bake
+                {outlineColors.partSeams}
+                {bayerDither.enabled
+                  ? ` · Bayer ${bayerDither.strength.toFixed(2)}`
+                  : ""}{" "}
+                · Endesga · live bake
               </p>
             </div>
+          </div>
+
+          <div className="bayer-row">
+            <label className="part-lock bayer-toggle">
+              <input
+                type="checkbox"
+                checked={bayerDither.enabled}
+                onChange={(e) =>
+                  patchBayerDither({ enabled: e.target.checked })
+                }
+              />
+              Bayer dither
+            </label>
+            <label className="light-slider bayer-strength">
+              <span className="light-slider-label">Strength</span>
+              <input
+                type="range"
+                min={BAYER_STRENGTH_MIN}
+                max={BAYER_STRENGTH_MAX}
+                step={BAYER_STRENGTH_STEP}
+                value={bayerDither.strength}
+                disabled={!bayerDither.enabled}
+                onChange={(e) =>
+                  patchBayerDither({ strength: Number(e.target.value) })
+                }
+                title="Ordered dither strength before Endesga lock"
+              />
+              <span className="slider-val">
+                {bayerDither.strength.toFixed(2)}
+              </span>
+            </label>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => {
+                const next = { ...DEFAULT_BAYER_DITHER };
+                saveBayerDitherSettings(next);
+                setBayerDither(next);
+              }}
+            >
+              Reset
+            </button>
           </div>
 
           <CollapseSection

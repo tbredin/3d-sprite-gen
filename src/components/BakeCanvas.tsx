@@ -22,8 +22,10 @@ import { ChibiCharacter } from "./ChibiCharacter";
 import { downloadDataUrl } from "../lib/capture";
 import {
   applyPartOutline,
+  DEFAULT_BAYER_DITHER,
   DEFAULT_OUTLINE_PASS,
   quantizeImageData,
+  type BayerDitherSettings,
   type OutlinePassSettings,
   type SpriteSize,
 } from "../lib/palette";
@@ -93,6 +95,8 @@ type BakeProps = {
   rimLights: RimLightSettings;
   /** Depth+normal discontinuity outline pass — see docs/SPIKE-depth-normal-edges.md. */
   edgeOutline?: EdgeOutlineSettings;
+  /** Bayer ordered dither before Endesga lock — see docs/SPIKE-bayer-dither.md. */
+  bayerDither?: BayerDitherSettings;
   onCaptured: (dataUrl: string) => void;
   /** CSS display size (NN upscale of the native size×size buffer). */
   displayPx?: number;
@@ -115,6 +119,7 @@ function BakeCapture({
   mirror,
   rimKey,
   edgeOutline,
+  bayerDither,
   onCaptured,
 }: {
   size: SpriteSize;
@@ -130,6 +135,7 @@ function BakeCapture({
   /** Changes when lighting knobs move so the PNG rebakes. */
   rimKey: string;
   edgeOutline: EdgeOutlineSettings;
+  bayerDither: BayerDitherSettings;
   onCaptured: (dataUrl: string) => void;
 }) {
   const { gl, scene } = useThree();
@@ -157,6 +163,8 @@ function BakeCapture({
   outlinePassRef.current = outlinePass;
   const edgeOutlineRef = useRef(edgeOutline);
   edgeOutlineRef.current = edgeOutline;
+  const bayerDitherRef = useRef(bayerDither);
+  bayerDitherRef.current = bayerDither;
 
   useEffect(() => () => target.dispose(), [target]);
   useEffect(
@@ -201,7 +209,7 @@ function BakeCapture({
         }
 
         const imageData = new ImageData(new Uint8ClampedArray(flipped), size, size);
-        quantizeImageData(imageData, colors);
+        quantizeImageData(imageData, colors, bayerDitherRef.current);
 
         // Internal creases first; silhouette + part seams paint on top.
         const edge = edgeOutlineRef.current;
@@ -315,6 +323,8 @@ function BakeCapture({
     edgeOutline.opacity,
     edgeOutline.dilate,
     edgeOutline.blur,
+    bayerDither.enabled,
+    bayerDither.strength,
   ]);
 
   return null;
@@ -356,6 +366,7 @@ export function BakeCanvas({
   mirror = false,
   rimLights,
   edgeOutline = DEFAULT_EDGE_OUTLINE_SETTINGS,
+  bayerDither = DEFAULT_BAYER_DITHER,
   onCaptured,
   displayPx,
 }: BakeProps) {
@@ -454,6 +465,7 @@ export function BakeCanvas({
         mirror={mirror}
         rimKey={rimKey}
         edgeOutline={edgeOutline}
+        bayerDither={bayerDither}
         onCaptured={onCaptured}
       />
     </Canvas>
