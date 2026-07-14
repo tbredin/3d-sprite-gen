@@ -1,4 +1,7 @@
 import { COMBAT_ARM_POSES } from "./armPoses";
+import { COMBAT_LEG_POSES } from "./legPoses";
+import type { LeadSide } from "./stance";
+import { DEFAULT_LEAD } from "./stance";
 import type {
   ArmPose,
   CharacterSpec,
@@ -157,40 +160,59 @@ function pickTrim(cloth: string): string | undefined {
 }
 
 function poseForWeapon(weapon: WeaponType): { arm: ArmPose; leg: LegPose } {
-  const leg: LegPose = "ready";
+  // Variants stay inside the silhouette stance language (lead fwd / trail back).
   if (weapon === "staff") {
     return {
       arm: pick(["cast", "raise", "ready"] as ArmPose[]),
-      leg,
+      leg: pick(["ready", "stand", "guard"] as LegPose[]),
     };
   }
   if (weapon === "rifle") {
     return {
-      arm: pick(["extended", "reach"] as ArmPose[]),
-      leg,
+      arm: pick(["extended", "reach", "ready"] as ArmPose[]),
+      leg: pick(["ready", "wide", "lunge"] as LegPose[]),
     };
   }
   if (weapon === "shield") {
     return {
       arm: pick(["guard", "ready"] as ArmPose[]),
-      leg,
+      leg: pick(["guard", "wide", "crouch"] as LegPose[]),
     };
   }
   if (weapon === "sword") {
     return {
       arm: pick(["ready", "extended", "reach", "raise"] as ArmPose[]),
-      leg,
+      leg: pick(["ready", "lunge", "wide", "guard"] as LegPose[]),
     };
   }
   return {
     arm: pick(COMBAT_ARM_POSES),
-    leg,
+    leg: pick(COMBAT_LEG_POSES),
   };
+}
+
+/** Weapon hand for an ipsilateral lead — shield nests on the trail side. */
+function handForWeapon(
+  weapon: WeaponType,
+  lead: LeadSide,
+): "left" | "right" {
+  if (weapon === "shield") {
+    return lead === "right" ? "left" : "right";
+  }
+  return lead;
+}
+
+function pickLeadSide(): LeadSide {
+  // Mostly right-lead; occasional mirrored left-lead (same silhouette intent).
+  return Math.random() < 0.18 ? "left" : DEFAULT_LEAD;
 }
 
 type HeadBits = Pick<CharacterSpec, "skin" | "head" | "hair" | "face" | "helmet">;
 type TorsoBits = Pick<CharacterSpec, "torso" | "accessories">;
-type ArmsBits = Pick<CharacterSpec, "arms" | "weapon">;
+type ArmsBits = Pick<CharacterSpec, "arms" | "weapon" | "leadSide"> & {
+  /** Coupled leg pose so random doesn't break ipsilateral stance. */
+  legPose: LegPose;
+};
 type LegsBits = Pick<CharacterSpec, "legs">;
 
 function randomHead(skinHint?: string): HeadBits {
@@ -264,7 +286,12 @@ function randomTorso(helmetStyle?: HelmetStyle): TorsoBits {
   };
 }
 
-function randomArms(skin: string, sleeveHint?: string): ArmsBits {
+function randomArms(
+  skin: string,
+  sleeveHint?: string,
+  leadHint?: LeadSide,
+): ArmsBits {
+  const leadSide = leadHint ?? pickLeadSide();
   const weaponType = pick(WEAPON);
   const poses = poseForWeapon(weaponType);
   const cloth = sleeveHint ?? pick(CLOTH);
@@ -273,6 +300,7 @@ function randomArms(skin: string, sleeveHint?: string): ArmsBits {
       ? 0.1 + Math.random() * 0.2
       : 0.5 + Math.random() * 0.4;
   return {
+    leadSide,
     arms: {
       pose: poses.arm,
       sleeveColor: cloth,
@@ -281,13 +309,14 @@ function randomArms(skin: string, sleeveHint?: string): ArmsBits {
     },
     weapon: {
       type: weaponType,
-      hand: Math.random() < 0.2 ? "left" : "right",
+      hand: handForWeapon(weaponType, leadSide),
       color: pick(CLOTH),
     },
+    legPose: poses.leg,
   };
 }
 
-function randomLegs(): LegsBits {
+function randomLegs(poseHint?: LegPose): LegsBits {
   const pantColor = pick(CLOTH);
   // Boots always contrast pants so footwear reads in the bake.
   let bootColor = pick(BOOT);
@@ -296,7 +325,7 @@ function randomLegs(): LegsBits {
   }
   return {
     legs: {
-      pose: "ready",
+      pose: poseHint ?? pick(COMBAT_LEG_POSES),
       pantColor,
       bootColor,
     },
@@ -305,7 +334,8 @@ function randomLegs(): LegsBits {
 
 /**
  * Build a random CharacterSpec biased toward combat-ready JRPG sprites.
- * Avoids bald bulbs, lanky limbs, and limp T-poses.
+ * Keeps the silhouette fighting stance (torso ¾, ipsilateral lead) — pose
+ * names only vary exaggeration inside that language.
  */
 export function randomCharacter(locks?: PartLocks, base?: CharacterSpec): CharacterSpec {
   const keep = locks ?? EMPTY_LOCKS;
@@ -324,20 +354,33 @@ export function randomCharacter(locks?: PartLocks, base?: CharacterSpec): Charac
     : randomTorso(head.helmet?.style);
 
   const arms = keep.arms && prev
-    ? { arms: prev.arms, weapon: prev.weapon }
-    : randomArms(head.skin, torso.torso.color);
+    ? {
+        leadSide: prev.leadSide ?? DEFAULT_LEAD,
+        arms: prev.arms,
+        weapon: prev.weapon,
+        legPose: prev.legs.pose,
+      }
+    : randomArms(
+        head.skin,
+        torso.torso.color,
+        keep.legs && prev?.leadSide ? prev.leadSide : undefined,
+      );
 
   // Soft coupling: sleeve often matches torso cloth when both unlock.
   if (!keep.arms && !keep.torso && arms.arms) {
     arms.arms.sleeveColor = torso.torso.color;
   }
 
-  const legs = keep.legs && prev ? { legs: prev.legs } : randomLegs();
+  const legs = keep.legs && prev
+    ? { legs: prev.legs }
+    : randomLegs(!keep.arms ? arms.legPose : undefined);
 
   return {
     ...head,
     ...torso,
-    ...arms,
+    leadSide: arms.leadSide,
+    arms: arms.arms,
+    weapon: arms.weapon,
     ...legs,
   };
 }
@@ -360,9 +403,21 @@ export function rerollPart(spec: CharacterSpec, part: PartId): CharacterSpec {
     };
   }
   if (part === "arms") {
-    return { ...spec, ...randomArms(spec.skin, spec.torso.color) };
+    // Keep leadSide so ipsilateral feet stay matched when only arms reroll.
+    const next = randomArms(spec.skin, spec.torso.color, spec.leadSide ?? DEFAULT_LEAD);
+    return {
+      ...spec,
+      leadSide: next.leadSide,
+      arms: next.arms,
+      weapon: next.weapon,
+      legs: { ...spec.legs, pose: next.legPose },
+    };
   }
-  return { ...spec, ...randomLegs() };
+  // Legs-only: keep leadSide, pick a stance variant that still reads.
+  return {
+    ...spec,
+    ...randomLegs(pick(COMBAT_LEG_POSES)),
+  };
 }
 
 /** Keep geometry/styles; only shuffle colors owned by that part. */

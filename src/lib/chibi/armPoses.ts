@@ -1,4 +1,5 @@
 import type { ArmPose } from "./types";
+import { DEFAULT_LEAD, leadSign, type LeadSide } from "./stance";
 
 /** Per-side shoulder Euler (radians) + elbow bend around local X (negative = flex). */
 export type ArmSideJoints = {
@@ -10,82 +11,156 @@ export type ArmSideJoints = {
 };
 
 /**
- * Combat-ready JRPG poses for two-bone arms.
- * `side` is +1 (right) or -1 (left) so flares mirror.
+ * Combat-ready JRPG arms for two-bone limbs.
+ *
+ * Silhouette stance: lead arm forward (extends weapon mass); trail arm back and
+ * lower (shield nests closer). `side` +1 = character right. All named poses
+ * stay inside this language — they exaggerate lead/trail, not undo it.
  */
-export function armJointsForPose(pose: ArmPose, side: 1 | -1): ArmSideJoints {
+export function armJointsForPose(
+  pose: ArmPose,
+  side: 1 | -1,
+  lead: LeadSide = DEFAULT_LEAD,
+): ArmSideJoints {
+  const isLead = side === leadSign(lead);
+
   switch (pose) {
     case "ready":
-      // Asymmetric duel stance: weapon-side forward, offhand raised.
-      return {
-        shoulder: {
-          x: side > 0 ? -0.55 : -0.35,
-          y: side * (side > 0 ? 0.35 : -0.45),
-          z: side * (side > 0 ? 0.7 : 0.95),
-        },
-        elbow: side > 0 ? -0.75 : -1.35,
-        wrist: {
-          x: side > 0 ? -0.2 : -0.1,
-          y: side * 0.25,
-          z: side * (side > 0 ? -0.15 : 0.2),
-        },
-      };
-    case "hang":
-      return {
-        shoulder: { x: 0.05, y: 0, z: side * 0.22 },
-        elbow: -0.25,
-      };
-    case "walk":
-      return {
-        shoulder: { x: side > 0 ? 0.4 : -0.2, y: 0, z: side * 0.3 },
-        elbow: -0.6,
-      };
-    case "extended":
-      return {
-        shoulder: { x: -0.5, y: side * 0.22, z: side * 0.95 },
-        elbow: -0.5,
-        wrist: { x: -0.25, z: side * -0.15 },
-      };
-    case "reach":
-      return {
-        shoulder: { x: -0.9, y: side * 0.12, z: side * 0.5 },
-        elbow: -0.7,
-        wrist: { x: -0.3 },
-      };
-    case "akimbo":
-      return {
-        shoulder: { x: 0.3, y: -side * 0.4, z: side * 0.8 },
-        elbow: -1.5,
-        wrist: { y: side * 0.3 },
-      };
-    case "raise":
-      return {
-        shoulder: { x: -1.3, y: side * 0.1, z: side * 0.35 },
-        elbow: -0.6,
-        wrist: { x: -0.2 },
-      };
-    case "salute":
-      return {
-        shoulder: { x: -1.05, y: -side * 0.25, z: side * 0.15 },
-        elbow: -1.65,
-        wrist: { z: side * 0.2 },
-      };
-    case "cast":
-      return {
-        shoulder: { x: -1.0, y: side * 0.5, z: side * 0.45 },
-        elbow: -0.8,
-        wrist: { x: -0.4, y: side * 0.25 },
-      };
-    case "guard":
-      return {
-        shoulder: { x: -0.25, y: -side * 0.55, z: side * 0.9 },
-        elbow: -1.55,
-        wrist: { y: side * 0.4, z: side * -0.2 },
-      };
     case "idle":
+      return isLead
+        ? {
+            // Forward punch-line — clear depth past the chest edge.
+            shoulder: { x: -0.95, y: side * 0.5, z: side * 0.48 },
+            elbow: -0.45,
+            wrist: { x: -0.4, y: side * 0.22, z: side * -0.12 },
+          }
+        : {
+            // Trail: back and lower, elbow tucked.
+            shoulder: { x: 0.22, y: -side * 0.4, z: side * 0.85 },
+            elbow: -1.2,
+            wrist: { x: 0.08, y: side * 0.18, z: side * 0.28 },
+          };
+
+    case "hang":
+      // Soft hang still keeps lead slightly ahead of trail.
+      return isLead
+        ? {
+            shoulder: { x: -0.2, y: side * 0.12, z: side * 0.28 },
+            elbow: -0.35,
+          }
+        : {
+            shoulder: { x: 0.18, y: -side * 0.08, z: side * 0.32 },
+            elbow: -0.45,
+          };
+
+    case "walk":
+      return isLead
+        ? {
+            shoulder: { x: -0.75, y: side * 0.2, z: side * 0.4 },
+            elbow: -0.55,
+          }
+        : {
+            shoulder: { x: 0.35, y: -side * 0.15, z: side * 0.45 },
+            elbow: -0.7,
+          };
+
+    case "extended":
+      // Lead locked out toward +Z; trail counterweight low.
+      return isLead
+        ? {
+            shoulder: { x: -1.15, y: side * 0.35, z: side * 0.4 },
+            elbow: -0.25,
+            wrist: { x: -0.35, z: side * -0.12 },
+          }
+        : {
+            shoulder: { x: 0.35, y: -side * 0.45, z: side * 0.9 },
+            elbow: -1.25,
+            wrist: { x: 0.1, y: side * 0.2 },
+          };
+
+    case "reach":
+      return isLead
+        ? {
+            shoulder: { x: -1.25, y: side * 0.28, z: side * 0.35 },
+            elbow: -0.4,
+            wrist: { x: -0.4 },
+          }
+        : {
+            shoulder: { x: 0.1, y: -side * 0.35, z: side * 0.8 },
+            elbow: -1.1,
+            wrist: { x: 0.05 },
+          };
+
+    case "akimbo":
+      // Fists near hips but still lead-forward / trail-back asymmetry.
+      return isLead
+        ? {
+            shoulder: { x: -0.15, y: -side * 0.25, z: side * 0.7 },
+            elbow: -1.45,
+            wrist: { y: side * 0.25 },
+          }
+        : {
+            shoulder: { x: 0.45, y: -side * 0.5, z: side * 0.95 },
+            elbow: -1.55,
+            wrist: { y: side * 0.35 },
+          };
+
+    case "raise":
+      // Lead high-forward (axe / signal); trail anchors low-back.
+      return isLead
+        ? {
+            shoulder: { x: -1.45, y: side * 0.2, z: side * 0.3 },
+            elbow: -0.45,
+            wrist: { x: -0.25 },
+          }
+        : {
+            shoulder: { x: 0.3, y: -side * 0.4, z: side * 0.85 },
+            elbow: -1.15,
+            wrist: { x: 0.05 },
+          };
+
+    case "salute":
+      return isLead
+        ? {
+            shoulder: { x: -1.15, y: -side * 0.15, z: side * 0.2 },
+            elbow: -1.55,
+            wrist: { z: side * 0.2 },
+          }
+        : {
+            shoulder: { x: 0.2, y: -side * 0.3, z: side * 0.7 },
+            elbow: -1.0,
+          };
+
+    case "cast":
+      // Lead thrusts staff/orb forward-up; trail open low behind.
+      return isLead
+        ? {
+            shoulder: { x: -1.2, y: side * 0.55, z: side * 0.38 },
+            elbow: -0.55,
+            wrist: { x: -0.45, y: side * 0.3 },
+          }
+        : {
+            shoulder: { x: 0.18, y: -side * 0.45, z: side * 0.75 },
+            elbow: -1.05,
+            wrist: { x: 0.05, y: side * 0.15 },
+          };
+
+    case "guard":
+      // Lead weapon still forward; trail (shield) lower + closer to ribs.
+      return isLead
+        ? {
+            shoulder: { x: -0.75, y: side * 0.4, z: side * 0.5 },
+            elbow: -0.65,
+            wrist: { x: -0.25, y: side * 0.2 },
+          }
+        : {
+            shoulder: { x: -0.05, y: -side * 0.6, z: side * 0.95 },
+            elbow: -1.4,
+            wrist: { y: side * 0.45, z: side * -0.15 },
+          };
+
     default:
-      // Idle = combat ready (default for sprites).
-      return armJointsForPose("ready", side);
+      return armJointsForPose("ready", side, lead);
   }
 }
 

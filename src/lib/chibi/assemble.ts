@@ -14,14 +14,23 @@ import {
   generateTorso,
   generateWeapon,
 } from "./parts";
+import { resolveLeadSide, torsoYawForLead } from "./stance";
 
 /**
  * Assemble a full chibi from a declarative spec.
  * LLM path: emit CharacterSpec JSON → assembleCharacter(spec).
+ *
+ * Hierarchy for silhouette stance (see stance.ts):
+ *   root  — facing +Z; BakeCanvas rotationY turns the whole sprite
+ *     head / face / hair / helmet  — stay on root so faceCheat uses body yaw
+ *     upperBody (yaw ≈ ±45°) — torso, hem, cape, arms (+ weapons)
+ *     legs — planted on root with ipsilateral lead foot
  */
 export function assembleCharacter(spec: CharacterSpec): Group {
   const root = new Group();
   root.name = "chibi";
+
+  const leadSide = resolveLeadSide(spec.leadSide);
 
   const head = generateHead({
     skin: spec.skin,
@@ -62,13 +71,18 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     tagPartGroup(helmet, PartGroupId.HEAD);
   }
 
+  const upper = new Group();
+  upper.name = "upperBody";
+  upper.rotation.y = torsoYawForLead(leadSide);
+  root.add(upper);
+
   const torso = generateTorso({
     style: spec.torso.style,
     color: spec.torso.color,
     trim: spec.torso.trim,
     skin: spec.skin,
   });
-  root.add(torso);
+  upper.add(torso);
   addHullOutlines(torso, 0.03);
   tagPartGroup(torso, PartGroupId.TORSO);
 
@@ -78,7 +92,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
       style: hem,
       color: spec.accessories?.hemColor ?? spec.torso.trim ?? spec.torso.color,
     });
-    root.add(hemG);
+    upper.add(hemG);
     addHullOutlines(hemG, 0.024);
     tagPartGroup(hemG, PartGroupId.ACCESSORY);
   }
@@ -90,7 +104,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
         spec.torso.trim ??
         spec.torso.color,
     });
-    root.add(cape);
+    upper.add(cape);
     addHullOutlines(cape, 0.028);
     tagPartGroup(cape, PartGroupId.ACCESSORY);
   }
@@ -101,8 +115,9 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     sleeveColor: spec.arms.sleeveColor ?? spec.torso.color,
     sleeveLength: spec.arms.sleeveLength,
     handColor: spec.arms.handColor,
+    leadSide,
   });
-  root.add(arms.root);
+  upper.add(arms.root);
   addHullOutlines(arms.root, 0.028);
   tagPartGroup(arms.root, PartGroupId.ARMS);
 
@@ -110,17 +125,27 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     pose: spec.legs.pose,
     pantColor: spec.legs.pantColor,
     bootColor: spec.legs.bootColor,
+    leadSide,
   });
   root.add(legs);
   addHullOutlines(legs, 0.028);
   tagPartGroup(legs, PartGroupId.LEGS);
 
   if (spec.weapon && spec.weapon.type !== "none") {
-    const hand =
-      spec.weapon.hand === "left" ? arms.leftHand : arms.rightHand;
+    // Shield nests on the trail (back) hand; other weapons extend the lead hand.
+    // Explicit weapon.hand still wins when present.
+    const defaultHand =
+      spec.weapon.type === "shield"
+        ? leadSide === "right"
+          ? "left"
+          : "right"
+        : leadSide;
+    const handId = spec.weapon.hand ?? defaultHand;
+    const hand = handId === "left" ? arms.leftHand : arms.rightHand;
     const weapon = generateWeapon({
       type: spec.weapon.type,
       color: spec.weapon.color,
+      hand: handId,
     });
     hand.add(weapon);
     addHullOutlines(weapon, 0.022);
@@ -133,6 +158,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
 export const PRESETS: Record<PresetId, CharacterSpec> = {
   mage: {
     skin: "#e4a672",
+    leadSide: "right",
     head: { scale: 0.92 },
     hair: { style: "long", color: "#5b3d8a", complexity: 5 },
     face: { eyeColor: "#2a1c4a", nose: true },
@@ -145,6 +171,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   },
   knight: {
     skin: "#e4a672",
+    leadSide: "right",
     head: { scale: 0.9 },
     hair: { style: "bald", color: "#433455" },
     face: { eyeColor: "#1a1c2c" },
@@ -157,11 +184,12 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       sleeveLength: 0.95,
       handColor: "#e4a672",
     },
-    legs: { pose: "ready", pantColor: "#6a7484", bootColor: "#3a415c" },
+    legs: { pose: "lunge", pantColor: "#6a7484", bootColor: "#3a415c" },
     weapon: { type: "sword", hand: "right", color: "#dfe4ea" },
   },
   soldier: {
     skin: "#c98a6a",
+    leadSide: "right",
     head: { scale: 0.9 },
     hair: { style: "undercut", color: "#2a2035", complexity: 5 },
     face: { eyeColor: "#1a1c2c" },
@@ -174,11 +202,12 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       sleeveLength: 0.75,
       handColor: "#c98a6a",
     },
-    legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#1a1c2c" },
+    legs: { pose: "wide", pantColor: "#2a2540", bootColor: "#1a1c2c" },
     weapon: { type: "rifle", hand: "right", color: "#1a1c2c" },
   },
   rogue: {
     skin: "#e4a672",
+    leadSide: "right",
     head: { scale: 0.9 },
     hair: { style: "spiky", color: "#f0d48a", complexity: 7 },
     face: { eyeColor: "#2a6ebd" },
@@ -186,11 +215,12 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     torso: { style: "jacket", color: "#322947", trim: "#e83b3b" },
     accessories: { hem: "loincloth", hemColor: "#e83b3b", cape: true, capeColor: "#322947" },
     arms: { pose: "ready", sleeveColor: "#322947", sleeveLength: 0.55 },
-    legs: { pose: "ready", pantColor: "#1a1c2c", bootColor: "#433455" },
+    legs: { pose: "crouch", pantColor: "#1a1c2c", bootColor: "#433455" },
     weapon: { type: "none", color: "#000000" },
   },
   scientist: {
     skin: "#f0c8a0",
+    leadSide: "right",
     head: { scale: 0.94 },
     hair: { style: "mohawk", color: "#e83b3b", complexity: 6 },
     face: { eyeColor: "#3d6e70", nose: true },
@@ -208,6 +238,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   },
   cleric: {
     skin: "#f0c8a0",
+    leadSide: "right",
     head: { scale: 0.9 },
     hair: { style: "bob", color: "#e8e4d8", complexity: 4 },
     face: { eyeColor: "#3d6e70", nose: true },
@@ -220,6 +251,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   },
   ranger: {
     skin: "#d4a574",
+    leadSide: "right",
     head: { scale: 0.9 },
     hair: { style: "braid", color: "#6b3a1f", complexity: 5 },
     face: { eyeColor: "#2a4550", nose: true },
@@ -232,11 +264,12 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       sleeveLength: 0.65,
       handColor: "#d4a574",
     },
-    legs: { pose: "ready", pantColor: "#2a4030", bootColor: "#322947" },
+    legs: { pose: "guard", pantColor: "#2a4030", bootColor: "#322947" },
     weapon: { type: "sword", hand: "right", color: "#8b5a2b" },
   },
   barbarian: {
     skin: "#c98a6a",
+    leadSide: "right",
     head: { scale: 0.9 },
     hair: { style: "topknot", color: "#1a1c2c", complexity: 6 },
     face: { eyeColor: "#e83b3b", nose: true },
@@ -249,11 +282,12 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       sleeveLength: 0.15,
       handColor: "#c98a6a",
     },
-    legs: { pose: "ready", pantColor: "#433455", bootColor: "#1a1c2c" },
+    legs: { pose: "wide", pantColor: "#433455", bootColor: "#1a1c2c" },
     weapon: { type: "sword", hand: "right", color: "#7a8090" },
   },
   acolyte: {
     skin: "#ffe0bd",
+    leadSide: "right",
     head: { scale: 0.9 },
     hair: { style: "fringe", color: "#3a9bb5", complexity: 5 },
     face: { eyeColor: "#5a2a7a" },
@@ -266,6 +300,8 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   },
   pirate: {
     skin: "#e4a672",
+    // Mirrored silhouette — left lead, blade in forward hand.
+    leadSide: "left",
     head: { scale: 0.9 },
     hair: { style: "twinTails", color: "#1a1c2c", complexity: 6 },
     face: { eyeColor: "#1a1c2c", nose: true },
@@ -273,7 +309,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     torso: { style: "jacket", color: "#3d6e70", trim: "#e83b3b" },
     accessories: { hem: "loincloth", hemColor: "#e83b3b", cape: true, capeColor: "#3d6e70" },
     arms: {
-      pose: "guard",
+      pose: "ready",
       sleeveColor: "#3d6e70",
       sleeveLength: 0.5,
       handColor: "#e4a672",

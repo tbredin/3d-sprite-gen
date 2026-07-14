@@ -61,6 +61,11 @@ export type HemStyle = "none" | "skirt" | "loincloth";
 
 export type CharacterSpec = {
   skin: string;
+  /**
+   * Ipsilateral fighting lead (hand + foot). Default `"right"`.
+   * Drives torso ~45° yaw, arm asymmetry, and which foot is forward.
+   */
+  leadSide?: "left" | "right";
   head?: {
     /** Egg-shaped JRPG head scale (slightly under hair shell). */
     scale?: number;

@@ -102,6 +102,14 @@ export { randomCharacter, rerollPart, rerollPartColors, PART_IDS, EMPTY_LOCKS } 
 export type { PartId, PartLocks } from "./random";
 export { ARM_POSES, COMBAT_ARM_POSES, armJointsForPose } from "./armPoses";
 export { LEG_POSES, COMBAT_LEG_POSES, legJointsForPose } from "./legPoses";
+export {
+  DEFAULT_LEAD,
+  TORSO_YAW,
+  leadSign,
+  resolveLeadSide,
+  torsoYawForLead,
+} from "./stance";
+export type { LeadSide } from "./stance";
 export type {
   CharacterSpec,
   PresetId,

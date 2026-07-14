@@ -60,7 +60,7 @@ export function generateHead(opts: {
   const mat = toon(opts.skin);
   const cy = LAYOUT.headCenterY;
   const r = CHIBI.skullR * s;
-  /** Extra vertical stretch (~10%) for SNES SD proportions. */
+  /** Extra vertical stretch (~10%) for SNES SD proportions under high iso. */
   const tall = 1.1;
 
   const skull = new Mesh(new SphereGeometry(r, 14, 12), mat);
@@ -1024,6 +1024,8 @@ export function generateArms(opts: {
   sleeveColor?: string;
   sleeveLength?: number;
   handColor?: string;
+  /** Ipsilateral fighting lead — default right. */
+  leadSide?: "left" | "right";
 }): {
   root: Group;
   leftHand: Group;
@@ -1041,12 +1043,13 @@ export function generateArms(opts: {
   const sleeveFrac = opts.sleeveLength ?? 0.7;
   const shoulderX = CHIBI.shoulderWidth * 0.48;
   const sy = LAYOUT.shoulderY - 0.02;
+  const lead = opts.leadSide ?? "right";
 
   let leftHand!: Group;
   let rightHand!: Group;
 
   for (const side of [-1, 1] as const) {
-    const joints = armJointsForPose(opts.pose, side);
+    const joints = armJointsForPose(opts.pose, side, lead);
 
     const shoulder = new Group();
     shoulder.name = side > 0 ? "armRight" : "armLeft";
@@ -1137,6 +1140,8 @@ export function generateLegs(opts: {
   pose: LegPose;
   pantColor: string;
   bootColor: string;
+  /** Ipsilateral fighting lead — default right. */
+  leadSide?: "left" | "right";
 }): Group {
   const g = new Group();
   g.name = "legs";
@@ -1146,9 +1151,10 @@ export function generateLegs(opts: {
   const thighLen = total * 0.42;
   const shinLen = total * 0.36;
   const hipX = CHIBI.hipWidth * 0.3;
+  const lead = opts.leadSide ?? "right";
 
   for (const side of [-1, 1] as const) {
-    const joints = legJointsForPose(opts.pose, side);
+    const joints = legJointsForPose(opts.pose, side, lead);
 
     const hip = new Group();
     hip.name = side > 0 ? "legRight" : "legLeft";
@@ -1230,6 +1236,8 @@ export const WEAPON_READABILITY = {
 export function generateWeapon(opts: {
   type: WeaponType;
   color: string;
+  /** Which hand holds the prop — mirrors lateral shield offsets. */
+  hand?: "left" | "right";
 }): Group {
   const g = new Group();
   g.name = "weapon";
@@ -1237,9 +1245,12 @@ export function generateWeapon(opts: {
   const mat = toonDetail(opts.color);
   const accent = lightenHex(opts.color, 0.35);
   const t = WEAPON_READABILITY;
+  /** +1 right hand (default), −1 left — lateral prop offsets. */
+  const hx = opts.hand === "left" ? -1 : 1;
 
   if (opts.type === "sword") {
     // Grip + pommel — dark leather/metal, independent of blade color.
+    // Blade along +Y extends the lead-hand silhouette past the mitt.
     g.add(mesh(limbCylinder(0.05, 0.16), toonDetail("#4a3626"), 0, -0.03, 0.05));
     g.add(mesh(new SphereGeometry(0.045, 8, 6), toonDetail("#2a1c14"), 0, -0.13, 0.05));
     // Flat crossguard — a hard box silhouette break, brighter than the grip
@@ -1291,12 +1302,13 @@ export function generateWeapon(opts: {
     g.add(mesh(new BoxGeometry(0.032, 0.06, 0.032), toonDetail("#14151f"), 0, 0.12, 0.61));
     g.add(mesh(new BoxGeometry(0.065, 0.17, 0.055), toonDetail("#14151f"), 0, -0.17, 0.15));
   } else if (opts.type === "shield") {
+    // Nest shield slightly outboard of the trail mitt (mirrored per hand).
     const disc = new Mesh(
       new CylinderGeometry(t.shieldDiscR, t.shieldDiscR, 0.08, 14),
       mat,
     );
     disc.rotation.z = Math.PI / 2;
-    disc.position.set(0.1, 0.05, 0.1);
+    disc.position.set(hx * 0.1, 0.02, 0.06);
     g.add(disc);
     // Dark rim band behind the face — two-tone silhouette read at a glance.
     const rim = new Mesh(
@@ -1304,11 +1316,17 @@ export function generateWeapon(opts: {
       toonDetail("#2a2035"),
     );
     rim.rotation.z = Math.PI / 2;
-    rim.position.set(0.085, 0.05, 0.1);
+    rim.position.set(hx * 0.085, 0.02, 0.06);
     g.add(rim);
     // Big bright boss so the shield reads distinctly from a plain disc.
     g.add(
-      mesh(new SphereGeometry(t.shieldBossR, 8, 6), toonDetail("#eef2f5"), 0.14, 0.05, 0.1),
+      mesh(
+        new SphereGeometry(t.shieldBossR, 8, 6),
+        toonDetail("#eef2f5"),
+        hx * 0.14,
+        0.02,
+        0.06,
+      ),
     );
   }
   return g;
