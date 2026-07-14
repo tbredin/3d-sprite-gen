@@ -267,8 +267,12 @@ export default function App() {
           Procedural chibi → iso bake at {size}×{size}px · free / local
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
-        <p className="tagline feature-boost-note">
-          Helmet heads: soldier / hair / hats, goat head — plus shirtless goatman preset.
+        <p
+          className={`tagline feature-boost-note${
+            __GIT_BRANCH__ !== "main" ? " branch-not-main" : ""
+          }`}
+        >
+          {__GIT_BRANCH__}
         </p>
       </header>
 
