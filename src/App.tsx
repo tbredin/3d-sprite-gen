@@ -596,22 +596,32 @@ export default function App() {
         <section className="panel panel-bake">
           <h2 className="panel-title">Baked PNG ({size}×{size})</h2>
 
-          {preview ? (
-            <img
-              className="pixel-preview"
-              src={preview}
-              alt="baked sprite"
-              width={displayPx}
-              height={displayPx}
-            />
-          ) : (
-            <div
-              className="pixel-empty"
-              style={{ width: displayPx, height: displayPx }}
+          <div className="bake-preview-row">
+            {preview ? (
+              <img
+                className="pixel-preview"
+                src={preview}
+                alt="baked sprite"
+                width={displayPx}
+                height={displayPx}
+              />
+            ) : (
+              <div
+                className="pixel-empty"
+                style={{ width: displayPx, height: displayPx }}
+              >
+                Preparing…
+              </div>
+            )}
+            <button
+              type="button"
+              className="download-btn"
+              onClick={() => preview && saveSprite(preview, size)}
+              disabled={!preview}
             >
-              Preparing…
-            </div>
-          )}
+              Download PNG
+            </button>
+          </div>
 
           <CollapseSection
             title="Outlines"
@@ -939,16 +949,6 @@ export default function App() {
             </p>
           </CollapseSection>
 
-          <div className="bake-tools">
-            <button
-              type="button"
-              className="download-btn"
-              onClick={() => preview && saveSprite(preview, size)}
-              disabled={!preview}
-            >
-              Download PNG
-            </button>
-          </div>
           <p className="meta">
             {palette?.name ?? "…"} · sil #{outlineColors.silhouette} · seams #
             {outlineColors.partSeams} · Endesga · live bake
