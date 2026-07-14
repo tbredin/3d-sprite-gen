@@ -111,9 +111,11 @@ export { LEG_POSES, COMBAT_LEG_POSES, legJointsForPose } from "./legPoses";
 export {
   DEFAULT_LEAD,
   TORSO_YAW,
+  LEGS_YAW_FRAC,
   leadSign,
   resolveLeadSide,
   torsoYawForLead,
+  legsYawForLead,
 } from "./stance";
 export type { LeadSide } from "./stance";
 export type {
