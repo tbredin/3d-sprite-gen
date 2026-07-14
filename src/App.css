@@ -297,9 +297,15 @@ button.ghost {
   gap: 0.25rem;
 }
 
-.collapse-actions .ghost {
-  padding: 0.1rem 0.35rem;
+/* Beat `.panel button` / `button` (height: var(--control-h) = 2rem) */
+.panel .collapse-actions .ghost {
+  box-sizing: border-box;
+  height: 1.25rem !important;
+  max-height: 1.25rem;
+  min-height: 0;
+  padding: 0 0.35rem !important;
   font-size: 0.62rem;
+  line-height: 1;
 }
 
 .collapse-body {
@@ -527,25 +533,6 @@ button.ghost {
   color: var(--text);
   background: #0c0e16;
   border: 1px solid #3a415c;
-}
-
-.spec-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
-  margin-bottom: 0.25rem;
-}
-
-/* Beat `.panel button` / `button` (height: var(--control-h) = 2rem) */
-.panel .spec-toolbar .ghost {
-  box-sizing: border-box;
-  height: 1.25rem !important;
-  max-height: 1.25rem;
-  min-height: 0;
-  padding: 0 0.35rem !important;
-  font-size: 0.62rem;
-  line-height: 1;
 }
 
 /* Beat `.panel textarea` (height: 2rem, inherited panel font) */

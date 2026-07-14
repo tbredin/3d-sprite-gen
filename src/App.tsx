@@ -784,33 +784,39 @@ export default function App() {
             title="Active spec"
             open={specOpen}
             onToggle={() => setSpecOpen((v) => !v)}
+            actions={
+              <>
+                <button type="button" className="ghost" onClick={downloadSpecJson}>
+                  Download
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => void copySpecJson()}
+                >
+                  Copy
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => specFileRef.current?.click()}
+                >
+                  Load
+                </button>
+                <input
+                  ref={specFileRef}
+                  type="file"
+                  accept="application/json,.json"
+                  hidden
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    void onLoadSpecFile(file);
+                    e.target.value = "";
+                  }}
+                />
+              </>
+            }
           >
-            <div className="spec-toolbar">
-              <button type="button" className="ghost" onClick={downloadSpecJson}>
-                Download
-              </button>
-              <button type="button" className="ghost" onClick={() => void copySpecJson()}>
-                Copy
-              </button>
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => specFileRef.current?.click()}
-              >
-                Load
-              </button>
-              <input
-                ref={specFileRef}
-                type="file"
-                accept="application/json,.json"
-                hidden
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  void onLoadSpecFile(file);
-                  e.target.value = "";
-                }}
-              />
-            </div>
             <textarea
               className="spec-editor"
               value={specText}
