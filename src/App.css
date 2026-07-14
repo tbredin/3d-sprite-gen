@@ -347,20 +347,26 @@ button.ghost {
   gap: 0.12rem 0.4rem;
 }
 
+.light-hint {
+  margin: 0.05rem 0 0.2rem;
+  font-size: 0.58rem;
+  line-height: 1.25;
+}
+
 .light-fill-grid {
   grid-template-columns: 1fr;
-  margin-bottom: 0.35rem;
-  padding-bottom: 0.3rem;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.2rem;
   border-bottom: 1px solid #3a415c;
 }
 
 .panel label.light-fill-row {
-  grid-template-columns: 4.2rem 1fr 1.85rem 1.5rem;
+  grid-template-columns: 2.5rem 1fr 1.85rem 0.95rem;
 }
 
 .panel label.light-fill-row .light-inline-color {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 0.95rem;
+  height: 0.95rem;
   padding: 0;
   border: 1px solid #3a415c;
   background: transparent;

@@ -96,11 +96,12 @@ import "./App.css";
 
 const PITCH_LIMIT = Math.PI / 2 - 0.05;
 
-/** Soft global lights — Ambience is the universal fill slider. */
+/** Soft global lights — Amb is the universal fill slider. */
 const FILL_LIGHT_ROWS = [
   {
     key: "ambientBrightness" as const,
-    label: "Ambience",
+    label: "Amb",
+    title: "Ambience",
     min: 0,
     max: 1.2,
     step: 0.02,
@@ -109,7 +110,8 @@ const FILL_LIGHT_ROWS = [
   },
   {
     key: "keyBrightness" as const,
-    label: "Key fill",
+    label: "Key",
+    title: "Key fill",
     min: 0,
     max: 4,
     step: 0.05,
@@ -784,10 +786,8 @@ export default function App() {
                 </ul>
               )}
             </div>
-            <p className="hint">
-              Ambience is the soft global fill. Red / blue are harsh{" "}
-              <em>directional</em> rims from behind — raise Behind so they
-              skim the silhouette instead of washing the whole sprite.
+            <p className="hint light-hint">
+              Amb = soft fill; red/blue = harsh rear rims (raise Behind to skim).
             </p>
             <div className="light-grid light-fill-grid">
               {FILL_LIGHT_ROWS.map((row) => (
@@ -795,7 +795,9 @@ export default function App() {
                   key={row.key}
                   className={`light-slider light-fill-row${row.tone ? ` ${row.tone}` : ""}`}
                 >
-                  <span className="light-slider-label">{row.label}</span>
+                  <span className="light-slider-label" title={row.title}>
+                    {row.label}
+                  </span>
                   <input
                     type="range"
                     min={row.min}
@@ -807,7 +809,7 @@ export default function App() {
                         [row.key]: Number(e.target.value),
                       })
                     }
-                    title={row.label}
+                    title={row.title}
                   />
                   <span className="slider-val">
                     {rimLights[row.key].toFixed(2)}
@@ -819,7 +821,7 @@ export default function App() {
                     onChange={(e) =>
                       patchRimLights({ [row.colorKey]: e.target.value })
                     }
-                    title={`${row.label} colour`}
+                    title={`${row.title} colour`}
                   />
                 </label>
               ))}
