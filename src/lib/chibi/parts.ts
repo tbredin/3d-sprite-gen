@@ -165,18 +165,28 @@ export function generateFace(opts: {
   eyeColor?: string;
   nose?: boolean;
   skin: string;
+  /** Optional `CharacterSpec.face.scale` — eyes/mouth independent of hair. */
+  scale?: number;
 }): Group {
   const g = new Group();
   g.name = "face";
+  const hs = opts.scale ?? 1;
   const t = FACE_READABILITY;
   const irisMat = toonDetail(opts.eyeColor ?? "#1a1c2c");
   const white = toon("#f7f4ec");
   const lid = toonDetail("#211a2c");
   const shine = toonDetail("#ffffff");
-  const y = LAYOUT.headCenterY - 0.02 + t.eyeLift;
-  const z = t.eyeZ;
-  const ex = t.eyeSpacing;
-  const d = t.eyeDepth;
+  const y = LAYOUT.headCenterY - 0.02 * hs + t.eyeLift * hs;
+  const z = t.eyeZ * hs;
+  const ex = t.eyeSpacing * hs;
+  const d = t.eyeDepth * hs;
+  const eyeW = t.eyeW * hs;
+  const eyeH = t.eyeH * hs;
+  const irisW = t.irisW * hs;
+  const irisH = t.irisH * hs;
+  const browW = t.browW * hs;
+  const browH = t.browH * hs;
+  const browDepth = t.browDepth * hs;
 
   for (const s of [-1, 1] as const) {
     const eye = new Group();
@@ -185,18 +195,18 @@ export function generateFace(opts: {
     eye.rotation.y = 0;
 
     // Bottom rect of the sclera.
-    const botH = t.eyeH * 0.48;
+    const botH = eyeH * 0.48;
     eye.add(
-      mesh(new BoxGeometry(t.eyeW, botH, d), white, 0, -t.eyeH * 0.2, 0),
+      mesh(new BoxGeometry(eyeW, botH, d), white, 0, -eyeH * 0.2, 0),
     );
     // Top rect — slightly wider (anime “larger at the top”).
-    const topH = t.eyeH * 0.52;
+    const topH = eyeH * 0.52;
     eye.add(
       mesh(
-        new BoxGeometry(t.eyeW * t.eyeTopWiden, topH, d),
+        new BoxGeometry(eyeW * t.eyeTopWiden, topH, d),
         white,
         0,
-        t.eyeH * 0.18,
+        eyeH * 0.18,
         0,
       ),
     );
@@ -204,10 +214,10 @@ export function generateFace(opts: {
     // Iris — flat dark rectangle, sits low in the white.
     eye.add(
       mesh(
-        new BoxGeometry(t.irisW, t.irisH, d * 0.7),
+        new BoxGeometry(irisW, irisH, d * 0.7),
         irisMat,
         0,
-        -0.008,
+        -0.008 * hs,
         d * 0.15,
       ),
     );
@@ -215,10 +225,10 @@ export function generateFace(opts: {
     // Thick upper lid line under the brow.
     eye.add(
       mesh(
-        new BoxGeometry(t.eyeW * t.eyeTopWiden * 1.02, 0.018, d * 0.8),
+        new BoxGeometry(eyeW * t.eyeTopWiden * 1.02, 0.018 * hs, d * 0.8),
         lid,
         0,
-        t.eyeH * 0.42,
+        eyeH * 0.42,
         d * 0.1,
       ),
     );
@@ -226,10 +236,10 @@ export function generateFace(opts: {
     // Catchlight fleck.
     eye.add(
       mesh(
-        new BoxGeometry(0.022, 0.022, d * 0.5),
+        new BoxGeometry(0.022 * hs, 0.022 * hs, d * 0.5),
         shine,
-        -t.irisW * 0.22,
-        t.irisH * 0.18,
+        -irisW * 0.22,
+        irisH * 0.18,
         d * 0.35,
       ),
     );
@@ -237,11 +247,11 @@ export function generateFace(opts: {
     // Thick eyebrow bar — heavy anime brow, not a thin capsule slash.
     eye.add(
       mesh(
-        new BoxGeometry(t.browW, t.browH, t.browDepth),
+        new BoxGeometry(browW, browH, browDepth),
         lid,
         0,
-        t.eyeH * 0.72,
-        -0.002,
+        eyeH * 0.72,
+        -0.002 * hs,
       ),
     );
 
@@ -250,13 +260,22 @@ export function generateFace(opts: {
 
   if (opts.nose) {
     g.add(
-      mesh(new SphereGeometry(0.028, 8, 6), toon(opts.skin), 0, y - 0.12, z - 0.02),
+      mesh(
+        new SphereGeometry(0.028 * hs, 8, 6),
+        toon(opts.skin),
+        0,
+        y - 0.12 * hs,
+        z - 0.02 * hs,
+      ),
     );
   }
 
-  const mouth = new Mesh(new BoxGeometry(t.mouthWidth, 0.018, 0.016), lid);
+  const mouth = new Mesh(
+    new BoxGeometry(t.mouthWidth * hs, 0.018 * hs, 0.016 * hs),
+    lid,
+  );
   mouth.name = "mouth";
-  mouth.position.set(0, y - 0.19, z - 0.03);
+  mouth.position.set(0, y - 0.19 * hs, z - 0.03 * hs);
   g.add(mouth);
 
   return g;
@@ -679,8 +698,8 @@ export function generateHair(opts: {
  * 3. Per-style dome squash (sciFi ×0.96/0.9, goat ×0.95/0.92) stacks on top
  * 4. Replace-mount hides the multi-volume skin head (skull+crown+cheeks), so a
  *    single shell has less silhouette mass than the skull it replaces
- * Style boosts (`REPLACE_HEAD_BOOST`) undo that compound shrink for mass-light
- * closed heads; keep knight on shared HELMET_SHELL only.
+ * Style boosts (`REPLACE_HEAD_BOOST`, `KNIGHT_HEAD_BOOST`) undo that compound
+ * shrink for mass-light closed heads — never raise HELMET_SHELL globally.
  */
 const HEAD_TALL = 1.1;
 /** Match `generateHead` skull squash before shell scale. */
@@ -692,6 +711,8 @@ const SKULL_EGG = { x: 0.92, y: 1.05, z: 0.86 } as const;
 const HELMET_SHELL = 0.98;
 /** SciFi / goat closed heads — undo HELMET_SHELL + egg-squash compound shrink. */
 const REPLACE_HEAD_BOOST = 1.3;
+/** Knight kettle only — still reads small after Elite Knight rebuild. */
+const KNIGHT_HEAD_BOOST = 1.2;
 
 /**
  * Head gear. Closed styles (`knight`, `sciFi`, `goat`) and deep cowls (`hood`)
@@ -726,7 +747,10 @@ export function generateHelmet(opts: {
 
   if (opts.style === "knight") {
     // Dark Souls Elite Knight–inspired flat-top kettle (closed head replacement).
-    // Flattened crown + dual horizontal slits + T-nasal — readable at 42–48px.
+    // ×1.2 knight-only boost (like sciFi REPLACE_HEAD_BOOST) — do not raise
+    // shared HELMET_SHELL or overlay caps balloon.
+    const r = CHIBI.skullR * s * KNIGHT_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
     const slit = toon(opts.visor ?? "#1a1c2c");
 
     // Main kettle body — egg with a flatter Y than other closed helms
@@ -1028,39 +1052,43 @@ export function generateHelmet(opts: {
       ),
     );
 
-    // Ram horns — thick overlapping cones with roots sunk into cranial shell.
-    // Prior two-cone tips floated above the skull and read as tiny sticks.
+    // Goat horns — grow out of the skull sideways, then curl up + forward
+    // (real goat arc). Prior upright cones read as floating sticks.
+    // ConeGeometry apex is local +Y; rotZ ±π/2 aims tip along ±X.
     for (const side of [-1, 1] as const) {
-      // Root plug inside upper temple so horns grow out of bone, not hover above
-      const rootX = side * shellR * eggX * 0.55;
-      const rootY = skullPos.y + shellR * eggY * 0.42;
-      const rootZ = skullPos.z - shellR * eggZ * 0.2;
-      g.add(mesh(new SphereGeometry(r * 0.26, 8, 6), horn, rootX, rootY, rootZ));
+      // Root plug sunk into upper temple / parietal bone
+      const rootX = side * shellR * eggX * 0.78;
+      const rootY = skullPos.y + shellR * eggY * 0.38;
+      const rootZ = skullPos.z + shellR * eggZ * 0.08;
+      g.add(mesh(new SphereGeometry(r * 0.28, 8, 6), horn, rootX, rootY, rootZ));
 
-      const stump = new Mesh(new ConeGeometry(r * 0.3, r * 0.7, 7), horn);
-      stump.position.set(side * r * 0.48, skullPos.y + r * 0.72 * tall, skullPos.z - r * 0.22);
-      stump.rotation.z = side * 0.55;
-      stump.rotation.x = -0.5;
+      // Stump — mostly lateral out of the skull (+ slight lift)
+      const stump = new Mesh(new ConeGeometry(r * 0.3, r * 0.62, 7), horn);
+      stump.position.set(side * r * 1.05, rootY + r * 0.06 * tall, rootZ + r * 0.06);
+      stump.rotation.z = -side * (Math.PI / 2 - 0.28);
+      stump.rotation.x = 0.2;
       g.add(stump);
 
-      const midHorn = new Mesh(new ConeGeometry(r * 0.2, r * 0.78, 7), horn);
+      // Mid — continue outward, turn up and begin curling forward
+      const midHorn = new Mesh(new ConeGeometry(r * 0.2, r * 0.72, 7), horn);
       midHorn.position.set(
-        side * r * 0.72,
-        skullPos.y + r * 1.28 * tall,
-        skullPos.z - r * 0.52,
+        side * r * 1.48,
+        rootY + r * 0.55 * tall,
+        rootZ + r * 0.42,
       );
-      midHorn.rotation.z = side * 0.32;
-      midHorn.rotation.x = -0.85;
+      midHorn.rotation.z = -side * 0.55;
+      midHorn.rotation.x = 0.85;
       g.add(midHorn);
 
-      const hornTip = new Mesh(new ConeGeometry(r * 0.1, r * 0.58, 6), horn);
+      // Tip — curl forward (and a touch inward) like a goat hook
+      const hornTip = new Mesh(new ConeGeometry(r * 0.1, r * 0.52, 6), horn);
       hornTip.position.set(
-        side * r * 0.82,
-        skullPos.y + r * 1.72 * tall,
-        skullPos.z - r * 0.88,
+        side * r * 1.38,
+        rootY + r * 0.95 * tall,
+        rootZ + r * 0.98,
       );
-      hornTip.rotation.z = side * 0.12;
-      hornTip.rotation.x = -1.1;
+      hornTip.rotation.z = -side * 0.15;
+      hornTip.rotation.x = Math.PI / 2 + 0.15;
       g.add(hornTip);
     }
 

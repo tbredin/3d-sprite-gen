@@ -23,7 +23,8 @@ Shared helpers live above `generateHelmet` in `parts.ts`:
 | `SKULL_EGG` | `{ x: 0.92, y: 1.05, z: 0.86 }` | Match `generateHead` squash (× `HEAD_TALL` 1.1 on Y) |
 | `HELMET_SHELL` | `0.98` | Shell radius = `skullR × 0.98` (~6% under prior 1.04) |
 | Closed axes | `SKULL_EGG × {0.98, 0.94×tall, 0.98}` | Slightly tighter / flatter than skin egg |
-| `REPLACE_HEAD_BOOST` | `1.3` | **sciFi + goat only** — undoes compound shrink (see below); knight stays unboosted |
+| `REPLACE_HEAD_BOOST` | `1.3` | **sciFi + goat only** — undoes compound shrink (see below) |
+| `KNIGHT_HEAD_BOOST` | `1.2` | **knight only** — kettle radius boost; do not raise `HELMET_SHELL` |
 | Cap overlay | crown `≈ 0.85 × skullR`, brim `≈ 1.12 × skullR` | Sit on crown; do not expand skull silhouette much |
 | Crest / antenna | short stubs only | Punctuate iso silhouette without inflating AABB |
 
@@ -40,7 +41,7 @@ Not a single bug — **stacked intentional shrinks** after replace-mount hides t
 4. Style meshes squash further (sciFi dome ×0.96/0.9; goat ×0.95/0.92)
 5. Skin heads also have layered crown / cheeks / face pad — a lone shell has less mass
 
-Raising `HELMET_SHELL` globally re-balloons **knight**. Use `REPLACE_HEAD_BOOST` (1.3) on sciFi/goat instead. Goat horns get an extra geometry bump (thicker/taller cones) so they read at 42–48px.
+Raising `HELMET_SHELL` globally re-balloons overlays. Use `REPLACE_HEAD_BOOST` (1.3) on sciFi/goat and `KNIGHT_HEAD_BOOST` (1.2) on knight. Goat horns curl out / up / forward from temple roots. Scientist is bare head + mohawk: bump `head.scale` ×1.1 (face tracks); hair stays unscaled.
 
 ## Model
 
@@ -99,9 +100,8 @@ first pass: horns floated above the skull as tiny sticks, and the nose read as a
 detached oval.
 
 Rebuild:
-- **Horns** — root sphere plugs sunk into the cranial shell + three overlapping
-  cones per side (stump `r×0.3`, mid `r×0.2`, tip `r×0.1`) curving up/back like
-  ram horns so they weld into one silhouette at 42–48px.
+- **Horns** — temple root plugs + three cones: out sideways → up + forward curl
+  (goat hook), not upright sticks. Tip aims +Z.
 - **Muzzle** — box bridge → mid box → forward cone tip welded to face front;
   nostrils recessed into the tip (no floating nose sphere).
 
@@ -110,6 +110,8 @@ Rebuild:
 - **`torso.style === "hoodedRobe"`** — soft cowl in `generateTorso` now uses the
   same `skullR × HELMET_SHELL` egg (was a hard-coded `0.52` balloon). Still not
   wired to `helmetMode`; random avoids pairing it with `helmet: hood`.
+- **Scientist** — bare head + mohawk (`helmet: none`). Skull `head.scale` ×1.1
+  (0.94→1.034); face features ×1.1 via `face.scale`; hair geometry unscaled.
 
 ## Hair catalog additions
 

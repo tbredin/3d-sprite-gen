@@ -62,7 +62,7 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     mount: "replace",
     showFace: false,
     notes:
-      "DS Elite Knight flat-top kettle (~skullR×0.98) — closed replace; dual slits + T-nasal.",
+      "DS Elite Knight kettle (×1.2 knight-only boost) — closed replace; dual slits + T-nasal.",
   },
   sciFi: {
     style: "sciFi",
@@ -82,7 +82,7 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     mount: "replace",
     showFace: false,
     notes:
-      "Animal head (×1.3 boost) — ram horns rooted in skull, welded muzzle; hides human face.",
+      "Animal head (×1.3 boost) — horns root in skull then curl out / up / forward; welded muzzle.",
   },
 };
 

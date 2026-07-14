@@ -58,12 +58,15 @@ export function assembleCharacter(spec: CharacterSpec): Group {
       skin: spec.skin,
       eyeColor: spec.face?.eyeColor,
       nose: spec.face?.nose,
+      // Independent of head.scale — scientist bumps face without touching hair.
+      scale: spec.face?.scale ?? 1,
     });
     root.add(face);
     tagPartGroup(face, PartGroupId.HEAD);
   }
 
-  // Hair is under / inside replacements — skip so it doesn't poke out
+  // Hair is under / inside replacements — skip so it doesn't poke out.
+  // Hair geometry is intentionally not multiplied by head.scale.
   if (!replaceHead && spec.hair) {
     const hair = generateHair({
       style: spec.hair.style,
@@ -238,9 +241,10 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   scientist: {
     skin: "#f0c8a0",
     leadSide: "right",
-    head: { scale: 0.94 },
+    // Bare skull + mohawk (no helmet). Skull ×1.1; face ×1.1; hair stays world-sized.
+    head: { scale: 0.94 * 1.1 },
     hair: { style: "mohawk", color: "#e83b3b", complexity: 6 },
-    face: { eyeColor: "#3d6e70", nose: true },
+    face: { eyeColor: "#3d6e70", nose: true, scale: 1.1 },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "jacket", color: "#c7cfcc", trim: "#3d6e70" },
     accessories: { hem: "none" },
