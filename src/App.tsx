@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { BakeCanvas, saveSprite } from "./components/BakeCanvas";
+import {
+  BakeCanvas,
+  saveSprite,
+  DEFAULT_EDGE_OUTLINE_SETTINGS,
+  type EdgeOutlineSettings,
+} from "./components/BakeCanvas";
 import { CollapseSection } from "./components/CollapseSection";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
 import { fetchStatus, type StatusResponse } from "./api";
@@ -69,12 +74,16 @@ export default function App() {
     loadRimLightSettings(),
   );
   const [outlineHex, setOutlineHex] = useState(() => loadOutlineHex());
+  const [edgeOutline, setEdgeOutline] = useState<EdgeOutlineSettings>(
+    () => ({ ...DEFAULT_EDGE_OUTLINE_SETTINGS }),
+  );
   const [palette, setPalette] = useState<Palette | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [specOpen, setSpecOpen] = useState(false);
   const [lightsOpen, setLightsOpen] = useState(false);
+  const [edgesOpen, setEdgesOpen] = useState(false);
   const dragRef = useRef<{
     pointerId: number;
     x: number;
@@ -168,6 +177,10 @@ export default function App() {
     setOutlineHex(hex);
   };
 
+  const patchEdgeOutline = (patch: Partial<EdgeOutlineSettings>) => {
+    setEdgeOutline((prev) => ({ ...prev, ...patch }));
+  };
+
   useEffect(() => {
     loadPalette("endesga-64")
       .then((p) => {
@@ -224,6 +237,7 @@ export default function App() {
                     rotationY={rotationY}
                     spec={spec}
                     rimLights={rimLights}
+                    edgeOutline={edgeOutline}
                     displayPx={displayPx}
                     onCaptured={setPreview}
                   />
@@ -380,6 +394,73 @@ export default function App() {
                 </label>
               ))}
             </div>
+          </CollapseSection>
+
+          <CollapseSection
+            title="Edge detection (spike)"
+            open={edgesOpen}
+            onToggle={() => setEdgesOpen((v) => !v)}
+            actions={
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => setEdgeOutline({ ...DEFAULT_EDGE_OUTLINE_SETTINGS })}
+              >
+                Reset
+              </button>
+            }
+          >
+            <label className="field">
+              <input
+                type="checkbox"
+                checked={edgeOutline.enabled}
+                onChange={(e) => patchEdgeOutline({ enabled: e.target.checked })}
+              />
+              {" "}Depth + normal internal creases
+            </label>
+            <div className="light-grid">
+              <label className="light-slider">
+                <span className="light-slider-label">Depth</span>
+                <input
+                  type="range"
+                  min={0.01}
+                  max={0.3}
+                  step={0.01}
+                  value={edgeOutline.depthThreshold}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ depthThreshold: Number(e.target.value) })
+                  }
+                  title="Depth delta threshold (world units)"
+                />
+                <span className="slider-val">
+                  {edgeOutline.depthThreshold.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Normal°</span>
+                <input
+                  type="range"
+                  min={5}
+                  max={90}
+                  step={1}
+                  value={edgeOutline.normalThresholdDeg}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ normalThresholdDeg: Number(e.target.value) })
+                  }
+                  title="Normal angle threshold (degrees)"
+                />
+                <span className="slider-val">
+                  {edgeOutline.normalThresholdDeg.toFixed(0)}
+                </span>
+              </label>
+            </div>
+            <p className="hint">
+              Draws internal crease lines from baked depth/normal
+              discontinuities (limb-over-torso overlaps, joints) — silhouette
+              rim still comes from the existing pixel outline.
+            </p>
           </CollapseSection>
 
           {error ? <p className="error">{error}</p> : null}

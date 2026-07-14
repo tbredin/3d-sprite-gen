@@ -19,13 +19,14 @@ function getOutlineMaterial(thickness: number): MeshBasicMaterial {
   });
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.uThickness = { value: thickness };
+    // MeshBasicMaterial already declares `normal`; expand along it (not objectNormal).
     shader.vertexShader = `uniform float uThickness;\n${shader.vertexShader}`.replace(
       "#include <begin_vertex>",
       `#include <begin_vertex>
-       transformed += normalize(objectNormal) * uThickness;`,
+       transformed += normalize(normal) * uThickness;`,
     );
   };
-  mat.customProgramCacheKey = () => `chibi-outline-${key}`;
+  mat.customProgramCacheKey = () => `chibi-outline-v2-${key}`;
   outlineMats.set(key, mat);
   return mat;
 }
