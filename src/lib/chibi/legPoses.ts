@@ -16,8 +16,11 @@ export type LegSideJoints = {
  *
  * Convention: side +1 = character right. Positive hip.x swings the thigh
  * forward (toward +Z); mirrored hip.z opens the A-frame. Lead foot matches
- * the forward hand; trail sits clearly back so the 42px silhouette isn't a
- * glued pillar.
+ * the forward hand; trail sits clearly back + wider so the 42px silhouette
+ * isn't a glued pillar (esp. trail foot under body at bottom-right facing).
+ *
+ * Width (hip.z / hip sockets) is exaggerated more than forward depth — iso
+ * readability over subtle fighting-game realism.
  */
 export function legJointsForPose(
   pose: LegPose,
@@ -25,72 +28,75 @@ export function legJointsForPose(
   lead: LeadSide = DEFAULT_LEAD,
 ): LegSideJoints {
   const isLead = side === leadSign(lead);
+  /** Trail opens wider than lead so the tucked foot clears the torso. */
+  const aFrame = (leadZ: number, trailZ: number) =>
+    side * (isLead ? leadZ : trailZ);
 
   switch (pose) {
     case "stand":
-      // Tall plant — still a soft lead/trail so stance reads.
+      // Tall plant — soft lead/trail + wide base for iso read.
       return {
         hip: {
-          x: isLead ? 0.22 : -0.06,
+          x: isLead ? 0.18 : -0.14,
           y: side * 0.04,
-          z: side * 0.2,
+          z: aFrame(0.34, 0.42),
         },
         knee: isLead ? 0.18 : 0.14,
-        foot: { x: isLead ? -0.12 : -0.06, y: side * 0.03 },
+        foot: { x: isLead ? -0.12 : -0.06, y: side * 0.06 },
       };
 
     case "wide":
-      // Broad guard base — exaggerated A-frame + lead step.
+      // Broad guard base — maximal A-frame + lead step.
       return {
         hipY: -0.02,
         hip: {
-          x: isLead ? 0.32 : -0.05,
+          x: isLead ? 0.28 : -0.12,
           y: side * 0.06,
-          z: side * 0.48,
+          z: aFrame(0.55, 0.62),
         },
         knee: isLead ? 0.42 : 0.36,
-        foot: { x: isLead ? -0.2 : -0.12, y: side * 0.1 },
+        foot: { x: isLead ? -0.2 : -0.12, y: side * 0.12 },
       };
 
     case "crouch":
-      // Low ready — deep knees, lead still edged forward.
+      // Low ready — deep knees, lead edged forward, trail planted wide.
       return {
         hipY: -0.14,
         hip: {
-          x: isLead ? 0.5 : 0.18,
+          x: isLead ? 0.46 : 0.1,
           y: side * 0.05,
-          z: side * 0.34,
+          z: aFrame(0.42, 0.52),
         },
         knee: isLead ? 1.05 : 0.95,
-        foot: { x: isLead ? -0.65 : -0.55, y: side * 0.05 },
+        foot: { x: isLead ? -0.65 : -0.55, y: side * 0.08 },
       };
 
     case "guard":
-      // Compact braced crouch with clear lead foot.
+      // Compact braced crouch with clear lead foot + wide trail.
       return {
         hipY: -0.08,
         hip: {
-          x: isLead ? 0.38 : 0.08,
+          x: isLead ? 0.34 : 0.02,
           y: isLead ? side * 0.08 : side * 0.04,
-          z: side * 0.3,
+          z: aFrame(0.38, 0.48),
         },
         knee: isLead ? 0.7 : 0.58,
-        foot: { x: isLead ? -0.42 : -0.32, y: side * 0.05 },
+        foot: { x: isLead ? -0.42 : -0.32, y: side * 0.08 },
       };
 
     case "lunge":
-      // Long planted duel step — lead deep forward, trail planted back.
+      // Long planted duel step — lead deep forward, trail wide + back.
       return {
         hipY: -0.05,
         hip: {
-          x: isLead ? 0.58 : -0.18,
+          x: isLead ? 0.52 : -0.28,
           y: isLead ? side * 0.14 : -side * 0.1,
-          z: side * 0.24,
+          z: aFrame(0.34, 0.46),
         },
         knee: isLead ? 0.62 : 0.55,
         foot: {
           x: isLead ? -0.42 : -0.3,
-          y: side * 0.04,
+          y: side * 0.06,
         },
       };
 
@@ -99,14 +105,14 @@ export function legJointsForPose(
       return {
         hipY: isLead ? -0.06 : -0.16,
         hip: {
-          x: isLead ? 0.4 : 0.55,
+          x: isLead ? 0.36 : 0.5,
           y: isLead ? side * 0.1 : -side * 0.08,
-          z: side * 0.24,
+          z: aFrame(0.34, 0.44),
         },
         knee: isLead ? 0.55 : 1.35,
         foot: {
           x: isLead ? -0.35 : -0.85,
-          y: side * 0.04,
+          y: side * 0.06,
         },
       };
 
@@ -117,18 +123,18 @@ export function legJointsForPose(
 
     case "ready":
     default:
-      // Fighting ready: soft crouch, lead foot edged forward for iso read.
+      // Fighting ready: soft crouch, width > depth, trail wide+back for iso.
       return {
         hipY: -0.03,
         hip: {
-          x: isLead ? 0.4 : -0.08,
-          y: isLead ? side * 0.12 : -side * 0.08,
-          z: side * 0.28,
+          x: isLead ? 0.32 : -0.2,
+          y: isLead ? side * 0.12 : -side * 0.1,
+          z: aFrame(0.4, 0.52),
         },
         knee: isLead ? 0.52 : 0.42,
         foot: {
           x: isLead ? -0.34 : -0.22,
-          y: side * 0.05,
+          y: side * 0.08,
         },
       };
   }

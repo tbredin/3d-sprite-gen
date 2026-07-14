@@ -1282,7 +1282,8 @@ export function generateLegs(opts: {
   const total = CHIBI.legs;
   const thighLen = total * 0.42;
   const shinLen = total * 0.36;
-  const hipX = CHIBI.hipWidth * 0.3;
+  // Wide hip sockets so planted feet clear the torso at 42–48px iso.
+  const hipX = CHIBI.hipWidth * 0.52;
   const lead = opts.leadSide ?? "right";
 
   for (const side of [-1, 1] as const) {

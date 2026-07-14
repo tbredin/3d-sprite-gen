@@ -21,8 +21,8 @@ export const CHIBI = {
   armThick: 0.26 * HEAD,
   legThick: 0.28 * HEAD,
   handSize: 0.2 * HEAD,
-  footLength: 0.28 * HEAD,
-  footWidth: 0.2 * HEAD,
+  footLength: 0.32 * HEAD,
+  footWidth: 0.24 * HEAD,
   /** Base skull radius before head.scale. */
   skullR: 0.36 * HEAD,
 } as const;
