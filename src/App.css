@@ -347,6 +347,74 @@ button.ghost {
   gap: 0.12rem 0.4rem;
 }
 
+.light-fill-grid {
+  grid-template-columns: 1fr;
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #3a415c;
+}
+
+.panel label.light-fill-row {
+  grid-template-columns: 4.2rem 1fr 1.85rem 1.5rem;
+}
+
+.panel label.light-fill-row .light-inline-color {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid #3a415c;
+  background: transparent;
+  cursor: pointer;
+}
+
+.light-subhead {
+  margin: 0.15rem 0 0.3rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.light-colors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem 0.4rem;
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #3a415c;
+}
+
+.panel label.light-color-field {
+  display: grid;
+  grid-template-columns: 2.5rem auto 1fr;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+
+.panel label.light-color-field input[type="color"] {
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid #3a415c;
+  background: transparent;
+  cursor: pointer;
+}
+
+.light-color-hex {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.62rem;
+  text-transform: lowercase;
+  color: var(--text);
+  letter-spacing: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .panel label.light-slider {
   display: grid;
   grid-template-columns: 2.5rem 1fr 1.85rem;
@@ -491,7 +559,6 @@ button.ghost {
   line-height: 1.2;
   height: auto;
 }
-
 
 /* Outline toggles reuse part-row; checkbox label fills the left. */
 .part-row > label.part-lock {

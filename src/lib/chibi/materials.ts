@@ -11,12 +11,13 @@ let gradientMap: CanvasTexture | null = null;
 function getGradientMap() {
   if (gradientMap) return gradientMap;
   const c = document.createElement("canvas");
+  // Three hard cel bands: deep shadow / mid / lit. Soft wrap from side rims
+  // stays in mid instead of flipping the whole sprite into the lit band.
   c.width = 3;
   c.height = 1;
   const ctx = c.getContext("2d")!;
   const img = ctx.createImageData(3, 1);
-  // Cel bands: room for rim color without crushing fills to black.
-  const bands = [90, 160, 255];
+  const bands = [42, 128, 255];
   for (let i = 0; i < 3; i++) {
     img.data[i * 4] = bands[i]!;
     img.data[i * 4 + 1] = bands[i]!;

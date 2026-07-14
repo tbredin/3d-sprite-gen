@@ -64,9 +64,30 @@ import "./App.css";
 
 const PITCH_LIMIT = Math.PI / 2 - 0.05;
 
-const LIGHT_ROWS = [
-  { key: "keyBrightness", label: "Key", min: 0, max: 4, step: 0.05, tone: "" },
-  { key: "ambientBrightness", label: "Amb", min: 0, max: 1.2, step: 0.02, tone: "" },
+/** Soft global lights — Ambience is the universal fill slider. */
+const FILL_LIGHT_ROWS = [
+  {
+    key: "ambientBrightness" as const,
+    label: "Ambience",
+    min: 0,
+    max: 1.2,
+    step: 0.02,
+    colorKey: "ambientColor" as const,
+    tone: "",
+  },
+  {
+    key: "keyBrightness" as const,
+    label: "Key fill",
+    min: 0,
+    max: 4,
+    step: 0.05,
+    colorKey: "keyColor" as const,
+    tone: "",
+  },
+];
+
+/** Harsh directional rims — parked behind the character (not ambient wash). */
+const RIM_LIGHT_ROWS = [
   { key: "redBrightness", label: "R bri", min: 0, max: 8, step: 0.05, tone: "light-red" },
   { key: "blueBrightness", label: "B bri", min: 0, max: 8, step: 0.05, tone: "light-blue" },
   { key: "redBehind", label: "R beh", min: -1, max: 6, step: 0.05, tone: "light-red" },
@@ -75,6 +96,11 @@ const LIGHT_ROWS = [
   { key: "blueSide", label: "B side", min: 0, max: 5, step: 0.05, tone: "light-blue" },
   { key: "redHeight", label: "R hgt", min: -180, max: 180, step: 1, tone: "light-red" },
   { key: "blueHeight", label: "B hgt", min: -180, max: 180, step: 1, tone: "light-blue" },
+] as const;
+
+const RIM_COLOR_FIELDS = [
+  { key: "redColor", label: "Red" },
+  { key: "blueColor", label: "Blue" },
 ] as const;
 
 function clampPitch(rad: number) {
@@ -86,7 +112,7 @@ export default function App() {
   const [facing, setFacing] = useState<FacingId>(facingPersist.facing);
   const [rotationX, setRotationX] = useState(facingPersist.rotationX);
   const [rotationY, setRotationY] = useState(facingPersist.rotationY);
-  const [size, setSize] = useState<SpriteSize>(48);
+  const [size, setSize] = useState<SpriteSize>(42);
   const [zoom, setZoom] = useState(1);
   const [cameraHeight, setCameraHeight] = useState(() => loadCameraHeight());
   const [presetId, setPresetId] = useState<PresetId | "random">("mage");
@@ -116,7 +142,7 @@ export default function App() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [specOpen, setSpecOpen] = useState(true);
-  const [lightsOpen, setLightsOpen] = useState(false);
+  const [lightsOpen, setLightsOpen] = useState(true);
   const [outlinesOpen, setOutlinesOpen] = useState(true);
   const dragRef = useRef<{
     pointerId: number;
@@ -287,6 +313,10 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    saveFacingPersist({ facing, rotationX, rotationY });
+  }, [facing, rotationX, rotationY]);
+
   const patchOutlineColor = (patch: Partial<OutlineColors>) => {
     setOutlineColors((prev) => {
       const next = { ...prev, ...patch };
@@ -336,7 +366,7 @@ export default function App() {
           mesh_backend: "chibi-primitives",
           mesh_ready: true,
           message: "Local chibi primitive builder (no upload required).",
-          sizes: [32, 48, 64],
+          sizes: [32, 42, 48, 64],
           default_palette: "endesga-64",
         }),
       );
@@ -427,6 +457,7 @@ export default function App() {
                   onChange={(e) => setSize(Number(e.target.value) as SpriteSize)}
                 >
                   <option value={32}>32</option>
+                  <option value={42}>42</option>
                   <option value={48}>48</option>
                   <option value={64}>64</option>
                 </select>
@@ -571,8 +602,67 @@ export default function App() {
               </button>
             }
           >
+            <p className="hint">
+              Ambience is the soft global fill. Red / blue are harsh{" "}
+              <em>directional</em> rims from behind — raise Behind so they
+              skim the silhouette instead of washing the whole sprite.
+            </p>
+            <div className="light-grid light-fill-grid">
+              {FILL_LIGHT_ROWS.map((row) => (
+                <label
+                  key={row.key}
+                  className={`light-slider light-fill-row${row.tone ? ` ${row.tone}` : ""}`}
+                >
+                  <span className="light-slider-label">{row.label}</span>
+                  <input
+                    type="range"
+                    min={row.min}
+                    max={row.max}
+                    step={row.step}
+                    value={rimLights[row.key]}
+                    onChange={(e) =>
+                      patchRimLights({
+                        [row.key]: Number(e.target.value),
+                      })
+                    }
+                    title={row.label}
+                  />
+                  <span className="slider-val">
+                    {rimLights[row.key].toFixed(2)}
+                  </span>
+                  <input
+                    type="color"
+                    className="light-inline-color"
+                    value={rimLights[row.colorKey]}
+                    onChange={(e) =>
+                      patchRimLights({ [row.colorKey]: e.target.value })
+                    }
+                    title={`${row.label} colour`}
+                  />
+                </label>
+              ))}
+            </div>
+            <p className="light-subhead">Directional rims</p>
+            <div className="light-colors">
+              {RIM_COLOR_FIELDS.map((field) => (
+                <label key={field.key} className="light-color-field">
+                  <span className="light-slider-label">{field.label}</span>
+                  <input
+                    type="color"
+                    value={rimLights[field.key]}
+                    onChange={(e) =>
+                      patchRimLights({ [field.key]: e.target.value })
+                    }
+                    title={`${field.label} ${rimLights[field.key]}`}
+                  />
+                  <span className="light-color-hex" title={rimLights[field.key]}>
+                    {rimLights[field.key]}
+                  </span>
+                </label>
+              ))}
+            </div>
             <div className="light-grid">
-              {LIGHT_ROWS.map((row) => (
+              {RIM_LIGHT_ROWS.map((row) => (
                 <label
                   key={row.key}
                   className={`light-slider${row.tone ? ` ${row.tone}` : ""}`}

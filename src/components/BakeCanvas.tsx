@@ -349,6 +349,10 @@ export function BakeCanvas({
     rimLights.blueSide,
     rimLights.redHeight,
     rimLights.blueHeight,
+    rimLights.keyColor,
+    rimLights.ambientColor,
+    rimLights.redColor,
+    rimLights.blueColor,
     cameraHeight,
   ].join(":");
 
@@ -376,22 +380,26 @@ export function BakeCanvas({
     >
       <IsoCameraSquare zoom={zoom} cameraHeight={cameraHeight} />
       {/*
-        Directional rims = parallel colored rays from behind L/R (classic toon rim).
-        Camera key = soft frontal fill so midtones don't vanish.
+        Soft fill = ambient + faint camera key only.
+        Red/blue are DirectionalLights parked behind the character so they
+        skim the silhouette (true rim), not wash the whole sprite.
       */}
-      <ambientLight intensity={rimLights.ambientBrightness} color="#9aa8c0" />
+      <ambientLight
+        intensity={rimLights.ambientBrightness}
+        color={rimLights.ambientColor}
+      />
       <directionalLight
-        color="#dfe8f4"
+        color={rimLights.keyColor}
         intensity={rimLights.keyBrightness}
         position={camPos}
       />
       <directionalLight
-        color="#ff3a3a"
+        color={rimLights.redColor}
         intensity={rimLights.redBrightness}
         position={rim.left}
       />
       <directionalLight
-        color="#7ec8ff"
+        color={rimLights.blueColor}
         intensity={rimLights.blueBrightness}
         position={rim.right}
       />
