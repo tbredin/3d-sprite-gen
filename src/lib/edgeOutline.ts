@@ -14,14 +14,30 @@ import {
  * outline trick, done per-pixel at native sprite resolution instead of via a
  * screen-space post shader.
  *
+ * Soft response (gamma + softness + separate weights) keeps mid-slider
+ * settings from painting every curved surface as a harsh binary edge.
+ *
  * See docs/SPIKE-depth-normal-edges.md for the full write-up and tuning notes.
  */
 
 export type EdgeDetectOptions = {
-  /** World-space (view-axis) depth delta above which a cardinal edge fires. */
+  /** World-space (view-axis) depth delta above which depth response rises. */
   depthThreshold: number;
-  /** Normal angle delta between cardinal neighbours (degrees) above which a cardinal edge fires. */
+  /** Normal angle delta between cardinal neighbours (degrees). */
   normalThresholdDeg: number;
+  /** 0–1 blend weight for the depth channel. */
+  depthWeight: number;
+  /** 0–1 blend weight for the normal channel. */
+  normalWeight: number;
+  /**
+   * Soft onset width (0 = near-binary at threshold, 1 = wide ramp).
+   * Mid defaults keep curve surfaces from lighting up all at once.
+   */
+  softness: number;
+  /**
+   * Gamma on the soft response (>1 = slower onset / fewer mid-strength edges).
+   */
+  thresholdGamma: number;
 };
 
 /** Slider / clamp bounds — higher threshold = fewer, more selective edges. */
@@ -31,36 +47,75 @@ export const EDGE_DEPTH_STEP = 0.01;
 export const EDGE_NORMAL_MIN = 5;
 export const EDGE_NORMAL_MAX = 99;
 export const EDGE_NORMAL_STEP = 1;
+export const EDGE_WEIGHT_MIN = 0;
+export const EDGE_WEIGHT_MAX = 1;
+export const EDGE_WEIGHT_STEP = 0.05;
+export const EDGE_SOFTNESS_MIN = 0;
+export const EDGE_SOFTNESS_MAX = 1;
+export const EDGE_SOFTNESS_STEP = 0.05;
+export const EDGE_GAMMA_MIN = 0.4;
+export const EDGE_GAMMA_MAX = 3;
+export const EDGE_GAMMA_STEP = 0.05;
+export const EDGE_OPACITY_MIN = 0.05;
+export const EDGE_OPACITY_MAX = 1;
+export const EDGE_OPACITY_STEP = 0.05;
+export const EDGE_DILATE_MIN = 0;
+export const EDGE_DILATE_MAX = 2;
+export const EDGE_DILATE_STEP = 1;
+export const EDGE_BLUR_MIN = 0;
+export const EDGE_BLUR_MAX = 2;
+export const EDGE_BLUR_STEP = 1;
 
 /**
- * Defaults tuned by eye against the ~2.1-unit-tall chibi rig at 48px.
- * Raised above the old 0.15 / 60° pair: at bake resolution curved surfaces
- * routinely exceed those, so the usable "few edges" range sat past the old
- * slider caps (0.30 depth / 90° normal).
+ * Defaults tuned for a softer mid-range: slightly higher thresholds, softer
+ * ramp, mild gamma, and opacity under 1 so enabling the pass isn't severe.
  */
 export const DEFAULT_EDGE_OPTIONS: EdgeDetectOptions = {
-  depthThreshold: 0.28,
-  normalThresholdDeg: 75,
+  depthThreshold: 0.34,
+  normalThresholdDeg: 82,
+  depthWeight: 1,
+  normalWeight: 0.75,
+  softness: 0.55,
+  thresholdGamma: 1.45,
 };
 
 export type EdgeOutlineSettings = EdgeDetectOptions & {
   enabled: boolean;
   /** Endesga hex (no #) for depth/normal crease pixels — independent of silhouette outline. */
   color: string;
+  /** Edge composite strength (0–1). */
+  opacity: number;
+  /** Expand edge mask by N cardinal rings (0–2). */
+  dilate: number;
+  /** Box-blur passes on the strength field (0–2) before paint. */
+  blur: number;
 };
 
 /** Matches the previous shared outline default so enabling edges doesn't jump colour. */
 export const DEFAULT_EDGE_OUTLINE_SETTINGS: EdgeOutlineSettings = {
   enabled: false,
   color: DEFAULT_OUTLINE_HEX,
+  opacity: 0.72,
+  dilate: 0,
+  blur: 0,
   ...DEFAULT_EDGE_OPTIONS,
 };
 
-/** v2: wider depth/normal ranges + more selective defaults. */
-const EDGE_OUTLINE_STORAGE_KEY = "3d-sprite-gen:edge-outline-v2";
+/** v3: soft curve + opacity/dilate/blur + separate channel weights. */
+const EDGE_OUTLINE_STORAGE_KEY = "3d-sprite-gen:edge-outline-v3";
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
+}
+
+function clampOpt(
+  n: unknown,
+  min: number,
+  max: number,
+  fallback: number,
+): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  return clamp(n, min, max);
 }
 
 export function loadEdgeOutlineSettings(
@@ -85,20 +140,54 @@ export function loadEdgeOutlineSettings(
     return {
       enabled: parsed.enabled === true,
       color,
-      depthThreshold:
-        typeof parsed.depthThreshold === "number" &&
-        Number.isFinite(parsed.depthThreshold)
-          ? clamp(parsed.depthThreshold, EDGE_DEPTH_MIN, EDGE_DEPTH_MAX)
-          : fallback.depthThreshold,
-      normalThresholdDeg:
-        typeof parsed.normalThresholdDeg === "number" &&
-        Number.isFinite(parsed.normalThresholdDeg)
-          ? clamp(
-              parsed.normalThresholdDeg,
-              EDGE_NORMAL_MIN,
-              EDGE_NORMAL_MAX,
-            )
-          : fallback.normalThresholdDeg,
+      depthThreshold: clampOpt(
+        parsed.depthThreshold,
+        EDGE_DEPTH_MIN,
+        EDGE_DEPTH_MAX,
+        fallback.depthThreshold,
+      ),
+      normalThresholdDeg: clampOpt(
+        parsed.normalThresholdDeg,
+        EDGE_NORMAL_MIN,
+        EDGE_NORMAL_MAX,
+        fallback.normalThresholdDeg,
+      ),
+      depthWeight: clampOpt(
+        parsed.depthWeight,
+        EDGE_WEIGHT_MIN,
+        EDGE_WEIGHT_MAX,
+        fallback.depthWeight,
+      ),
+      normalWeight: clampOpt(
+        parsed.normalWeight,
+        EDGE_WEIGHT_MIN,
+        EDGE_WEIGHT_MAX,
+        fallback.normalWeight,
+      ),
+      softness: clampOpt(
+        parsed.softness,
+        EDGE_SOFTNESS_MIN,
+        EDGE_SOFTNESS_MAX,
+        fallback.softness,
+      ),
+      thresholdGamma: clampOpt(
+        parsed.thresholdGamma,
+        EDGE_GAMMA_MIN,
+        EDGE_GAMMA_MAX,
+        fallback.thresholdGamma,
+      ),
+      opacity: clampOpt(
+        parsed.opacity,
+        EDGE_OPACITY_MIN,
+        EDGE_OPACITY_MAX,
+        fallback.opacity,
+      ),
+      dilate: Math.round(
+        clampOpt(parsed.dilate, EDGE_DILATE_MIN, EDGE_DILATE_MAX, fallback.dilate),
+      ),
+      blur: Math.round(
+        clampOpt(parsed.blur, EDGE_BLUR_MIN, EDGE_BLUR_MAX, fallback.blur),
+      ),
     };
   } catch {
     return fallback;
@@ -113,6 +202,13 @@ export function saveEdgeOutlineSettings(settings: EdgeOutlineSettings) {
       color: normalizePaletteHex(settings.color),
       depthThreshold: settings.depthThreshold,
       normalThresholdDeg: settings.normalThresholdDeg,
+      depthWeight: settings.depthWeight,
+      normalWeight: settings.normalWeight,
+      softness: settings.softness,
+      thresholdGamma: settings.thresholdGamma,
+      opacity: settings.opacity,
+      dilate: settings.dilate,
+      blur: settings.blur,
     }),
   );
 }
@@ -213,17 +309,88 @@ export function erodeMask(opaque: Uint8Array, w: number, h: number): Uint8Array 
 }
 
 /**
- * Cardinal-neighbour depth+normal discontinuity edge mask, restricted to
- * pixel pairs that are both inside the silhouette. The outer silhouette rim
- * is already handled by `applyPixelOutline`; this pass is for the *interior*
- * creases that a pure alpha-silhouette outline can never see (e.g. an arm
- * resting in front of the torso, at the same screen-space alpha). Candidate
- * pixels are further restricted to the eroded "core" mask (see `erodeMask`)
- * so smooth silhouette-edge foreshortening doesn't fire on its own.
- *
- * Each firing pixel is marked (not just the "far" side), so creases render
- * as a ~1-2px line — cheap and matches the chunky look of the rest of the
- * palette-locked bake.
+ * Soft step around a threshold: value just below threshold stays low;
+ * softness widens the ramp; gamma > 1 pushes the useful response later.
+ */
+export function softThresholdResponse(
+  value: number,
+  threshold: number,
+  softness: number,
+  gamma: number,
+): number {
+  const soft = clamp(softness, 0, 1);
+  const half = Math.max(1e-5, threshold * (0.04 + soft * 0.96));
+  const t = (value - (threshold - half)) / (2 * half);
+  const s = clamp(t, 0, 1);
+  const smooth = s * s * (3 - 2 * s);
+  const g = Math.max(0.05, gamma);
+  return Math.pow(smooth, g);
+}
+
+function dilateStrength(
+  src: Float32Array,
+  w: number,
+  h: number,
+  rings: number,
+): Float32Array {
+  if (rings <= 0) return src;
+  let cur = src;
+  for (let r = 0; r < rings; r++) {
+    const next = new Float32Array(cur.length);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let m = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            m = Math.max(m, cur[ny * w + nx]);
+          }
+        }
+        next[y * w + x] = m;
+      }
+    }
+    cur = next;
+  }
+  return cur;
+}
+
+function blurStrength(
+  src: Float32Array,
+  w: number,
+  h: number,
+  passes: number,
+): Float32Array {
+  if (passes <= 0) return src;
+  let cur = src;
+  for (let p = 0; p < passes; p++) {
+    const next = new Float32Array(cur.length);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        let sum = 0;
+        let count = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+            sum += cur[ny * w + nx];
+            count++;
+          }
+        }
+        next[y * w + x] = count ? sum / count : 0;
+      }
+    }
+    cur = next;
+  }
+  return cur;
+}
+
+/**
+ * Cardinal-neighbour depth+normal discontinuity strength field (0–1),
+ * restricted to pixel pairs that are both inside the silhouette.
+ * Soft response + separate channel weights replace the old binary OR.
  */
 export function detectDepthNormalEdges(
   opaque: Uint8Array,
@@ -232,14 +399,16 @@ export function detectDepthNormalEdges(
   w: number,
   h: number,
   opts: EdgeDetectOptions,
-): Uint8Array {
-  const edges = new Uint8Array(w * h);
+): Float32Array {
+  const edges = new Float32Array(w * h);
   const core = erodeMask(opaque, w, h);
-  const cosThreshold = Math.cos((opts.normalThresholdDeg * Math.PI) / 180);
+  const depthW = clamp(opts.depthWeight, 0, 1);
+  const normalW = clamp(opts.normalWeight, 0, 1);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
       if (!core[i]) continue;
+      let best = 0;
       for (const [dy, dx] of [
         [0, 1],
         [0, -1],
@@ -253,10 +422,13 @@ export function detectDepthNormalEdges(
         if (!opaque[ni]) continue;
 
         const dDepth = Math.abs(depthWorld[i] - depthWorld[ni]);
-        if (dDepth > opts.depthThreshold) {
-          edges[i] = 1;
-          break;
-        }
+        const depthResp =
+          softThresholdResponse(
+            dDepth,
+            opts.depthThreshold,
+            opts.softness,
+            opts.thresholdGamma,
+          ) * depthW;
 
         const ax = normals[i * 3];
         const ay = normals[i * 3 + 1];
@@ -264,31 +436,53 @@ export function detectDepthNormalEdges(
         const bx = normals[ni * 3];
         const by = normals[ni * 3 + 1];
         const bz = normals[ni * 3 + 2];
-        const dot = ax * bx + ay * by + az * bz;
-        if (dot < cosThreshold) {
-          edges[i] = 1;
-          break;
-        }
+        const dot = clamp(ax * bx + ay * by + az * bz, -1, 1);
+        const angleDeg = (Math.acos(dot) * 180) / Math.PI;
+        const normalResp =
+          softThresholdResponse(
+            angleDeg,
+            opts.normalThresholdDeg,
+            opts.softness,
+            opts.thresholdGamma,
+          ) * normalW;
+
+        best = Math.max(best, depthResp, normalResp);
       }
+      edges[i] = best;
     }
   }
   return edges;
 }
 
-/** Composite an edge mask as solid 1px edge colour, in place. */
+/**
+ * Dilate / blur the strength field then composite with opacity over existing pixels.
+ */
 export function applyEdgeMask(
   data: ImageData,
-  edges: Uint8Array,
+  edges: Float32Array,
   edgeHex: string,
+  opacity = 1,
+  dilate = 0,
+  blur = 0,
 ): ImageData {
+  const w = data.width;
+  const h = data.height;
+  let field = edges;
+  field = dilateStrength(field, w, h, Math.round(dilate));
+  field = blurStrength(field, w, h, Math.round(blur));
   const [or, og, ob] = hexToRgb(edgeHex);
   const px = data.data;
-  for (let i = 0; i < edges.length; i++) {
-    if (!edges[i]) continue;
+  const op = clamp(opacity, 0, 1);
+  for (let i = 0; i < field.length; i++) {
+    const strength = field[i] * op;
+    if (strength <= 0.02) continue;
     const o = i * 4;
-    px[o] = or;
-    px[o + 1] = og;
-    px[o + 2] = ob;
+    const a = px[o + 3] / 255;
+    if (a < 0.02) continue;
+    const t = clamp(strength, 0, 1);
+    px[o] = Math.round(px[o] * (1 - t) + or * t);
+    px[o + 1] = Math.round(px[o + 1] * (1 - t) + og * t);
+    px[o + 2] = Math.round(px[o + 2] * (1 - t) + ob * t);
     px[o + 3] = 255;
   }
   return data;
