@@ -46,7 +46,9 @@ function lightenHex(hex: string, amount = 0.35): string {
 
 /**
  * Slim JRPG head from stacked volumes — taper jaw so bald ≠ bulb.
- * Skull stays under hair shells; cheeks / chin / brow add structure.
+ * ~10% taller than the old skull scale so the head still reads from a high
+ * iso camera; chin is pushed down + slightly forward so it isn't lost under
+ * the camera.
  */
 export function generateHead(opts: {
   skin: string;
@@ -58,32 +60,48 @@ export function generateHead(opts: {
   const mat = toon(opts.skin);
   const cy = LAYOUT.headCenterY;
   const r = CHIBI.skullR * s;
+  /** Extra vertical stretch (~10%) for SNES SD proportions. */
+  const tall = 1.1;
 
   const skull = new Mesh(new SphereGeometry(r, 14, 12), mat);
-  skull.position.set(0, cy + 0.06, -0.04);
-  skull.scale.set(0.92, 1.05, 0.86);
+  skull.position.set(0, cy + 0.08 * tall, -0.04);
+  skull.scale.set(0.92, 1.05 * tall, 0.86);
   g.add(skull);
 
   const crown = new Mesh(new SphereGeometry(r * 0.72, 12, 8), mat);
-  crown.position.set(0, cy + r * 0.72, -0.04);
-  crown.scale.set(1.05, 0.45, 1.0);
+  crown.position.set(0, cy + r * 0.8 * tall, -0.04);
+  crown.scale.set(1.05, 0.5 * tall, 1.0);
   g.add(crown);
 
   const facePad = new Mesh(new SphereGeometry(r * 0.85, 12, 10), mat);
-  facePad.position.set(0, cy - 0.04, r * 0.48);
-  facePad.scale.set(1.0, 1.08, 0.48);
+  // Lower + taller face plane so cheek/chin silhouette survives top-down iso.
+  facePad.position.set(0, cy - 0.06 * tall, r * 0.5);
+  facePad.scale.set(1.0, 1.2 * tall, 0.5);
   g.add(facePad);
 
   g.add(mesh(new SphereGeometry(r * 0.35, 8, 6), mat, -r * 0.78, cy + 0.02, 0.05));
   g.add(mesh(new SphereGeometry(r * 0.35, 8, 6), mat, r * 0.78, cy + 0.02, 0.05));
 
-  g.add(mesh(new SphereGeometry(r * 0.4, 10, 8), mat, -r * 0.55, cy - 0.1, r * 0.4));
-  g.add(mesh(new SphereGeometry(r * 0.4, 10, 8), mat, r * 0.55, cy - 0.1, r * 0.4));
+  // Jaw cheeks — dropped so the face isn't all forehead from above.
+  g.add(
+    mesh(new SphereGeometry(r * 0.42, 10, 8), mat, -r * 0.55, cy - 0.14 * tall, r * 0.42),
+  );
+  g.add(
+    mesh(new SphereGeometry(r * 0.42, 10, 8), mat, r * 0.55, cy - 0.14 * tall, r * 0.42),
+  );
 
-  g.add(mesh(new SphereGeometry(r * 0.36, 10, 8), mat, 0, cy - r * 0.85, r * 0.28));
-  g.add(mesh(new SphereGeometry(r * 0.28, 8, 6), mat, 0, cy - r * 1.05, r * 0.18));
+  // Chin stack — longer + proud so it clears foreshortening at high elevation.
+  g.add(
+    mesh(new SphereGeometry(r * 0.38, 10, 8), mat, 0, cy - r * 0.95 * tall, r * 0.36),
+  );
+  g.add(
+    mesh(new SphereGeometry(r * 0.3, 8, 6), mat, 0, cy - r * 1.22 * tall, r * 0.26),
+  );
+  g.add(
+    mesh(new SphereGeometry(r * 0.2, 8, 6), mat, 0, cy - r * 1.38 * tall, r * 0.18),
+  );
 
-  g.add(mesh(new SphereGeometry(r * 0.5, 10, 8), mat, 0, cy + r * 0.22, r * 0.58));
+  g.add(mesh(new SphereGeometry(r * 0.5, 10, 8), mat, 0, cy + r * 0.24 * tall, r * 0.58));
 
   g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), mat, -r * 1.05, cy - 0.02, 0));
   g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), mat, r * 1.05, cy - 0.02, 0));
@@ -101,29 +119,39 @@ export function generateHead(opts: {
 }
 
 /**
- * Face readability tuning — hand-tuned knobs for NN-downscaled 32–64px bakes.
- * Bump these to push facial features further without touching geometry code.
- * See docs/SPIKE-feature-readability.md for before/after context.
+ * Face readability — SNES / anime SD eyes as flat *rects*, not ovals.
+ *
+ * Separate `eye-left` / `eye-right` groups. Sit flush with the face pad
+ * (barely proud), spaced wide, with a thick brow bar. See faceCheat + SPIKE.
  */
 export const FACE_READABILITY = {
-  /** Sclera (eye white) radius — was 0.07. Bigger flat-fronted disc survives NN downscale. */
-  eyeWhiteR: 0.09,
-  /** Iris radius — was 0.042. Near-black default vs light sclera = the core contrast pair. */
-  irisR: 0.06,
-  /** Half-distance between eyes — was 0.11. */
-  eyeSpacing: 0.115,
-  /** Extra +Z push (beyond the old skullR + 0.08 plane) so eyes/brows win
-   * depth/occlusion against hair bangs and hoods. */
-  forwardPush: 0.05,
-  /** Eyebrow capsule radius — was 0.022. Thicker slash reads as a value break at 32px. */
-  browRadius: 0.03,
-  /** Mouth hint half-width. 0 disables (set via caller if ever needed). */
-  mouthWidth: 0.075,
+  /** Sclera width / height / depth (rectangular anime eye). +20% vs prior. */
+  eyeW: 0.18,
+  eyeH: 0.132,
+  eyeDepth: 0.026,
+  /** Top tier slightly wider than bottom (classic anime eye). */
+  eyeTopWiden: 1.12,
+  /** Iris box size — fills most of the white. +20% vs prior. */
+  irisW: 0.114,
+  irisH: 0.094,
+  /** Half-distance between eye centres — wider than the old oval pair. */
+  eyeSpacing: 0.145,
+  /**
+   * World Z for the eye plate. Barely proud of the facePad front
+   * (was skullR*0.92 ≈ flush / invisible; nudge out a hair).
+   */
+  eyeZ: CHIBI.skullR * 0.98,
+  eyeLift: 0.01,
+  /** Thick brow bar (width, height, depth). +20% vs prior. */
+  browW: 0.204,
+  browH: 0.046,
+  browDepth: 0.024,
+  mouthWidth: 0.07,
 } as const;
 
 /**
- * Large low-set JRPG eyes with sclera + iris + brow + shine + mouth hint.
- * Tuned in FACE_READABILITY for legibility once baked + NN-downscaled.
+ * Separate left/right rectangular FF-style eyes + shared mouth/nose.
+ * Per-eye visibility is applied later by `applySpriteFaceCheat`.
  */
 export function generateFace(opts: {
   eyeColor?: string;
@@ -133,65 +161,94 @@ export function generateFace(opts: {
   const g = new Group();
   g.name = "face";
   const t = FACE_READABILITY;
-  const iris = toonDetail(opts.eyeColor ?? "#1a1c2c");
+  const irisMat = toonDetail(opts.eyeColor ?? "#1a1c2c");
   const white = toon("#f7f4ec");
   const lid = toonDetail("#211a2c");
   const shine = toonDetail("#ffffff");
-  const y = LAYOUT.headCenterY - 0.04;
-  // Forward-offset beyond the old face plane so eyes/brows sit proud of hair.
-  const z = CHIBI.skullR + 0.08 + t.forwardPush;
+  const y = LAYOUT.headCenterY - 0.02 + t.eyeLift;
+  const z = t.eyeZ;
   const ex = t.eyeSpacing;
+  const d = t.eyeDepth;
 
   for (const s of [-1, 1] as const) {
-    // Sclera — big, slightly flattened disc so it stays a bright readable
-    // blob instead of a bulging sphere once viewed from the iso angle.
-    const eyeWhite = mesh(
-      new SphereGeometry(t.eyeWhiteR, 12, 10),
-      white,
-      s * ex,
-      y,
-      z,
-    );
-    eyeWhite.scale.set(1.08, 1.2, 0.62);
-    g.add(eyeWhite);
+    const eye = new Group();
+    eye.name = s < 0 ? "eye-left" : "eye-right";
+    eye.position.set(s * ex, y, z);
+    eye.rotation.y = 0;
 
-    // Near-black iris dominating the white — the single highest-contrast
-    // pair on the whole sprite, so it's the last thing to die under NN scale.
-    const eyeIris = mesh(
-      new SphereGeometry(t.irisR, 10, 8),
-      iris,
-      s * ex,
-      y - 0.006,
-      z + 0.05,
+    // Bottom rect of the sclera.
+    const botH = t.eyeH * 0.48;
+    eye.add(
+      mesh(new BoxGeometry(t.eyeW, botH, d), white, 0, -t.eyeH * 0.2, 0),
     );
-    eyeIris.scale.set(1, 1.15, 0.55);
-    g.add(eyeIris);
-
-    // Tiny catchlight fleck — classic JRPG shine; one bright pixel that
-    // keeps the eye from reading as a flat dark dot at small sizes.
-    g.add(
-      mesh(new SphereGeometry(t.irisR * 0.3, 6, 5), shine, s * ex - 0.016, y + 0.022, z + 0.065),
+    // Top rect — slightly wider (anime “larger at the top”).
+    const topH = t.eyeH * 0.52;
+    eye.add(
+      mesh(
+        new BoxGeometry(t.eyeW * t.eyeTopWiden, topH, d),
+        white,
+        0,
+        t.eyeH * 0.18,
+        0,
+      ),
     );
 
-    // Heavy brow slash — anchors the socket, reads as a dark bar even when
-    // the eye itself gets crushed by palette quantization.
-    const brow = new Mesh(new CapsuleGeometry(t.browRadius, 0.1, 3, 6), lid);
-    brow.position.set(s * ex, y + 0.078, z - 0.015);
-    brow.rotation.z = s * 0.14;
-    brow.rotation.x = -0.4;
-    g.add(brow);
+    // Iris — flat dark rectangle, sits low in the white.
+    eye.add(
+      mesh(
+        new BoxGeometry(t.irisW, t.irisH, d * 0.7),
+        irisMat,
+        0,
+        -0.008,
+        d * 0.15,
+      ),
+    );
+
+    // Thick upper lid line under the brow.
+    eye.add(
+      mesh(
+        new BoxGeometry(t.eyeW * t.eyeTopWiden * 1.02, 0.018, d * 0.8),
+        lid,
+        0,
+        t.eyeH * 0.42,
+        d * 0.1,
+      ),
+    );
+
+    // Catchlight fleck.
+    eye.add(
+      mesh(
+        new BoxGeometry(0.022, 0.022, d * 0.5),
+        shine,
+        -t.irisW * 0.22,
+        t.irisH * 0.18,
+        d * 0.35,
+      ),
+    );
+
+    // Thick eyebrow bar — heavy anime brow, not a thin capsule slash.
+    eye.add(
+      mesh(
+        new BoxGeometry(t.browW, t.browH, t.browDepth),
+        lid,
+        0,
+        t.eyeH * 0.72,
+        -0.002,
+      ),
+    );
+
+    g.add(eye);
   }
 
   if (opts.nose) {
     g.add(
-      mesh(new SphereGeometry(0.032, 8, 6), toon(opts.skin), 0, y - 0.09, z - 0.02),
+      mesh(new SphereGeometry(0.028, 8, 6), toon(opts.skin), 0, y - 0.12, z - 0.02),
     );
   }
 
-  // Mouth hint — flat dark bar. Subtle at full render, but the one feature
-  // that keeps "face" from reading as blank once eyes fall into hair shadow.
-  const mouth = new Mesh(new BoxGeometry(t.mouthWidth, 0.02, 0.02), lid);
-  mouth.position.set(0, y - 0.17, z - 0.05);
+  const mouth = new Mesh(new BoxGeometry(t.mouthWidth, 0.018, 0.016), lid);
+  mouth.name = "mouth";
+  mouth.position.set(0, y - 0.19, z - 0.03);
   g.add(mouth);
 
   return g;

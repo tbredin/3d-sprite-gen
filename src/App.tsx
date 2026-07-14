@@ -4,9 +4,10 @@ import { CollapseSection } from "./components/CollapseSection";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
 import { fetchStatus, type StatusResponse } from "./api";
 import {
-  DEFAULT_FACING,
   FACING_PRESETS,
   getFacing,
+  loadFacingPersist,
+  saveFacingPersist,
   type FacingId,
 } from "./lib/facing";
 import {
@@ -35,6 +36,11 @@ import {
   saveRimLightSettings,
   type RimLightSettings,
 } from "./lib/rimLights";
+import {
+  DEFAULT_CAMERA_HEIGHT,
+  loadCameraHeight,
+  saveCameraHeight,
+} from "./lib/isoCamera";
 import "./App.css";
 
 const PITCH_LIMIT = Math.PI / 2 - 0.05;
@@ -56,11 +62,13 @@ function clampPitch(rad: number) {
 }
 
 export default function App() {
-  const [facing, setFacing] = useState<FacingId>(DEFAULT_FACING);
-  const [rotationX, setRotationX] = useState(0);
-  const [rotationY, setRotationY] = useState(getFacing(DEFAULT_FACING).rotationY);
+  const [facingPersist] = useState(() => loadFacingPersist());
+  const [facing, setFacing] = useState<FacingId>(facingPersist.facing);
+  const [rotationX, setRotationX] = useState(facingPersist.rotationX);
+  const [rotationY, setRotationY] = useState(facingPersist.rotationY);
   const [size, setSize] = useState<SpriteSize>(48);
   const [zoom, setZoom] = useState(1);
+  const [cameraHeight, setCameraHeight] = useState(() => loadCameraHeight());
   const [presetId, setPresetId] = useState<PresetId | "random">("mage");
   const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
   const [charKey, setCharKey] = useState(0);
@@ -91,6 +99,10 @@ export default function App() {
     setRotationX(0);
     setRotationY(getFacing(id).rotationY);
   };
+
+  useEffect(() => {
+    saveFacingPersist({ facing, rotationX, rotationY });
+  }, [facing, rotationX, rotationY]);
 
   const applyPreset = (id: PresetId) => {
     setPresetId(id);
@@ -197,7 +209,8 @@ export default function App() {
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
         <p className="tagline feature-boost-note">
-          Feature boost active: bigger high-contrast eyes + chunkier weapon silhouettes for 32–64px readability
+          Feature boost: FF-style camera-facing faces + chunkier weapons for 32–64px
+          readability
         </p>
       </header>
 
@@ -223,6 +236,7 @@ export default function App() {
                     colors={palette.colors}
                     outlineHex={outlineHex}
                     zoom={zoom}
+                    cameraHeight={cameraHeight}
                     rotationX={rotationX}
                     rotationY={rotationY}
                     spec={spec}
@@ -268,8 +282,17 @@ export default function App() {
                   <option value={64}>64</option>
                 </select>
               </label>
-              <label className="field">
-                Zoom
+              <div className="field">
+                <div className="field-heading">
+                  <span>Zoom</span>
+                  <button
+                    type="button"
+                    className="field-reset"
+                    onClick={() => setZoom(1)}
+                  >
+                    Reset
+                  </button>
+                </div>
                 <input
                   type="range"
                   min={0.7}
@@ -278,7 +301,35 @@ export default function App() {
                   value={zoom}
                   onChange={(e) => setZoom(Number(e.target.value))}
                 />
-              </label>
+              </div>
+              <div className="field">
+                <div className="field-heading">
+                  <span>Cam height</span>
+                  <button
+                    type="button"
+                    className="field-reset"
+                    onClick={() => {
+                      setCameraHeight(DEFAULT_CAMERA_HEIGHT);
+                      saveCameraHeight(DEFAULT_CAMERA_HEIGHT);
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+                <input
+                  type="range"
+                  min={0.55}
+                  max={1.55}
+                  step={0.05}
+                  value={cameraHeight}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setCameraHeight(v);
+                    saveCameraHeight(v);
+                  }}
+                  title="Iso camera elevation (1 = classic)"
+                />
+              </div>
             </div>
           </div>
 

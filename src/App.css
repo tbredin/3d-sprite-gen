@@ -148,6 +148,36 @@ body {
   padding-top: 0.1rem;
 }
 
+.field-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.panel button.field-reset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #7ec8ff);
+  font: inherit;
+  font-size: 0.65rem;
+  line-height: 1;
+  height: auto;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.panel button.field-reset:hover {
+  color: var(--text, #e8eef6);
+  background: none;
+}
+
 .preview-side .field input[type="range"] {
   width: 100%;
 }

@@ -60,6 +60,64 @@ export const CUSTOM_FACING: FacingPreset = {
 
 export const DEFAULT_FACING: FacingId = "away-tr";
 
+const FACING_STORAGE_KEY = "3d-sprite-gen:iso-facing-v1";
+
+export type FacingPersist = {
+  facing: FacingId;
+  /** Kept for custom / free drag so reload restores the orbit. */
+  rotationX: number;
+  rotationY: number;
+};
+
+function isFacingId(v: unknown): v is FacingId {
+  return (
+    v === "away-tr" ||
+    v === "away-tl" ||
+    v === "toward-br" ||
+    v === "toward-bl" ||
+    v === "custom"
+  );
+}
+
+export function loadFacingPersist(): FacingPersist {
+  const fallback: FacingPersist = {
+    facing: DEFAULT_FACING,
+    rotationX: 0,
+    rotationY: getFacing(DEFAULT_FACING).rotationY,
+  };
+  try {
+    const raw = localStorage.getItem(FACING_STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<FacingPersist>;
+    const facing = isFacingId(parsed.facing) ? parsed.facing : DEFAULT_FACING;
+    const rotX = Number(parsed.rotationX);
+    const rotY = Number(parsed.rotationY);
+    if (facing === "custom") {
+      return {
+        facing,
+        rotationX: Number.isFinite(rotX) ? rotX : 0,
+        rotationY: Number.isFinite(rotY) ? rotY : getFacing(DEFAULT_FACING).rotationY,
+      };
+    }
+    // Named presets always use canonical yaw (ignore stale custom angles).
+    return {
+      facing,
+      rotationX: 0,
+      rotationY: getFacing(facing).rotationY,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveFacingPersist(state: FacingPersist) {
+  try {
+    localStorage.setItem(FACING_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
 export function getFacing(id: FacingId): FacingPreset {
   if (id === "custom") return CUSTOM_FACING;
   return FACING_PRESETS.find((p) => p.id === id) ?? FACING_PRESETS[0]!;

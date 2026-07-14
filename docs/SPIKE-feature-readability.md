@@ -19,29 +19,25 @@ At 32–48px the baked sprites read as mushy colored primitives:
 
 ## Changes
 
-All changes are in `src/lib/chibi/parts.ts` (`generateFace` / `generateWeapon`),
-plus a small UI note. No changes to `legPoses.ts` / `armPoses.ts` / proportions
-in `units.ts` — chibi scale and the planted ready-leg stance are untouched.
+Changes: `parts.ts` (face + weapons), `faceCheat.ts` + `ChibiCharacter` /
+`BakeCanvas` (camera-facing yaw), plus a UI note. No changes to leg/arm poses
+or proportions in `units.ts`.
 
-### Face (`generateFace`)
+### Face (`generateFace` + `applySpriteFaceCheat`)
 
-- Sclera radius `0.07 → 0.09`, iris radius `0.042 → 0.06` — the single
-  highest-contrast pair on the sprite (near-black iris via `toonDetail` vs a
-  light sclera) is now large enough to survive NN downscale to 32px.
-- Added a tiny catchlight fleck (classic JRPG eye shine) so the eye doesn't
-  collapse into a flat dark dot once quantized.
-- Brow capsules thickened (`0.022 → 0.03` radius) — a heavy dark "slash" that
-  still reads as a value break even if the eye itself gets crushed.
-- Added a small dark mouth-hint bar (new — face previously had no mouth).
-- Face plane pushed forward an extra `+0.05` in `+Z` (`FACE_READABILITY.forwardPush`)
-  beyond the previous `skullR + 0.08` plane, so eyes/brows sit proud of hair
-  bangs / hood geometry and are more likely to win the depth fight for hair
-  styles with heavy forward fringe (`spiky`, `fringe`, `bowl`).
-- All eye/brow/mouth materials use `toonDetail` (not `toon`), so the near-black
-  iris/lid isn't lifted toward mid-grey the way large body surfaces are.
+Steering: SNES FF4–6 eyes are **flat painted discs** on the face — large
+iris in a tall sclera, soft upper lid, catchlight — not protruding spheres.
+Overworld “south” shows both eyes; diagonals keep a readable ¾; “north” is
+mostly hair/hat.
 
-Tuning knobs: `FACE_READABILITY` at the top of `parts.ts` (`eyeWhiteR`,
-`irisR`, `eyeSpacing`, `forwardPush`, `browRadius`, `mouthWidth`).
+- Separate `eye-left` / `eye-right` groups with `FACE_READABILITY` knobs
+  (`eyeWhiteR`, `irisR`, `forwardPush` ≈ 0.055 flush-proud, `discScale` Z
+  squash ≈ 0.32, soft upper lid mesh).
+- `applySpriteFaceCheat` only toggles per-eye visibility (and a light turn) —
+  **no** forward profile boost / heavy yaw (those made eyes stick out).
+
+Tuning knobs: `FACE_READABILITY` in `parts.ts`; visibility thresholds in
+`faceCheat.ts`.
 
 ### Weapons (`generateWeapon`)
 
@@ -76,9 +72,8 @@ Tuning knobs: `WEAPON_READABILITY` at the top of `parts.ts`.
 
 ### UI note
 
-`App.tsx` now shows a small green note under the header ("Feature boost
-active: bigger high-contrast eyes + chunkier weapon silhouettes for 32–64px
-readability") so the baked-PNG panel is self-documenting for this spike.
+`App.tsx` now shows a small note under the header ("Feature boost: FF4–6
+near-profile faces…") so the spike is self-documenting.
 Mesh changes are the primary deliverable; this is just a label.
 
 ## How to verify visually
@@ -90,12 +85,10 @@ npm run dev   # http://localhost:5174 (or whatever port Vite picks)
 
 In the UI:
 
-1. **Eyes:** pick a preset with no/short hair over the forehead and drag to
-   a "Toward" facing (`Iso facing` dropdown → *Toward · bottom-left* or
-   *bottom-right*) so the face points at the camera. `knight` (with helmet
-   set to `none` via *Reroll*/spec edit, or just look at the exposed lower
-   face) and `rogue`/`ranger` (no helmet) work well. At 32px and 48px the
-   sclera+iris pair should read as a distinct light/dark mark, not a blur.
+1. **Eyes:** cycle all four iso facings. Toward-* should show a clear dual-eye
+   (or soft ¾) face facing the camera — not a side-on strip. Away-* should
+   mostly show hair/helmet with little/no face. Prefer `rogue` / `ranger`
+   (no helmet).
 2. **Weapons:** `knight` (sword, *extended* pose), `ranger` (sword, *reach*),
    `soldier` (rifle, *extended*), `mage`/`cleric` (staff, *cast*), `pirate`
    (sword, *guard*). The default **Away · top-right** facing (back

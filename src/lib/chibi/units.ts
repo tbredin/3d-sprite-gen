@@ -36,6 +36,9 @@ export const LAYOUT = {
   headTopY: CHIBI.totalHeight,
 } as const;
 
+/** Mid-body Y for orbit/rotate pivot (and rim mid height). Feet stay at y=0. */
+export const CHARACTER_PIVOT_Y = CHIBI.totalHeight * 0.5;
+
 /**
  * Three.js CapsuleGeometry `length` is the cylinder only (excludes caps).
  * Returns length so overall height ≈ targetHeight.
