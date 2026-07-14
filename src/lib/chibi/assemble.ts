@@ -147,7 +147,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       sleeveLength: 0.95,
       handColor: "#e4a672",
     },
-    legs: { pose: "wide", pantColor: "#6a7484", bootColor: "#3a415c" },
+    legs: { pose: "ready", pantColor: "#6a7484", bootColor: "#3a415c" },
     weapon: { type: "sword", hand: "right", color: "#dfe4ea" },
   },
   soldier: {
@@ -164,7 +164,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       sleeveLength: 0.75,
       handColor: "#c98a6a",
     },
-    legs: { pose: "stride", pantColor: "#2a2540", bootColor: "#1a1c2c" },
+    legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#1a1c2c" },
     weapon: { type: "rifle", hand: "right", color: "#1a1c2c" },
   },
   rogue: {
@@ -176,7 +176,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     torso: { style: "jacket", color: "#322947", trim: "#e83b3b" },
     accessories: { hem: "loincloth", hemColor: "#e83b3b", cape: true, capeColor: "#322947" },
     arms: { pose: "ready", sleeveColor: "#322947", sleeveLength: 0.55 },
-    legs: { pose: "crouch", pantColor: "#1a1c2c", bootColor: "#433455" },
+    legs: { pose: "ready", pantColor: "#1a1c2c", bootColor: "#433455" },
     weapon: { type: "none", color: "#000000" },
   },
   scientist: {
@@ -222,7 +222,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       sleeveLength: 0.65,
       handColor: "#d4a574",
     },
-    legs: { pose: "lunge", pantColor: "#2a4030", bootColor: "#322947" },
+    legs: { pose: "ready", pantColor: "#2a4030", bootColor: "#322947" },
     weapon: { type: "sword", hand: "right", color: "#8b5a2b" },
   },
   barbarian: {
@@ -239,7 +239,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       sleeveLength: 0.15,
       handColor: "#c98a6a",
     },
-    legs: { pose: "wide", pantColor: "#433455", bootColor: "#1a1c2c" },
+    legs: { pose: "ready", pantColor: "#433455", bootColor: "#1a1c2c" },
     weapon: { type: "sword", hand: "right", color: "#7a8090" },
   },
   acolyte: {
@@ -268,7 +268,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       sleeveLength: 0.5,
       handColor: "#e4a672",
     },
-    legs: { pose: "stride", pantColor: "#2a2540", bootColor: "#8b5a2b" },
+    legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#8b5a2b" },
     weapon: { type: "sword", hand: "left", color: "#c7cfcc" },
   },
 };

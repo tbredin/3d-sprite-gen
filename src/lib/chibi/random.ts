@@ -1,5 +1,4 @@
 import { COMBAT_ARM_POSES } from "./armPoses";
-import { COMBAT_LEG_POSES } from "./legPoses";
 import type {
   ArmPose,
   CharacterSpec,
@@ -75,6 +74,8 @@ const TORSO: TorsoStyle[] = [
 const HEM: HemStyle[] = [
   "skirt",
   "skirt",
+  "skirt",
+  "loincloth",
   "loincloth",
   "loincloth",
   "loincloth",
@@ -156,33 +157,34 @@ function pickTrim(cloth: string): string | undefined {
 }
 
 function poseForWeapon(weapon: WeaponType): { arm: ArmPose; leg: LegPose } {
+  const leg: LegPose = "ready";
   if (weapon === "staff") {
     return {
       arm: pick(["cast", "raise", "ready"] as ArmPose[]),
-      leg: pick(["ready", "wide"] as LegPose[]),
+      leg,
     };
   }
   if (weapon === "rifle") {
     return {
       arm: pick(["extended", "reach"] as ArmPose[]),
-      leg: pick(["stride", "ready", "lunge"] as LegPose[]),
+      leg,
     };
   }
   if (weapon === "shield") {
     return {
       arm: pick(["guard", "ready"] as ArmPose[]),
-      leg: pick(["wide", "ready"] as LegPose[]),
+      leg,
     };
   }
   if (weapon === "sword") {
     return {
       arm: pick(["ready", "extended", "reach", "raise"] as ArmPose[]),
-      leg: pick(["ready", "wide", "lunge", "stride"] as LegPose[]),
+      leg,
     };
   }
   return {
     arm: pick(COMBAT_ARM_POSES),
-    leg: pick(COMBAT_LEG_POSES),
+    leg,
   };
 }
 
@@ -232,26 +234,32 @@ function randomTorso(helmetStyle?: HelmetStyle): TorsoBits {
 
   let hem: HemStyle = pick(HEM);
   if (torsoStyle === "hoodedRobe" || torsoStyle === "robe") {
-    hem = Math.random() < 0.35 ? "skirt" : "none";
+    hem = Math.random() < 0.7 ? "skirt" : pick(["skirt", "loincloth"] as HemStyle[]);
   } else if (torsoStyle === "tank" || torsoStyle === "fullPlate") {
     hem =
-      Math.random() < 0.75
-        ? "loincloth"
-        : pick(["skirt", "loincloth"] as HemStyle[]);
+      Math.random() < 0.85
+        ? pick(["loincloth", "loincloth", "skirt"] as HemStyle[])
+        : "none";
+  } else if (torsoStyle === "jacket" || torsoStyle === "chestplate") {
+    hem = Math.random() < 0.8 ? pick(["loincloth", "skirt"] as HemStyle[]) : "none";
   }
 
   const cape =
     torsoStyle === "hoodedRobe"
-      ? false
-      : Math.random() < (torsoStyle === "tank" ? 0.55 : 0.45);
+      ? Math.random() < 0.25
+      : Math.random() < (torsoStyle === "tank" ? 0.6 : 0.5);
+
+  // Prefer loud trim contrast so clothing reads after Endesga lock.
+  const hemColor = pickTrim(cloth) ?? pick(CLOTH);
+  const capeColor = pickTrim(cloth) ?? pick(CLOTH);
 
   return {
     torso: { style: torsoStyle, color: cloth, trim },
     accessories: {
       hem,
-      hemColor: trim ?? pick(CLOTH),
+      hemColor,
       cape,
-      capeColor: pick(CLOTH),
+      capeColor,
     },
   };
 }
@@ -280,11 +288,17 @@ function randomArms(skin: string, sleeveHint?: string): ArmsBits {
 }
 
 function randomLegs(): LegsBits {
+  const pantColor = pick(CLOTH);
+  // Boots always contrast pants so footwear reads in the bake.
+  let bootColor = pick(BOOT);
+  for (let i = 0; i < 4 && bootColor === pantColor; i++) {
+    bootColor = pick(BOOT);
+  }
   return {
     legs: {
-      pose: pick(COMBAT_LEG_POSES),
-      pantColor: pick(CLOTH),
-      bootColor: pick(BOOT),
+      pose: "ready",
+      pantColor,
+      bootColor,
     },
   };
 }
