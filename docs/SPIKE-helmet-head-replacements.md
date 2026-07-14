@@ -23,11 +23,24 @@ Shared helpers live above `generateHelmet` in `parts.ts`:
 | `SKULL_EGG` | `{ x: 0.92, y: 1.05, z: 0.86 }` | Match `generateHead` squash (× `HEAD_TALL` 1.1 on Y) |
 | `HELMET_SHELL` | `0.98` | Shell radius = `skullR × 0.98` (~6% under prior 1.04) |
 | Closed axes | `SKULL_EGG × {0.98, 0.94×tall, 0.98}` | Slightly tighter / flatter than skin egg |
+| `REPLACE_HEAD_BOOST` | `1.3` | **sciFi + goat only** — undoes compound shrink (see below); knight stays unboosted |
 | Cap overlay | crown `≈ 0.85 × skullR`, brim `≈ 1.12 × skullR` | Sit on crown; do not expand skull silhouette much |
 | Crest / antenna | short stubs only | Punctuate iso silhouette without inflating AABB |
 
 Prefer: thinner shells, tight jaw/bevor, flat brow strips (not second spheres),
 slim cheek flaps. Do **not** stack oversized sphere blobs.
+
+### Why we keep regenerating tiny replacement heads
+
+Not a single bug — **stacked intentional shrinks** after replace-mount hides the skin skull:
+
+1. Preset / random `head.scale` (~0.9–0.92) feeds `r = skullR × scale` into `generateHelmet`
+2. `shellR = r × HELMET_SHELL (0.98)`
+3. Dome axes use `shellEgg` (already tighter than skin `SKULL_EGG`)
+4. Style meshes squash further (sciFi dome ×0.96/0.9; goat ×0.95/0.92)
+5. Skin heads also have layered crown / cheeks / face pad — a lone shell has less mass
+
+Raising `HELMET_SHELL` globally re-balloons **knight**. Use `REPLACE_HEAD_BOOST` (1.3) on sciFi/goat instead. Goat horns get an extra geometry bump (thicker/taller cones) so they read at 42–48px.
 
 ## Model
 
@@ -75,6 +88,15 @@ Soldier preset uses `helmet: sciFi`. Earlier sealed-egg + chunky jaw still read 
 a **bulbous sphere**. Rebuilt as a practical closed infantry helm: tighter /
 flatter cranial shell, bucket lid, angular brow plate, slim cheek cups, nape
 collar, thin glowing visor + dark slit inset. Not a glass dome.
+
+Egg-hug + `head.scale` 0.9 made the sealed head look tiny vs body; `REPLACE_HEAD_BOOST`
+`×1.3` on sciFi radius (was `×1.2`, still undersized). Same boost on **goat**.
+
+### Goat / horns
+
+Goat uses the same `×1.3` radius boost. Horns: thicker/taller two-cone stack
+(`r×0.2 / r×0.65` base + `r×0.12 / r×0.55` tip, tips higher) so forks read at
+42–48px.
 
 ### Related (not a helmet style)
 

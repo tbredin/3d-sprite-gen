@@ -671,6 +671,16 @@ export function generateHair(opts: {
  * Helmet shells hug the egg skull from `generateHead`.
  * Shell ≈ skullR×0.96–1.00; egg axes match skin skull, slightly flatter on top.
  * Closed styles replace the skull; `cap` overlays the crown only.
+ *
+ * Why replacements keep reading tiny (do not "fix" by raising HELMET_SHELL
+ * globally — that re-balloons knight):
+ * 1. `r = skullR × head.scale` (presets ~0.9–0.92) then `shellR = r × 0.98`
+ * 2. `shellEgg` already tighter than the skin egg (×0.98 / ×0.94 / ×0.98)
+ * 3. Per-style dome squash (sciFi ×0.96/0.9, goat ×0.95/0.92) stacks on top
+ * 4. Replace-mount hides the multi-volume skin head (skull+crown+cheeks), so a
+ *    single shell has less silhouette mass than the skull it replaces
+ * Style boosts (`REPLACE_HEAD_BOOST`) undo that compound shrink for mass-light
+ * closed heads; keep knight on shared HELMET_SHELL only.
  */
 const HEAD_TALL = 1.1;
 /** Match `generateHead` skull squash before shell scale. */
@@ -680,6 +690,8 @@ const SKULL_EGG = { x: 0.92, y: 1.05, z: 0.86 } as const;
  * sit at/under the skin egg (user feedback: still ~5–10% too big).
  */
 const HELMET_SHELL = 0.98;
+/** SciFi / goat closed heads — undo HELMET_SHELL + egg-squash compound shrink. */
+const REPLACE_HEAD_BOOST = 1.3;
 
 /**
  * Head gear. Closed styles (`knight`, `sciFi`, `goat`) and deep cowls (`hood`)
@@ -805,9 +817,8 @@ export function generateHelmet(opts: {
   if (opts.style === "sciFi") {
     // Practical sealed infantry helm — hug the egg; angular plates, not a bulb.
     // Soldier preset. Slightly flatter / narrower than knight kettle.
-    // SciFi-only ×1.2 so the sealed infantry head matches body mass (not shared HELMET_SHELL).
-    const SCI_FI_SCALE = 1.2;
-    const r = CHIBI.skullR * s * SCI_FI_SCALE;
+    // ×1.3 undoes HELMET_SHELL + shellEgg + dome squash (×1.2 was still tiny).
+    const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
     const shellR = r * HELMET_SHELL;
     const visorMat = toon(opts.visor ?? "#5ad4a0");
     const dark = toon("#1a1c2c");
@@ -968,7 +979,10 @@ export function generateHelmet(opts: {
   }
 
   if (opts.style === "goat") {
-    // Full animal head replacement — horns / snout / ears read at 42–48px
+    // Full animal head replacement — horns / snout / ears read at 42–48px.
+    // Same ×1.3 boost as sciFi (no boost left goat as tiny as pre-bump soldier).
+    const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
     const fur = mat;
     const horn = toon(opts.visor ?? "#e8e4d8");
     const dark = toon("#2a2035");
@@ -987,17 +1001,17 @@ export function generateHelmet(opts: {
     g.add(mesh(new SphereGeometry(0.045, 6, 5), dark, -0.06, cy - r * 0.32 * tall, r * 1.28));
     g.add(mesh(new SphereGeometry(0.045, 6, 5), dark, 0.06, cy - r * 0.32 * tall, r * 1.28));
 
-    // Curved horns — outward then up (readable forks)
+    // Curved horns — thicker / taller so forks read at 42–48px (were ~r×0.8 total)
     for (const side of [-1, 1] as const) {
-      const base = new Mesh(new ConeGeometry(r * 0.14, r * 0.45, 6), horn);
-      base.position.set(side * r * 0.55, cy + r * 0.55 * tall, -r * 0.15);
-      base.rotation.z = side * 0.55;
-      base.rotation.x = -0.35;
+      const base = new Mesh(new ConeGeometry(r * 0.2, r * 0.65, 6), horn);
+      base.position.set(side * r * 0.58, cy + r * 0.62 * tall, -r * 0.18);
+      base.rotation.z = side * 0.5;
+      base.rotation.x = -0.4;
       g.add(base);
-      const tip = new Mesh(new ConeGeometry(r * 0.08, r * 0.35, 6), horn);
-      tip.position.set(side * r * 0.85, cy + r * 0.95 * tall, -r * 0.25);
-      tip.rotation.z = side * 0.25;
-      tip.rotation.x = -0.55;
+      const tip = new Mesh(new ConeGeometry(r * 0.12, r * 0.55, 6), horn);
+      tip.position.set(side * r * 0.95, cy + r * 1.25 * tall, -r * 0.32);
+      tip.rotation.z = side * 0.22;
+      tip.rotation.x = -0.6;
       g.add(tip);
     }
 

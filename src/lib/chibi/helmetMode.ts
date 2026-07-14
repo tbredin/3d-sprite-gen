@@ -69,7 +69,7 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     mount: "replace",
     showFace: false,
     notes:
-      "Practical sealed infantry helm hugging egg — brow plate + cheek cups + thin visor, not a sphere blob.",
+      "Sealed infantry helm (×1.3 radius boost) — brow plate + cheek cups + thin visor.",
   },
   hood: {
     style: "hood",
@@ -82,7 +82,7 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     mount: "replace",
     showFace: false,
     notes:
-      "Animal head replacement — horns, snout, goat ears; hides human skull/face.",
+      "Animal head (×1.3 boost) — tall thick horns, snout, ears; hides human skull/face.",
   },
 };
 
