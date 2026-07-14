@@ -5,7 +5,8 @@
  * 1. Torso yawed ~45° off character facing (+Z) — 3/4 body, lead shoulder forward.
  * 2. Lead arm forward (often weapon); trail arm back + lower (often shield).
  * 3. Ipsilateral feet: same foot forward as the forward hand.
- * 4. Exaggerated lead/trail depth + A-frame — no glued feet, no arms flush to torso.
+ * 4. Wide A-frame plant (lateral > depth) — both feet clear the torso silhouette;
+ *    trail foot pulled out + slightly back so bottom-right iso doesn't hide it.
  *
  * Character root still faces +Z; BakeCanvas `rotationY` turns the whole sprite.
  * Torso yaw lives on the upper-body group only — head/face stay on root so
