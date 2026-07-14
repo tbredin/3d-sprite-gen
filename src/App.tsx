@@ -91,6 +91,11 @@ export default function App() {
   const [cameraHeight, setCameraHeight] = useState(() => loadCameraHeight());
   const [presetId, setPresetId] = useState<PresetId | "random">("mage");
   const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
+  const [specText, setSpecText] = useState(() =>
+    JSON.stringify(getPreset("mage"), null, 2),
+  );
+  const [specParseError, setSpecParseError] = useState<string | null>(null);
+  const specFileRef = useRef<HTMLInputElement>(null);
   const [charKey, setCharKey] = useState(0);
   const [locks, setLocks] = useState<PartLocks>({ ...EMPTY_LOCKS });
   const [mirror, setMirror] = useState(false);
@@ -110,7 +115,7 @@ export default function App() {
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [specOpen, setSpecOpen] = useState(false);
+  const [specOpen, setSpecOpen] = useState(true);
   const [lightsOpen, setLightsOpen] = useState(false);
   const [outlinesOpen, setOutlinesOpen] = useState(true);
   const dragRef = useRef<{
@@ -136,13 +141,21 @@ export default function App() {
 
   const applyPreset = (id: PresetId) => {
     setPresetId(id);
-    setSpec(getPreset(id));
+    const next = getPreset(id);
+    setSpec(next);
+    setSpecText(JSON.stringify(next, null, 2));
+    setSpecParseError(null);
     setCharKey((k) => k + 1);
   };
 
   const applyRandom = () => {
     setPresetId("random");
-    setSpec((prev) => randomCharacter(locks, prev));
+    setSpec((prev) => {
+      const next = randomCharacter(locks, prev);
+      setSpecText(JSON.stringify(next, null, 2));
+      setSpecParseError(null);
+      return next;
+    });
     setCharKey((k) => k + 1);
   };
 
@@ -152,14 +165,83 @@ export default function App() {
 
   const applyRerollPart = (part: PartId) => {
     setPresetId("random");
-    setSpec((prev) => rerollPart(prev, part));
+    setSpec((prev) => {
+      const next = rerollPart(prev, part);
+      setSpecText(JSON.stringify(next, null, 2));
+      setSpecParseError(null);
+      return next;
+    });
     setCharKey((k) => k + 1);
   };
 
   const applyRerollColors = (part: PartId) => {
     setPresetId("random");
-    setSpec((prev) => rerollPartColors(prev, part));
+    setSpec((prev) => {
+      const next = rerollPartColors(prev, part);
+      setSpecText(JSON.stringify(next, null, 2));
+      setSpecParseError(null);
+      return next;
+    });
     setCharKey((k) => k + 1);
+  };
+
+  const applySpecFromParsed = (parsed: unknown) => {
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("Spec must be a JSON object");
+    }
+    const o = parsed as Partial<CharacterSpec>;
+    if (typeof o.skin !== "string" || !o.torso || !o.arms || !o.legs) {
+      throw new Error("Spec needs skin, torso, arms, and legs");
+    }
+    const next = structuredClone(parsed) as CharacterSpec;
+    setPresetId("random");
+    setSpec(next);
+    setCharKey((k) => k + 1);
+    return next;
+  };
+
+  const onSpecTextChange = (text: string) => {
+    setSpecText(text);
+    try {
+      const parsed: unknown = JSON.parse(text);
+      applySpecFromParsed(parsed);
+      setSpecParseError(null);
+    } catch (e) {
+      setSpecParseError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const downloadSpecJson = () => {
+    const blob = new Blob([JSON.stringify(spec, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `character-spec-${presetId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const copySpecJson = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(spec, null, 2));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const onLoadSpecFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed: unknown = JSON.parse(text);
+      const next = applySpecFromParsed(parsed);
+      setSpecText(JSON.stringify(next, null, 2));
+      setSpecParseError(null);
+    } catch (e) {
+      setSpecParseError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   const patchRimLights = (patch: Partial<RimLightSettings>) => {
@@ -703,7 +785,45 @@ export default function App() {
             open={specOpen}
             onToggle={() => setSpecOpen((v) => !v)}
           >
-            <pre className="spec-pre">{JSON.stringify(spec, null, 2)}</pre>
+            <div className="spec-toolbar">
+              <button type="button" className="ghost" onClick={downloadSpecJson}>
+                Download
+              </button>
+              <button type="button" className="ghost" onClick={() => void copySpecJson()}>
+                Copy
+              </button>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => specFileRef.current?.click()}
+              >
+                Load
+              </button>
+              <input
+                ref={specFileRef}
+                type="file"
+                accept="application/json,.json"
+                hidden
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  void onLoadSpecFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+            <textarea
+              className="spec-editor"
+              value={specText}
+              spellCheck={false}
+              onChange={(e) => onSpecTextChange(e.target.value)}
+              aria-label="CharacterSpec JSON"
+              rows={18}
+            />
+            {specParseError ? (
+              <p className="error spec-parse-error">{specParseError}</p>
+            ) : (
+              <p className="hint">Valid JSON · live bake updates on edit</p>
+            )}
           </CollapseSection>
         </section>
       </main>
