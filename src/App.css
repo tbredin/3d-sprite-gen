@@ -433,25 +433,34 @@ button.ghost {
   margin-bottom: 0.2rem;
 }
 
-.light-profile-name {
+/* Beat `.panel input` (0,1,1) which pins height: var(--control-h) = 2rem */
+.panel .light-profiles input.light-profile-name {
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
-  height: auto;
-  min-height: 1.35rem;
-  padding: 0.1rem 0.35rem;
+  flex: none;
+  align-self: center;
+  height: 1.25rem !important;
+  max-height: 1.25rem !important;
+  min-height: 0 !important;
+  padding: 0 0.3rem !important;
   font: inherit;
-  font-size: 0.62rem;
-  line-height: 1.2;
+  font-size: 0.6rem !important;
+  line-height: 1 !important;
   color: var(--text);
   background: #0c0e16;
   border: 1px solid #3a415c;
 }
 
-.light-profiles .ghost {
-  padding: 0.1rem 0.35rem;
-  font-size: 0.62rem;
-  line-height: 1.2;
-  height: auto;
+.panel .light-profiles .ghost {
+  box-sizing: border-box;
+  height: 1.25rem !important;
+  max-height: 1.25rem;
+  min-height: 0;
+  padding: 0 0.35rem !important;
+  font-size: 0.6rem;
+  line-height: 1;
 }
 
 .light-profile-list {
@@ -468,11 +477,11 @@ button.ghost {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.25rem;
-  min-height: 1.35rem;
+  min-height: 1.25rem;
 }
 
 .light-profile-label {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
