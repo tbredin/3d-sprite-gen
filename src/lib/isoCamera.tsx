@@ -7,6 +7,9 @@ import { CHIBI } from "./chibi/units";
  * Sea of Stars / BoF-ish low top-down isometric.
  * Character faces +Z (away / top-right under this camera).
  * Frustum fitted to the chibi (feet at y=0).
+ *
+ * Classic “true iso” elevation is atan(1/√2) ≈ 35.3°. Camera height slider
+ * remaps that as a relative scale (1 = default).
  */
 export const ISO = {
   elevation: Math.atan(1 / Math.SQRT2),
@@ -17,9 +20,44 @@ export const ISO = {
   lookY: CHIBI.totalHeight * 0.45,
 } as const;
 
-/** Unit vector from origin toward the locked iso camera (3D). */
-export function isoCameraDir() {
-  const { elevation, azimuth } = ISO;
+/** Default camera-height multiplier (1 = classic iso elevation). */
+export const DEFAULT_CAMERA_HEIGHT = 1;
+
+const CAMERA_HEIGHT_STORAGE_KEY = "3d-sprite-gen:camera-height-v1";
+
+export function loadCameraHeight(): number {
+  try {
+    const raw = localStorage.getItem(CAMERA_HEIGHT_STORAGE_KEY);
+    if (raw == null) return DEFAULT_CAMERA_HEIGHT;
+    const v = Number(raw);
+    if (!Number.isFinite(v)) return DEFAULT_CAMERA_HEIGHT;
+    return Math.min(1.55, Math.max(0.55, v));
+  } catch {
+    return DEFAULT_CAMERA_HEIGHT;
+  }
+}
+
+export function saveCameraHeight(height: number) {
+  try {
+    localStorage.setItem(CAMERA_HEIGHT_STORAGE_KEY, String(height));
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Effective elevation angle for a height multiplier (1 = ISO.elevation). */
+export function isoElevationForHeight(cameraHeight = DEFAULT_CAMERA_HEIGHT): number {
+  // Scale sin(elevation) so the slider reads as camera height, while keeping
+  // azimuth. Clamp so we never go fully top-down or flat side-view.
+  const base = ISO.elevation;
+  const sinTarget = Math.sin(base) * cameraHeight;
+  return Math.asin(Math.min(0.92, Math.max(0.28, sinTarget)));
+}
+
+/** Unit vector from origin toward the iso camera (3D). */
+export function isoCameraDir(cameraHeight = DEFAULT_CAMERA_HEIGHT) {
+  const elevation = isoElevationForHeight(cameraHeight);
+  const { azimuth } = ISO;
   const x = Math.cos(elevation) * Math.sin(azimuth);
   const y = Math.sin(elevation);
   const z = Math.cos(elevation) * Math.cos(azimuth);
@@ -27,17 +65,17 @@ export function isoCameraDir() {
   return { x: x / len, y: y / len, z: z / len };
 }
 
-/** Unit vector from origin toward the locked iso camera on the XZ plane. */
-export function isoCameraGroundDir() {
-  const { x, z } = isoCameraDir();
+/** Unit vector from origin toward the iso camera on the XZ plane. */
+export function isoCameraGroundDir(cameraHeight = DEFAULT_CAMERA_HEIGHT) {
+  const { x, z } = isoCameraDir(cameraHeight);
   const len = Math.hypot(x, z) || 1;
   return { x: x / len, z: z / len };
 }
 
 /** World position of the locked iso camera. */
-export function isoCameraPosition() {
+export function isoCameraPosition(cameraHeight = DEFAULT_CAMERA_HEIGHT) {
   const { distance } = ISO;
-  const d = isoCameraDir();
+  const d = isoCameraDir(cameraHeight);
   return [d.x * distance, d.y * distance, d.z * distance] as const;
 }
 
@@ -53,13 +91,14 @@ export function isoRimLightPositions(opts?: {
   sideLeft?: number;
   sideRight?: number;
   height?: number;
+  cameraHeight?: number;
 }) {
   const behindLeft = opts?.behindLeft ?? opts?.behind ?? 2.6;
   const behindRight = opts?.behindRight ?? opts?.behind ?? 2.6;
   const sideLeft = opts?.sideLeft ?? opts?.side ?? 2.4;
   const sideRight = opts?.sideRight ?? opts?.side ?? 2.4;
   const height = opts?.height ?? 1.55;
-  const { x: tx, z: tz } = isoCameraGroundDir();
+  const { x: tx, z: tz } = isoCameraGroundDir(opts?.cameraHeight);
   const bx = -tx;
   const bz = -tz;
   const rx = -tz;
@@ -84,8 +123,10 @@ export function placeIsoCamera(
   camera: OrthographicCamera,
   aspect: number,
   zoom = 1,
+  cameraHeight = DEFAULT_CAMERA_HEIGHT,
 ) {
-  const { elevation, azimuth, frustum, distance, lookY } = ISO;
+  const { azimuth, frustum, distance, lookY } = ISO;
+  const elevation = isoElevationForHeight(cameraHeight);
   const x = distance * Math.cos(elevation) * Math.sin(azimuth);
   const y = distance * Math.sin(elevation);
   const z = distance * Math.cos(elevation) * Math.cos(azimuth);
@@ -105,7 +146,13 @@ export function placeIsoCamera(
 }
 
 /** Locked orthographic iso camera for the live preview. */
-export function IsoCamera({ zoom = 1 }: { zoom?: number }) {
+export function IsoCamera({
+  zoom = 1,
+  cameraHeight = DEFAULT_CAMERA_HEIGHT,
+}: {
+  zoom?: number;
+  cameraHeight?: number;
+}) {
   const { set, size } = useThree();
   const camera = useMemo(() => new OrthographicCamera(), []);
 
@@ -114,8 +161,13 @@ export function IsoCamera({ zoom = 1 }: { zoom?: number }) {
   }, [camera, set]);
 
   useLayoutEffect(() => {
-    placeIsoCamera(camera, size.width / Math.max(size.height, 1), zoom);
-  }, [camera, zoom, size.width, size.height]);
+    placeIsoCamera(
+      camera,
+      size.width / Math.max(size.height, 1),
+      zoom,
+      cameraHeight,
+    );
+  }, [camera, zoom, cameraHeight, size.width, size.height]);
 
   return <primitive object={camera} />;
 }

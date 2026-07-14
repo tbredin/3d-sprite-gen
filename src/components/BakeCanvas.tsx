@@ -12,7 +12,12 @@ import {
   WebGLRenderTarget,
   type Object3D,
 } from "three";
-import { placeIsoCamera, isoRimLightPositions, isoCameraPosition } from "../lib/isoCamera";
+import {
+  placeIsoCamera,
+  isoRimLightPositions,
+  isoCameraPosition,
+  DEFAULT_CAMERA_HEIGHT,
+} from "../lib/isoCamera";
 import { ChibiCharacter } from "./ChibiCharacter";
 import { downloadDataUrl } from "../lib/capture";
 import {
@@ -35,6 +40,7 @@ import {
   type EdgeDetectOptions,
 } from "../lib/edgeOutline";
 import type { CharacterSpec } from "../lib/chibi";
+import { CHARACTER_PIVOT_Y } from "../lib/chibi/units";
 import type { RimLightSettings } from "../lib/rimLights";
 
 export type EdgeOutlineSettings = EdgeDetectOptions & {
@@ -53,6 +59,8 @@ type BakeProps = {
   outlineHex: string;
   outlinePass?: OutlinePassSettings;
   zoom: number;
+  /** 1 = classic iso elevation; higher = steeper camera. */
+  cameraHeight?: number;
   rotationX: number;
   rotationY: number;
   spec: CharacterSpec;
@@ -74,6 +82,7 @@ function BakeCapture({
   outlineHex,
   outlinePass,
   zoom,
+  cameraHeight,
   rotationX,
   rotationY,
   rimKey,
@@ -85,6 +94,7 @@ function BakeCapture({
   outlineHex: string;
   outlinePass: OutlinePassSettings;
   zoom: number;
+  cameraHeight: number;
   rotationX: number;
   rotationY: number;
   /** Changes when lighting knobs move so the PNG rebakes. */
@@ -134,7 +144,7 @@ function BakeCapture({
         if (cancelled) return;
 
         target.setSize(size, size);
-        placeIsoCamera(bakeCam, 1, zoom);
+        placeIsoCamera(bakeCam, 1, zoom, cameraHeight);
 
         const prev = gl.getRenderTarget();
         gl.setRenderTarget(target);
@@ -243,6 +253,7 @@ function BakeCapture({
     outlinePass.silhouette,
     outlinePass.partSeams,
     zoom,
+    cameraHeight,
     rotationX,
     rotationY,
     rimKey,
@@ -262,14 +273,20 @@ function BakeCapture({
  * Force square 1:1 aspect for the locked iso camera so a zero/odd
  * ResizeObserver reading can't collapse the ortho frustum.
  */
-function IsoCameraSquare({ zoom }: { zoom: number }) {
+function IsoCameraSquare({
+  zoom,
+  cameraHeight,
+}: {
+  zoom: number;
+  cameraHeight: number;
+}) {
   const { set } = useThree();
   const camera = useMemo(() => new OrthographicCamera(), []);
 
   useLayoutEffect(() => {
-    placeIsoCamera(camera, 1, zoom);
+    placeIsoCamera(camera, 1, zoom, cameraHeight);
     set({ camera });
-  }, [camera, set, zoom]);
+  }, [camera, set, zoom, cameraHeight]);
 
   return <primitive object={camera} />;
 }
@@ -280,6 +297,7 @@ export function BakeCanvas({
   outlineHex,
   outlinePass = DEFAULT_OUTLINE_PASS,
   zoom,
+  cameraHeight = DEFAULT_CAMERA_HEIGHT,
   rotationX,
   rotationY,
   spec,
@@ -296,8 +314,9 @@ export function BakeCanvas({
     sideLeft: rimLights.redSide,
     sideRight: rimLights.blueSide,
     height: rimLights.rimHeight,
+    cameraHeight,
   });
-  const camPos = isoCameraPosition();
+  const camPos = isoCameraPosition(cameraHeight);
   const rimKey = [
     rimLights.keyBrightness,
     rimLights.ambientBrightness,
@@ -308,6 +327,7 @@ export function BakeCanvas({
     rimLights.redSide,
     rimLights.blueSide,
     rimLights.rimHeight,
+    cameraHeight,
   ].join(":");
 
   return (
@@ -332,7 +352,7 @@ export function BakeCanvas({
         gl.setClearColor(0x000000, 0);
       }}
     >
-      <IsoCameraSquare zoom={zoom} />
+      <IsoCameraSquare zoom={zoom} cameraHeight={cameraHeight} />
       {/*
         Directional rims = parallel colored rays from behind L/R (classic toon rim).
         Camera key = soft frontal fill so midtones don't vanish.
@@ -353,8 +373,10 @@ export function BakeCanvas({
         intensity={rimLights.blueBrightness}
         position={rim.right}
       />
-      <group rotation={[rotationX, rotationY, 0]}>
-        <ChibiCharacter spec={spec} />
+      <group position={[0, CHARACTER_PIVOT_Y, 0]} rotation={[rotationX, rotationY, 0]}>
+        <group position={[0, -CHARACTER_PIVOT_Y, 0]}>
+          <ChibiCharacter spec={spec} rotationY={rotationY} />
+        </group>
       </group>
       <BakeCapture
         size={size}
@@ -362,6 +384,7 @@ export function BakeCanvas({
         outlineHex={outlineHex}
         outlinePass={outlinePass}
         zoom={zoom}
+        cameraHeight={cameraHeight}
         rotationX={rotationX}
         rotationY={rotationY}
         rimKey={rimKey}

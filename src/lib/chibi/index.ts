@@ -97,6 +97,7 @@ export {
   getPreset,
   PRESETS,
 } from "./assemble";
+export { applySpriteFaceCheat } from "./faceCheat";
 export { randomCharacter, rerollPart, rerollPartColors, PART_IDS, EMPTY_LOCKS } from "./random";
 export type { PartId, PartLocks } from "./random";
 export { ARM_POSES, COMBAT_ARM_POSES, armJointsForPose } from "./armPoses";

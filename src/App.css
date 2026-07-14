@@ -52,6 +52,12 @@ body {
   max-width: 42rem;
 }
 
+.feature-boost-note {
+  margin-top: -0.5rem;
+  color: #5ad4a0;
+  font-size: 0.72rem;
+}
+
 .layout {
   display: grid;
   gap: 0.85rem;
@@ -140,6 +146,36 @@ body {
   flex-direction: column;
   gap: 0.45rem;
   padding-top: 0.1rem;
+}
+
+.field-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.panel button.field-reset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent, #7ec8ff);
+  font: inherit;
+  font-size: 0.65rem;
+  line-height: 1;
+  height: auto;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.12em;
+}
+
+.panel button.field-reset:hover {
+  color: var(--text, #e8eef6);
+  background: none;
 }
 
 .preview-side .field input[type="range"] {

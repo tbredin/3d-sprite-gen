@@ -46,7 +46,9 @@ function lightenHex(hex: string, amount = 0.35): string {
 
 /**
  * Slim JRPG head from stacked volumes — taper jaw so bald ≠ bulb.
- * Skull stays under hair shells; cheeks / chin / brow add structure.
+ * ~10% taller than the old skull scale so the head still reads from a high
+ * iso camera; chin is pushed down + slightly forward so it isn't lost under
+ * the camera.
  */
 export function generateHead(opts: {
   skin: string;
@@ -58,32 +60,48 @@ export function generateHead(opts: {
   const mat = toon(opts.skin);
   const cy = LAYOUT.headCenterY;
   const r = CHIBI.skullR * s;
+  /** Extra vertical stretch (~10%) for SNES SD proportions. */
+  const tall = 1.1;
 
   const skull = new Mesh(new SphereGeometry(r, 14, 12), mat);
-  skull.position.set(0, cy + 0.06, -0.04);
-  skull.scale.set(0.92, 1.05, 0.86);
+  skull.position.set(0, cy + 0.08 * tall, -0.04);
+  skull.scale.set(0.92, 1.05 * tall, 0.86);
   g.add(skull);
 
   const crown = new Mesh(new SphereGeometry(r * 0.72, 12, 8), mat);
-  crown.position.set(0, cy + r * 0.72, -0.04);
-  crown.scale.set(1.05, 0.45, 1.0);
+  crown.position.set(0, cy + r * 0.8 * tall, -0.04);
+  crown.scale.set(1.05, 0.5 * tall, 1.0);
   g.add(crown);
 
   const facePad = new Mesh(new SphereGeometry(r * 0.85, 12, 10), mat);
-  facePad.position.set(0, cy - 0.04, r * 0.48);
-  facePad.scale.set(1.0, 1.08, 0.48);
+  // Lower + taller face plane so cheek/chin silhouette survives top-down iso.
+  facePad.position.set(0, cy - 0.06 * tall, r * 0.5);
+  facePad.scale.set(1.0, 1.2 * tall, 0.5);
   g.add(facePad);
 
   g.add(mesh(new SphereGeometry(r * 0.35, 8, 6), mat, -r * 0.78, cy + 0.02, 0.05));
   g.add(mesh(new SphereGeometry(r * 0.35, 8, 6), mat, r * 0.78, cy + 0.02, 0.05));
 
-  g.add(mesh(new SphereGeometry(r * 0.4, 10, 8), mat, -r * 0.55, cy - 0.1, r * 0.4));
-  g.add(mesh(new SphereGeometry(r * 0.4, 10, 8), mat, r * 0.55, cy - 0.1, r * 0.4));
+  // Jaw cheeks — dropped so the face isn't all forehead from above.
+  g.add(
+    mesh(new SphereGeometry(r * 0.42, 10, 8), mat, -r * 0.55, cy - 0.14 * tall, r * 0.42),
+  );
+  g.add(
+    mesh(new SphereGeometry(r * 0.42, 10, 8), mat, r * 0.55, cy - 0.14 * tall, r * 0.42),
+  );
 
-  g.add(mesh(new SphereGeometry(r * 0.36, 10, 8), mat, 0, cy - r * 0.85, r * 0.28));
-  g.add(mesh(new SphereGeometry(r * 0.28, 8, 6), mat, 0, cy - r * 1.05, r * 0.18));
+  // Chin stack — longer + proud so it clears foreshortening at high elevation.
+  g.add(
+    mesh(new SphereGeometry(r * 0.38, 10, 8), mat, 0, cy - r * 0.95 * tall, r * 0.36),
+  );
+  g.add(
+    mesh(new SphereGeometry(r * 0.3, 8, 6), mat, 0, cy - r * 1.22 * tall, r * 0.26),
+  );
+  g.add(
+    mesh(new SphereGeometry(r * 0.2, 8, 6), mat, 0, cy - r * 1.38 * tall, r * 0.18),
+  );
 
-  g.add(mesh(new SphereGeometry(r * 0.5, 10, 8), mat, 0, cy + r * 0.22, r * 0.58));
+  g.add(mesh(new SphereGeometry(r * 0.5, 10, 8), mat, 0, cy + r * 0.24 * tall, r * 0.58));
 
   g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), mat, -r * 1.05, cy - 0.02, 0));
   g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), mat, r * 1.05, cy - 0.02, 0));
@@ -101,7 +119,39 @@ export function generateHead(opts: {
 }
 
 /**
- * Large low-set JRPG eyes with sclera + iris (+ optional nose / mouth).
+ * Face readability — SNES / anime SD eyes as flat *rects*, not ovals.
+ *
+ * Separate `eye-left` / `eye-right` groups. Sit flush with the face pad
+ * (barely proud), spaced wide, with a thick brow bar. See faceCheat + SPIKE.
+ */
+export const FACE_READABILITY = {
+  /** Sclera width / height / depth (rectangular anime eye). +20% vs prior. */
+  eyeW: 0.18,
+  eyeH: 0.132,
+  eyeDepth: 0.026,
+  /** Top tier slightly wider than bottom (classic anime eye). */
+  eyeTopWiden: 1.12,
+  /** Iris box size — fills most of the white. +20% vs prior. */
+  irisW: 0.114,
+  irisH: 0.094,
+  /** Half-distance between eye centres — wider than the old oval pair. */
+  eyeSpacing: 0.145,
+  /**
+   * World Z for the eye plate. Barely proud of the facePad front
+   * (was skullR*0.92 ≈ flush / invisible; nudge out a hair).
+   */
+  eyeZ: CHIBI.skullR * 0.98,
+  eyeLift: 0.01,
+  /** Thick brow bar (width, height, depth). +20% vs prior. */
+  browW: 0.204,
+  browH: 0.046,
+  browDepth: 0.024,
+  mouthWidth: 0.07,
+} as const;
+
+/**
+ * Separate left/right rectangular FF-style eyes + shared mouth/nose.
+ * Per-eye visibility is applied later by `applySpriteFaceCheat`.
  */
 export function generateFace(opts: {
   eyeColor?: string;
@@ -110,37 +160,97 @@ export function generateFace(opts: {
 }): Group {
   const g = new Group();
   g.name = "face";
-  const iris = toonDetail(opts.eyeColor ?? "#1a1c2c");
-  const white = toon("#f2efe6");
-  const lid = toonDetail("#2a2035");
-  const y = LAYOUT.headCenterY - 0.04;
-  const z = CHIBI.skullR + 0.08;
-  const ex = 0.11;
+  const t = FACE_READABILITY;
+  const irisMat = toonDetail(opts.eyeColor ?? "#1a1c2c");
+  const white = toon("#f7f4ec");
+  const lid = toonDetail("#211a2c");
+  const shine = toonDetail("#ffffff");
+  const y = LAYOUT.headCenterY - 0.02 + t.eyeLift;
+  const z = t.eyeZ;
+  const ex = t.eyeSpacing;
+  const d = t.eyeDepth;
 
   for (const s of [-1, 1] as const) {
-    g.add(mesh(new SphereGeometry(0.07, 10, 8), white, s * ex, y, z));
-    g.add(
-      mesh(new SphereGeometry(0.042, 8, 6), iris, s * ex, y - 0.004, z + 0.035),
+    const eye = new Group();
+    eye.name = s < 0 ? "eye-left" : "eye-right";
+    eye.position.set(s * ex, y, z);
+    eye.rotation.y = 0;
+
+    // Bottom rect of the sclera.
+    const botH = t.eyeH * 0.48;
+    eye.add(
+      mesh(new BoxGeometry(t.eyeW, botH, d), white, 0, -t.eyeH * 0.2, 0),
     );
-    const brow = new Mesh(new CapsuleGeometry(0.022, 0.09, 3, 6), lid);
-    brow.position.set(s * ex, y + 0.06, z + 0.015);
-    brow.rotation.z = s * 0.12;
-    brow.rotation.x = -0.35;
-    g.add(brow);
+    // Top rect — slightly wider (anime “larger at the top”).
+    const topH = t.eyeH * 0.52;
+    eye.add(
+      mesh(
+        new BoxGeometry(t.eyeW * t.eyeTopWiden, topH, d),
+        white,
+        0,
+        t.eyeH * 0.18,
+        0,
+      ),
+    );
+
+    // Iris — flat dark rectangle, sits low in the white.
+    eye.add(
+      mesh(
+        new BoxGeometry(t.irisW, t.irisH, d * 0.7),
+        irisMat,
+        0,
+        -0.008,
+        d * 0.15,
+      ),
+    );
+
+    // Thick upper lid line under the brow.
+    eye.add(
+      mesh(
+        new BoxGeometry(t.eyeW * t.eyeTopWiden * 1.02, 0.018, d * 0.8),
+        lid,
+        0,
+        t.eyeH * 0.42,
+        d * 0.1,
+      ),
+    );
+
+    // Catchlight fleck.
+    eye.add(
+      mesh(
+        new BoxGeometry(0.022, 0.022, d * 0.5),
+        shine,
+        -t.irisW * 0.22,
+        t.irisH * 0.18,
+        d * 0.35,
+      ),
+    );
+
+    // Thick eyebrow bar — heavy anime brow, not a thin capsule slash.
+    eye.add(
+      mesh(
+        new BoxGeometry(t.browW, t.browH, t.browDepth),
+        lid,
+        0,
+        t.eyeH * 0.72,
+        -0.002,
+      ),
+    );
+
+    g.add(eye);
   }
 
   if (opts.nose) {
     g.add(
-      mesh(
-        new SphereGeometry(0.032, 8, 6),
-        toon(opts.skin),
-        0,
-        y - 0.08,
-        z + 0.05,
-      ),
+      mesh(new SphereGeometry(0.028, 8, 6), toon(opts.skin), 0, y - 0.12, z - 0.02),
     );
   }
-  g.add(mesh(new SphereGeometry(0.024, 6, 5), lid, 0, y - 0.16, z + 0.015));
+
+  const mouth = new Mesh(new BoxGeometry(t.mouthWidth, 0.018, 0.016), lid);
+  mouth.name = "mouth";
+  mouth.position.set(0, y - 0.19, z - 0.03);
+  g.add(mouth);
+
   return g;
 }
 
@@ -1083,8 +1193,39 @@ export function generateLegs(opts: {
 }
 
 /**
+ * Weapon readability tuning — chunkier silhouettes + accent sizes so held
+ * props read clearly against the hand/sleeve after bake + NN downscale.
+ * See docs/SPIKE-feature-readability.md for before/after context.
+ */
+export const WEAPON_READABILITY = {
+  /**
+   * Sword blade radius — was 0.035. Kept as a radially-symmetric cylinder
+   * (not a flat box): a thin flat blade can rotate edge-on to the camera
+   * under some arm poses and shrink to a sub-pixel sliver. A fat hex-profile
+   * cylinder guarantees a chunky silhouette from every rotation.
+   */
+  swordBladeR: 0.075,
+  swordBladeLength: 0.42,
+  /** Crossguard — was a 0.1-radius cylinder disc; now a wide flat box. */
+  swordGuardWidth: 0.3,
+  /** Staff orb — was 0.12. */
+  staffOrbR: 0.17,
+  /** Rifle barrel — was 0.05. */
+  rifleBarrelR: 0.075,
+  /** Shield face disc — was 0.3. */
+  shieldDiscR: 0.36,
+  /** Shield boss (center stud) — was 0.07. */
+  shieldBossR: 0.1,
+} as const;
+
+/**
  * Held props in hand-local space: grip at origin.
  * Parent into the hand Group from generateArms so they track every pose.
+ *
+ * All parts use `toonDetail` (not `toon`) so dark accent colors stay near-black
+ * instead of being lifted for large-surface readability — weapons are small
+ * enough that crushing contrast toward the hand/sleeve matters more than
+ * avoiding a "black blob" on a big torso panel.
  */
 export function generateWeapon(opts: {
   type: WeaponType;
@@ -1093,28 +1234,81 @@ export function generateWeapon(opts: {
   const g = new Group();
   g.name = "weapon";
   if (opts.type === "none") return g;
-  const mat = toon(opts.color);
+  const mat = toonDetail(opts.color);
+  const accent = lightenHex(opts.color, 0.35);
+  const t = WEAPON_READABILITY;
 
   if (opts.type === "sword") {
-    g.add(mesh(limbCylinder(0.04, 0.16), toon("#5a4030"), 0, -0.02, 0.05));
-    g.add(mesh(limbCylinder(0.1, 0.05), toon("#c7cfcc"), 0, 0.1, 0.05));
-    g.add(mesh(limbCylinder(0.035, 0.45), mat, 0, 0.35, 0.05));
-  } else if (opts.type === "staff") {
-    g.add(mesh(limbCylinder(0.04, 0.85), mat, 0, 0.1, 0.05));
-    g.add(mesh(new SphereGeometry(0.12, 8, 6), toon("#f5e07a"), 0, 0.6, 0.05));
-  } else if (opts.type === "rifle") {
-    const barrel = new Mesh(limbCylinder(0.05, 0.55), mat);
-    barrel.rotation.x = Math.PI / 2;
-    barrel.position.set(0, 0.02, 0.28);
-    g.add(barrel);
-    g.add(mesh(new BoxGeometry(0.08, 0.14, 0.12), mat, 0, -0.05, 0.06));
-  } else if (opts.type === "shield") {
-    const disc = new Mesh(new CylinderGeometry(0.3, 0.3, 0.07, 12), mat);
-    disc.rotation.z = Math.PI / 2;
-    disc.position.set(0.08, 0.05, 0.1);
-    g.add(disc);
+    // Grip + pommel — dark leather/metal, independent of blade color.
+    g.add(mesh(limbCylinder(0.05, 0.16), toonDetail("#4a3626"), 0, -0.03, 0.05));
+    g.add(mesh(new SphereGeometry(0.045, 8, 6), toonDetail("#2a1c14"), 0, -0.13, 0.05));
+    // Flat crossguard — a hard box silhouette break, brighter than the grip
+    // so the hand→weapon transition reads even before the blade starts.
     g.add(
-      mesh(new SphereGeometry(0.07, 8, 6), toon("#c7cfcc"), 0.1, 0.05, 0.1),
+      mesh(
+        new BoxGeometry(t.swordGuardWidth, 0.06, 0.1),
+        toonDetail("#eef2f5"),
+        0,
+        0.1,
+        0.05,
+      ),
+    );
+    // Fat hex-profile blade — radially symmetric so it reads as a chunky
+    // silhouette from any hand/wrist rotation instead of only face-on.
+    const blade = new Mesh(
+      new CylinderGeometry(t.swordBladeR, t.swordBladeR * 0.85, t.swordBladeLength, 6),
+      mat,
+    );
+    blade.position.set(0, 0.1 + 0.03 + t.swordBladeLength * 0.5, 0.05);
+    g.add(blade);
+    const tipY = 0.1 + 0.03 + t.swordBladeLength;
+    const tip = new Mesh(new ConeGeometry(t.swordBladeR * 0.85, 0.12, 6), mat);
+    tip.position.set(0, tipY + 0.06, 0.05);
+    g.add(tip);
+  } else if (opts.type === "staff") {
+    g.add(mesh(limbCylinder(0.05, 0.8), mat, 0, 0.1, 0.05));
+    // Claw prongs cradling the orb — extra silhouette beyond the mitt so
+    // the staff head doesn't collapse into a plain stick + ball.
+    for (const s of [-1, 1] as const) {
+      const prong = new Mesh(new ConeGeometry(0.035, 0.16, 5), toonDetail(accent));
+      prong.position.set(s * 0.08, 0.56, 0.05);
+      prong.rotation.z = s * 0.5;
+      g.add(prong);
+    }
+    // Pale crystal orb — near-white so it pops against any staff/shaft color.
+    g.add(mesh(new SphereGeometry(t.staffOrbR, 10, 8), toonDetail("#f5f8ff"), 0, 0.68, 0.05));
+  } else if (opts.type === "rifle") {
+    const barrel = new Mesh(limbCylinder(t.rifleBarrelR, 0.6), mat);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, 0.04, 0.32);
+    g.add(barrel);
+    // Chunky receiver body behind the barrel.
+    g.add(mesh(new BoxGeometry(0.15, 0.19, 0.24), mat, 0, -0.02, 0.04));
+    // Stock — extends back past the mitt so the rifle silhouette reads long.
+    g.add(mesh(new BoxGeometry(0.09, 0.12, 0.24), mat, 0, -0.05, -0.18));
+    // Near-black sight + magazine accents break up the value against a
+    // light-colored gun body.
+    g.add(mesh(new BoxGeometry(0.032, 0.06, 0.032), toonDetail("#14151f"), 0, 0.12, 0.61));
+    g.add(mesh(new BoxGeometry(0.065, 0.17, 0.055), toonDetail("#14151f"), 0, -0.17, 0.15));
+  } else if (opts.type === "shield") {
+    const disc = new Mesh(
+      new CylinderGeometry(t.shieldDiscR, t.shieldDiscR, 0.08, 14),
+      mat,
+    );
+    disc.rotation.z = Math.PI / 2;
+    disc.position.set(0.1, 0.05, 0.1);
+    g.add(disc);
+    // Dark rim band behind the face — two-tone silhouette read at a glance.
+    const rim = new Mesh(
+      new CylinderGeometry(t.shieldDiscR * 1.1, t.shieldDiscR * 1.1, 0.03, 14),
+      toonDetail("#2a2035"),
+    );
+    rim.rotation.z = Math.PI / 2;
+    rim.position.set(0.085, 0.05, 0.1);
+    g.add(rim);
+    // Big bright boss so the shield reads distinctly from a plain disc.
+    g.add(
+      mesh(new SphereGeometry(t.shieldBossR, 8, 6), toonDetail("#eef2f5"), 0.14, 0.05, 0.1),
     );
   }
   return g;

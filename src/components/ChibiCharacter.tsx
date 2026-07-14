@@ -1,5 +1,5 @@
-import { useEffect, useMemo } from "react";
-import { assembleCharacter, type CharacterSpec } from "../lib/chibi";
+import { useEffect, useLayoutEffect, useMemo } from "react";
+import { assembleCharacter, applySpriteFaceCheat, type CharacterSpec } from "../lib/chibi";
 import type { Object3D } from "three";
 
 function disposeObject(root: Object3D) {
@@ -20,8 +20,19 @@ function disposeObject(root: Object3D) {
 }
 
 /** R3F wrapper around assembleCharacter — rebuilds when spec identity changes. */
-export function ChibiCharacter({ spec }: { spec: CharacterSpec }) {
+export function ChibiCharacter({
+  spec,
+  rotationY = 0,
+}: {
+  spec: CharacterSpec;
+  /** Body yaw from the iso facing control — drives FF-style face cheating. */
+  rotationY?: number;
+}) {
   const group = useMemo(() => assembleCharacter(spec), [spec]);
+
+  useLayoutEffect(() => {
+    applySpriteFaceCheat(group, rotationY);
+  }, [group, rotationY]);
 
   useEffect(() => () => disposeObject(group), [group]);
 
