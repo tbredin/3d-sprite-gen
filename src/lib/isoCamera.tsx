@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo } from "react";
 import { useThree } from "@react-three/fiber";
 import { OrthographicCamera } from "three";
-import { CHIBI } from "./chibi/units";
+import { CHIBI, CHARACTER_PIVOT_Y } from "./chibi/units";
 
 /**
  * Sea of Stars / BoF-ish low top-down isometric.
@@ -80,8 +80,33 @@ export function isoCameraPosition(cameraHeight = DEFAULT_CAMERA_HEIGHT) {
 }
 
 /**
+ * Orbit a horizontal rim offset around the character pivot in that rim's
+ * vertical plane. heightDeg: 0 = level (midY), ±90 = above/below, ±180 =
+ * level on the opposite side (full half-turn each way).
+ */
+function orbitRimHeight(
+  hx: number,
+  hz: number,
+  midY: number,
+  heightDeg: number,
+): readonly [number, number, number] {
+  const r = Math.hypot(hx, hz);
+  const theta = (heightDeg * Math.PI) / 180;
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  if (r < 1e-8) {
+    // Degenerate flat offset — lift straight up/down by a unit arc so the
+    // slider still moves the light.
+    return [0, midY + sin, 0] as const;
+  }
+  return [hx * cos, midY + r * sin, hz * cos] as const;
+}
+
+/**
  * Rim light origin points sit behind the character (away from camera) and split
  * left/right. Used as DirectionalLight positions (rays aim at the origin).
+ * Height is elevation in degrees: rotate the horizontal rim offset around the
+ * character midpoint (0 = level, +90 above, −90 below, ±180 opposite side).
  */
 export function isoRimLightPositions(opts?: {
   behind?: number;
@@ -90,32 +115,38 @@ export function isoRimLightPositions(opts?: {
   side?: number;
   sideLeft?: number;
   sideRight?: number;
+  /** @deprecated use heightLeft / heightRight */
   height?: number;
+  /** Elevation degrees −180…180 (orbit, not Y offset). */
+  heightLeft?: number;
+  heightRight?: number;
+  /** World Y for slider 0 (default: chibi midpoint). */
+  midY?: number;
+  /** Iso camera height multiplier — keeps rim ground-dir in sync with bake cam. */
   cameraHeight?: number;
 }) {
   const behindLeft = opts?.behindLeft ?? opts?.behind ?? 2.6;
   const behindRight = opts?.behindRight ?? opts?.behind ?? 2.6;
   const sideLeft = opts?.sideLeft ?? opts?.side ?? 2.4;
   const sideRight = opts?.sideRight ?? opts?.side ?? 2.4;
-  const height = opts?.height ?? 1.55;
+  const midY = opts?.midY ?? CHARACTER_PIVOT_Y;
+  const heightLeft = opts?.heightLeft ?? opts?.height ?? 0;
+  const heightRight = opts?.heightRight ?? opts?.height ?? 0;
   const { x: tx, z: tz } = isoCameraGroundDir(opts?.cameraHeight);
   const bx = -tx;
   const bz = -tz;
   const rx = -tz;
   const rz = tx;
 
+  const leftHx = bx * behindLeft + rx * sideLeft;
+  const leftHz = bz * behindLeft + rz * sideLeft;
+  const rightHx = bx * behindRight - rx * sideRight;
+  const rightHz = bz * behindRight - rz * sideRight;
+
   return {
     // Names match screen sides in the iso bake preview.
-    left: [
-      bx * behindLeft + rx * sideLeft,
-      height,
-      bz * behindLeft + rz * sideLeft,
-    ] as const,
-    right: [
-      bx * behindRight - rx * sideRight,
-      height,
-      bz * behindRight - rz * sideRight,
-    ] as const,
+    left: orbitRimHeight(leftHx, leftHz, midY, heightLeft),
+    right: orbitRimHeight(rightHx, rightHz, midY, heightRight),
   };
 }
 

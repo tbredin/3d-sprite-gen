@@ -18,8 +18,12 @@ export type RimLightSettings = {
   /** Lateral offset from center (screen L/R spread). */
   redSide: number;
   blueSide: number;
-  /** Rim light height above the ground plane. */
-  rimHeight: number;
+  /**
+   * Rim elevation in degrees (−180…180): orbit around mid torso.
+   * 0 = level; +90 = above; −90 = below; ±180 = opposite side.
+   */
+  redHeight: number;
+  blueHeight: number;
 };
 
 export const DEFAULT_RIM_LIGHTS: RimLightSettings = {
@@ -31,22 +35,29 @@ export const DEFAULT_RIM_LIGHTS: RimLightSettings = {
   blueBehind: 2.8,
   redSide: 2.5,
   blueSide: 2.5,
-  rimHeight: 1.6,
+  // ~previous Y-offset look: atan2(0.75|0.35, rim radius) in degrees.
+  redHeight: 9,
+  blueHeight: 4,
 };
 
-const STORAGE_KEY = "3d-sprite-gen:rim-lights";
+/** Bump when height semantics change (Y offset → orbit degrees). */
+const STORAGE_KEY = "3d-sprite-gen:rim-lights-v7";
 
 export function loadRimLightSettings(): RimLightSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_RIM_LIGHTS };
-    const parsed = JSON.parse(raw) as Partial<RimLightSettings>;
+    const parsed = JSON.parse(raw) as Partial<RimLightSettings> & {
+      rimHeight?: number;
+    };
     // Older builds used point-light intensities (~8–9). Directionals need lower values.
     const legacyPoint =
       parsed.keyBrightness == null &&
       typeof parsed.redBrightness === "number" &&
       parsed.redBrightness > 5;
     const scale = legacyPoint ? 0.32 : 1;
+    const legacyHeight =
+      typeof parsed.rimHeight === "number" ? parsed.rimHeight - 1.05 : undefined;
     return {
       keyBrightness: clampNum(
         parsed.keyBrightness,
@@ -76,7 +87,18 @@ export function loadRimLightSettings(): RimLightSettings {
       blueBehind: clampNum(parsed.blueBehind, -2, 8, DEFAULT_RIM_LIGHTS.blueBehind),
       redSide: clampNum(parsed.redSide, 0, 6, DEFAULT_RIM_LIGHTS.redSide),
       blueSide: clampNum(parsed.blueSide, 0, 6, DEFAULT_RIM_LIGHTS.blueSide),
-      rimHeight: clampNum(parsed.rimHeight, 0.2, 5, DEFAULT_RIM_LIGHTS.rimHeight),
+      redHeight: clampNum(
+        parsed.redHeight ?? legacyHeight,
+        -180,
+        180,
+        DEFAULT_RIM_LIGHTS.redHeight,
+      ),
+      blueHeight: clampNum(
+        parsed.blueHeight ?? legacyHeight,
+        -180,
+        180,
+        DEFAULT_RIM_LIGHTS.blueHeight,
+      ),
     };
   } catch {
     return { ...DEFAULT_RIM_LIGHTS };

@@ -313,7 +313,8 @@ export function BakeCanvas({
     behindRight: rimLights.blueBehind,
     sideLeft: rimLights.redSide,
     sideRight: rimLights.blueSide,
-    height: rimLights.rimHeight,
+    heightLeft: rimLights.redHeight,
+    heightRight: rimLights.blueHeight,
     cameraHeight,
   });
   const camPos = isoCameraPosition(cameraHeight);
@@ -326,7 +327,8 @@ export function BakeCanvas({
     rimLights.blueBehind,
     rimLights.redSide,
     rimLights.blueSide,
-    rimLights.rimHeight,
+    rimLights.redHeight,
+    rimLights.blueHeight,
     cameraHeight,
   ].join(":");
 

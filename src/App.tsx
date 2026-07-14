@@ -63,7 +63,8 @@ const LIGHT_ROWS = [
   { key: "blueBehind", label: "B beh", min: -1, max: 6, step: 0.05, tone: "light-blue" },
   { key: "redSide", label: "R side", min: 0, max: 5, step: 0.05, tone: "light-red" },
   { key: "blueSide", label: "B side", min: 0, max: 5, step: 0.05, tone: "light-blue" },
-  { key: "rimHeight", label: "Height", min: 0.2, max: 4, step: 0.05, tone: "" },
+  { key: "redHeight", label: "R hgt", min: -180, max: 180, step: 1, tone: "light-red" },
+  { key: "blueHeight", label: "B hgt", min: -180, max: 180, step: 1, tone: "light-blue" },
 ] as const;
 
 function clampPitch(rad: number) {
