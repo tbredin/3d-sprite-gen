@@ -196,6 +196,9 @@ export default function App() {
           Procedural chibi → iso bake at {size}×{size}px · free / local
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
+        <p className="tagline feature-boost-note">
+          Feature boost active: bigger high-contrast eyes + chunkier weapon silhouettes for 32–64px readability
+        </p>
       </header>
 
       <main className="layout">

@@ -52,6 +52,12 @@ body {
   max-width: 42rem;
 }
 
+.feature-boost-note {
+  margin-top: -0.5rem;
+  color: #5ad4a0;
+  font-size: 0.72rem;
+}
+
 .layout {
   display: grid;
   gap: 0.85rem;
