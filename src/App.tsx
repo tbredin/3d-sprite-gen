@@ -23,9 +23,13 @@ import {
   type PresetId,
 } from "./lib/chibi";
 import {
+  DEFAULT_OUTLINE_PASS,
   loadOutlineHex,
+  loadOutlinePassSettings,
   loadPalette,
   saveOutlineHex,
+  saveOutlinePassSettings,
+  type OutlinePassSettings,
   type Palette,
   type SpriteSize,
 } from "./lib/palette";
@@ -69,12 +73,16 @@ export default function App() {
     loadRimLightSettings(),
   );
   const [outlineHex, setOutlineHex] = useState(() => loadOutlineHex());
+  const [outlinePass, setOutlinePass] = useState<OutlinePassSettings>(() =>
+    loadOutlinePassSettings(),
+  );
   const [palette, setPalette] = useState<Palette | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [specOpen, setSpecOpen] = useState(false);
   const [lightsOpen, setLightsOpen] = useState(false);
+  const [outlinesOpen, setOutlinesOpen] = useState(true);
   const dragRef = useRef<{
     pointerId: number;
     x: number;
@@ -168,6 +176,14 @@ export default function App() {
     setOutlineHex(hex);
   };
 
+  const patchOutlinePass = (patch: Partial<OutlinePassSettings>) => {
+    setOutlinePass((prev) => {
+      const next = { ...prev, ...patch };
+      saveOutlinePassSettings(next);
+      return next;
+    });
+  };
+
   useEffect(() => {
     loadPalette("endesga-64")
       .then((p) => {
@@ -219,6 +235,7 @@ export default function App() {
                     size={size}
                     colors={palette.colors}
                     outlineHex={outlineHex}
+                    outlinePass={outlinePass}
                     zoom={zoom}
                     rotationX={rotationX}
                     rotationY={rotationY}
@@ -405,19 +422,60 @@ export default function App() {
             </div>
           )}
 
-          <div className="bake-tools">
+          <CollapseSection
+            title="Outlines"
+            open={outlinesOpen}
+            onToggle={() => setOutlinesOpen((v) => !v)}
+            actions={
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => {
+                  const next = { ...DEFAULT_OUTLINE_PASS };
+                  saveOutlinePassSettings(next);
+                  setOutlinePass(next);
+                }}
+              >
+                Reset
+              </button>
+            }
+          >
+            <label className="field">
+              <input
+                type="checkbox"
+                checked={outlinePass.silhouette}
+                onChange={(e) => patchOutlinePass({ silhouette: e.target.checked })}
+              />
+              {" "}Outer silhouette
+            </label>
+            <label className="field">
+              <input
+                type="checkbox"
+                checked={outlinePass.partSeams}
+                onChange={(e) => patchOutlinePass({ partSeams: e.target.checked })}
+              />
+              {" "}Part seams (head / torso / arms / legs / weapon)
+            </label>
             <label className="field outline-color-label">
-              Sprite outline
+              Outline color
               {palette ? (
                 <OutlineSwatchSelect
                   colors={palette.colors}
                   value={outlineHex}
                   onChange={setOutlineColor}
+                  disabled={!outlinePass.silhouette && !outlinePass.partSeams}
                 />
               ) : (
                 <span className="hint">Loading palette…</span>
               )}
             </label>
+            <p className="hint">
+              Seams outline boundaries between tagged part groups after the
+              Endesga lock. Turn seams off to skip the extra ID render pass.
+            </p>
+          </CollapseSection>
+
+          <div className="bake-tools">
             <button
               type="button"
               className="download-btn"

@@ -5,14 +5,24 @@ type Props = {
   colors: string[];
   value: string;
   onChange: (hex: string) => void;
+  disabled?: boolean;
 };
 
 /** Dropdown that picks an Endesga swatch for the baked 1px outline. */
-export function OutlineSwatchSelect({ colors, value, onChange }: Props) {
+export function OutlineSwatchSelect({
+  colors,
+  value,
+  onChange,
+  disabled = false,
+}: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const selected = normalizePaletteHex(value);
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   useEffect(() => {
     if (!open) return;
@@ -38,6 +48,7 @@ export function OutlineSwatchSelect({ colors, value, onChange }: Props) {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
+        disabled={disabled}
         onClick={() => setOpen((v) => !v)}
       >
         <span

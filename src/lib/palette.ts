@@ -90,6 +90,39 @@ export function saveOutlineHex(hex: string) {
   localStorage.setItem(OUTLINE_STORAGE_KEY, normalizePaletteHex(hex));
 }
 
+/** Which outline passes run after palette quantize. */
+export type OutlinePassSettings = {
+  /** Outer 1px ring (transparent touching opaque). */
+  silhouette: boolean;
+  /** Internal seams between part groups (needs an ID pass). */
+  partSeams: boolean;
+};
+
+export const DEFAULT_OUTLINE_PASS: OutlinePassSettings = {
+  silhouette: true,
+  partSeams: true,
+};
+
+const OUTLINE_PASS_STORAGE_KEY = "3d-sprite-gen:outline-pass-v1";
+
+export function loadOutlinePassSettings(): OutlinePassSettings {
+  try {
+    const raw = localStorage.getItem(OUTLINE_PASS_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_OUTLINE_PASS };
+    const parsed = JSON.parse(raw) as Partial<OutlinePassSettings>;
+    return {
+      silhouette: parsed.silhouette !== false,
+      partSeams: parsed.partSeams !== false,
+    };
+  } catch {
+    return { ...DEFAULT_OUTLINE_PASS };
+  }
+}
+
+export function saveOutlinePassSettings(settings: OutlinePassSettings) {
+  localStorage.setItem(OUTLINE_PASS_STORAGE_KEY, JSON.stringify(settings));
+}
+
 /**
  * Single-pixel outline: every empty neighbour of an opaque pixel becomes outline.
  * Runs after quantize so the rim is one solid palette colour.
@@ -149,7 +182,10 @@ export function applyPartOutline(
   outlineHex = DEFAULT_OUTLINE_HEX,
   idBuffer?: Uint8Array | Uint8ClampedArray,
   decodePixel?: (r: number, g: number, b: number, a: number) => number,
+  pass: OutlinePassSettings = DEFAULT_OUTLINE_PASS,
 ): ImageData {
+  if (!pass.silhouette && !pass.partSeams) return data;
+
   const { width: w, height: h, data: px } = data;
   const [or, og, ob] = hexToRgb(outlineHex);
   const opaque = new Uint8Array(w * h);
@@ -157,11 +193,12 @@ export function applyPartOutline(
     opaque[i] = px[i * 4 + 3] >= 8 ? 1 : 0;
   }
 
+  const wantSeams = pass.partSeams && !!idBuffer && !!decodePixel;
   const partId = new Int16Array(w * h).fill(0);
-  if (idBuffer && decodePixel) {
+  if (wantSeams) {
     for (let i = 0; i < w * h; i++) {
       const o = i * 4;
-      partId[i] = decodePixel(idBuffer[o]!, idBuffer[o + 1]!, idBuffer[o + 2]!, idBuffer[o + 3]!);
+      partId[i] = decodePixel!(idBuffer![o]!, idBuffer![o + 1]!, idBuffer![o + 2]!, idBuffer![o + 3]!);
     }
   }
 
@@ -174,17 +211,19 @@ export function applyPartOutline(
   const outlinePixels = new Set<number>();
 
   // Outer silhouette: transparent pixel touching an opaque one grows the ring.
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      if (opaque[i]) continue;
-      for (const [dy, dx] of NEIGHBORS) {
-        const nx = x + dx;
-        const ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-        if (opaque[ny * w + nx]) {
-          outlinePixels.add(i);
-          break;
+  if (pass.silhouette) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (opaque[i]) continue;
+        for (const [dy, dx] of NEIGHBORS) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          if (opaque[ny * w + nx]) {
+            outlinePixels.add(i);
+            break;
+          }
         }
       }
     }
@@ -193,7 +232,7 @@ export function applyPartOutline(
   // Internal seams: opaque pixel bordering an opaque pixel from a different
   // part. Only the lower-id side is repainted so a seam stays 1px wide
   // instead of 2px (one line drawn on each side of the boundary).
-  if (idBuffer && decodePixel) {
+  if (wantSeams) {
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const i = y * w + x;

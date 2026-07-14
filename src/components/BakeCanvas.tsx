@@ -12,7 +12,9 @@ import { ChibiCharacter } from "./ChibiCharacter";
 import { downloadDataUrl } from "../lib/capture";
 import {
   applyPartOutline,
+  DEFAULT_OUTLINE_PASS,
   quantizeImageData,
+  type OutlinePassSettings,
   type SpriteSize,
 } from "../lib/palette";
 import { renderPartGroupBuffer } from "../lib/chibi/idPass";
@@ -36,6 +38,7 @@ type BakeProps = {
   colors: string[];
   /** Endesga hex (no #) for the 1px baked outline. */
   outlineHex: string;
+  outlinePass?: OutlinePassSettings;
   zoom: number;
   rotationX: number;
   rotationY: number;
@@ -54,6 +57,7 @@ function BakeCapture({
   size,
   colors,
   outlineHex,
+  outlinePass,
   zoom,
   rotationX,
   rotationY,
@@ -63,6 +67,7 @@ function BakeCapture({
   size: SpriteSize;
   colors: string[];
   outlineHex: string;
+  outlinePass: OutlinePassSettings;
   zoom: number;
   rotationX: number;
   rotationY: number;
@@ -85,6 +90,8 @@ function BakeCapture({
   const bakeCam = useMemo(() => new OrthographicCamera(), []);
   const onCapturedRef = useRef(onCaptured);
   onCapturedRef.current = onCaptured;
+  const outlinePassRef = useRef(outlinePass);
+  outlinePassRef.current = outlinePass;
 
   useEffect(() => () => target.dispose(), [target]);
 
@@ -108,14 +115,23 @@ function BakeCapture({
         gl.readRenderTargetPixels(target, 0, 0, size, size, buffer);
         const flipped = flipRows(buffer, size);
 
-        // Reuses `target` for a second flat-color pass so opaque pixels can
-        // be split by part group, not just by silhouette.
-        const idBuffer = renderPartGroupBuffer(gl, scene, bakeCam, size, target);
-        const idFlipped = flipRows(idBuffer, size);
+        const pass = outlinePassRef.current;
+        let idFlipped: Uint8Array | undefined;
+        // Skip the ID pass when seams are off — it is the expensive second render.
+        if (pass.partSeams) {
+          const idBuffer = renderPartGroupBuffer(gl, scene, bakeCam, size, target);
+          idFlipped = flipRows(idBuffer, size);
+        }
 
         const imageData = new ImageData(flipped, size, size);
         quantizeImageData(imageData, colors);
-        applyPartOutline(imageData, outlineHex, idFlipped, decodePartGroupPixel);
+        applyPartOutline(
+          imageData,
+          outlineHex,
+          idFlipped,
+          idFlipped ? decodePartGroupPixel : undefined,
+          pass,
+        );
 
         const out = document.createElement("canvas");
         out.width = size;
@@ -136,6 +152,8 @@ function BakeCapture({
     size,
     colors,
     outlineHex,
+    outlinePass.silhouette,
+    outlinePass.partSeams,
     zoom,
     rotationX,
     rotationY,
@@ -167,6 +185,7 @@ export function BakeCanvas({
   size,
   colors,
   outlineHex,
+  outlinePass = DEFAULT_OUTLINE_PASS,
   zoom,
   rotationX,
   rotationY,
@@ -247,6 +266,7 @@ export function BakeCanvas({
         size={size}
         colors={colors}
         outlineHex={outlineHex}
+        outlinePass={outlinePass}
         zoom={zoom}
         rotationX={rotationX}
         rotationY={rotationY}
