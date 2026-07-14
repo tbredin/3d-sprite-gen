@@ -68,6 +68,78 @@ export function normalizeLightHex(hex: string, fallback: string): string {
   return fallback;
 }
 
+/** Coerce partial / legacy storage into a full settings object. */
+export function normalizeRimLightSettings(
+  parsed: Partial<RimLightSettings> & { rimHeight?: number },
+): RimLightSettings {
+  // Older builds used point-light intensities (~8–9). Directionals need lower values.
+  const legacyPoint =
+    parsed.keyBrightness == null &&
+    typeof parsed.redBrightness === "number" &&
+    parsed.redBrightness > 5;
+  const scale = legacyPoint ? 0.32 : 1;
+  const legacyHeight =
+    typeof parsed.rimHeight === "number" ? parsed.rimHeight - 1.05 : undefined;
+  return {
+    keyBrightness: clampNum(
+      parsed.keyBrightness,
+      0,
+      8,
+      DEFAULT_RIM_LIGHTS.keyBrightness,
+    ),
+    ambientBrightness: clampNum(
+      parsed.ambientBrightness,
+      0,
+      2,
+      DEFAULT_RIM_LIGHTS.ambientBrightness,
+    ),
+    redBrightness: clampNum(
+      Number(parsed.redBrightness) * scale,
+      0,
+      24,
+      DEFAULT_RIM_LIGHTS.redBrightness,
+    ),
+    blueBrightness: clampNum(
+      Number(parsed.blueBrightness) * scale,
+      0,
+      24,
+      DEFAULT_RIM_LIGHTS.blueBrightness,
+    ),
+    redBehind: clampNum(parsed.redBehind, -2, 8, DEFAULT_RIM_LIGHTS.redBehind),
+    blueBehind: clampNum(parsed.blueBehind, -2, 8, DEFAULT_RIM_LIGHTS.blueBehind),
+    redSide: clampNum(parsed.redSide, 0, 6, DEFAULT_RIM_LIGHTS.redSide),
+    blueSide: clampNum(parsed.blueSide, 0, 6, DEFAULT_RIM_LIGHTS.blueSide),
+    redHeight: clampNum(
+      parsed.redHeight ?? legacyHeight,
+      -180,
+      180,
+      DEFAULT_RIM_LIGHTS.redHeight,
+    ),
+    blueHeight: clampNum(
+      parsed.blueHeight ?? legacyHeight,
+      -180,
+      180,
+      DEFAULT_RIM_LIGHTS.blueHeight,
+    ),
+    keyColor: normalizeLightHex(
+      String(parsed.keyColor ?? ""),
+      DEFAULT_RIM_LIGHTS.keyColor,
+    ),
+    ambientColor: normalizeLightHex(
+      String(parsed.ambientColor ?? ""),
+      DEFAULT_RIM_LIGHTS.ambientColor,
+    ),
+    redColor: normalizeLightHex(
+      String(parsed.redColor ?? ""),
+      DEFAULT_RIM_LIGHTS.redColor,
+    ),
+    blueColor: normalizeLightHex(
+      String(parsed.blueColor ?? ""),
+      DEFAULT_RIM_LIGHTS.blueColor,
+    ),
+  };
+}
+
 export function loadRimLightSettings(): RimLightSettings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -75,72 +147,7 @@ export function loadRimLightSettings(): RimLightSettings {
     const parsed = JSON.parse(raw) as Partial<RimLightSettings> & {
       rimHeight?: number;
     };
-    // Older builds used point-light intensities (~8–9). Directionals need lower values.
-    const legacyPoint =
-      parsed.keyBrightness == null &&
-      typeof parsed.redBrightness === "number" &&
-      parsed.redBrightness > 5;
-    const scale = legacyPoint ? 0.32 : 1;
-    const legacyHeight =
-      typeof parsed.rimHeight === "number" ? parsed.rimHeight - 1.05 : undefined;
-    return {
-      keyBrightness: clampNum(
-        parsed.keyBrightness,
-        0,
-        8,
-        DEFAULT_RIM_LIGHTS.keyBrightness,
-      ),
-      ambientBrightness: clampNum(
-        parsed.ambientBrightness,
-        0,
-        2,
-        DEFAULT_RIM_LIGHTS.ambientBrightness,
-      ),
-      redBrightness: clampNum(
-        Number(parsed.redBrightness) * scale,
-        0,
-        24,
-        DEFAULT_RIM_LIGHTS.redBrightness,
-      ),
-      blueBrightness: clampNum(
-        Number(parsed.blueBrightness) * scale,
-        0,
-        24,
-        DEFAULT_RIM_LIGHTS.blueBrightness,
-      ),
-      redBehind: clampNum(parsed.redBehind, -2, 8, DEFAULT_RIM_LIGHTS.redBehind),
-      blueBehind: clampNum(parsed.blueBehind, -2, 8, DEFAULT_RIM_LIGHTS.blueBehind),
-      redSide: clampNum(parsed.redSide, 0, 6, DEFAULT_RIM_LIGHTS.redSide),
-      blueSide: clampNum(parsed.blueSide, 0, 6, DEFAULT_RIM_LIGHTS.blueSide),
-      redHeight: clampNum(
-        parsed.redHeight ?? legacyHeight,
-        -180,
-        180,
-        DEFAULT_RIM_LIGHTS.redHeight,
-      ),
-      blueHeight: clampNum(
-        parsed.blueHeight ?? legacyHeight,
-        -180,
-        180,
-        DEFAULT_RIM_LIGHTS.blueHeight,
-      ),
-      keyColor: normalizeLightHex(
-        String(parsed.keyColor ?? ""),
-        DEFAULT_RIM_LIGHTS.keyColor,
-      ),
-      ambientColor: normalizeLightHex(
-        String(parsed.ambientColor ?? ""),
-        DEFAULT_RIM_LIGHTS.ambientColor,
-      ),
-      redColor: normalizeLightHex(
-        String(parsed.redColor ?? ""),
-        DEFAULT_RIM_LIGHTS.redColor,
-      ),
-      blueColor: normalizeLightHex(
-        String(parsed.blueColor ?? ""),
-        DEFAULT_RIM_LIGHTS.blueColor,
-      ),
-    };
+    return normalizeRimLightSettings(parsed);
   } catch {
     return { ...DEFAULT_RIM_LIGHTS };
   }

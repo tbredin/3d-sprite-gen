@@ -1,4 +1,7 @@
-import type { RimLightSettings } from "./rimLights";
+import {
+  normalizeRimLightSettings,
+  type RimLightSettings,
+} from "./rimLights";
 
 /** Named snapshot of the full rim / fill lighting board. */
 export type LightingProfile = {
@@ -47,7 +50,7 @@ export function snapshotCurrentLighting(
   return {
     id: createProfileId(),
     name: name.trim() || "Untitled",
-    settings: { ...settings },
+    settings: normalizeRimLightSettings(settings),
     updatedAt: Date.now(),
   };
 }
@@ -69,7 +72,7 @@ function normalizeProfile(raw: unknown): LightingProfile | null {
   return {
     id: o.id,
     name: o.name.trim() || "Untitled",
-    settings: { ...(o.settings as RimLightSettings) },
+    settings: normalizeRimLightSettings(s),
     updatedAt:
       typeof o.updatedAt === "number" && Number.isFinite(o.updatedAt)
         ? o.updatedAt

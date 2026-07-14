@@ -77,6 +77,7 @@ import {
 import {
   DEFAULT_RIM_LIGHTS,
   loadRimLightSettings,
+  normalizeRimLightSettings,
   saveRimLightSettings,
   type RimLightSettings,
 } from "./lib/rimLights";
@@ -311,7 +312,7 @@ export default function App() {
 
   const patchRimLights = (patch: Partial<RimLightSettings>) => {
     setRimLights((prev) => {
-      const next = { ...prev, ...patch };
+      const next = normalizeRimLightSettings({ ...prev, ...patch });
       saveRimLightSettings(next);
       return next;
     });
@@ -331,6 +332,7 @@ export default function App() {
   const saveLightingProfile = () => {
     const name = profileName.trim();
     if (!name) return;
+    const settings = normalizeRimLightSettings(rimLights);
     const existing = lightingProfiles.find(
       (p) => p.name.toLowerCase() === name.toLowerCase(),
     );
@@ -340,7 +342,7 @@ export default function App() {
           ? {
               ...p,
               name,
-              settings: { ...rimLights },
+              settings,
               updatedAt: Date.now(),
             }
           : p,
@@ -349,7 +351,7 @@ export default function App() {
     } else {
       persistProfiles([
         ...lightingProfiles,
-        snapshotCurrentLighting(rimLights, name),
+        snapshotCurrentLighting(settings, name),
       ]);
     }
     setProfileName("");
@@ -358,7 +360,7 @@ export default function App() {
   const loadLightingProfile = (id: string) => {
     const profile = lightingProfiles.find((p) => p.id === id);
     if (!profile) return;
-    const next = { ...profile.settings };
+    const next = normalizeRimLightSettings(profile.settings);
     saveRimLightSettings(next);
     setRimLights(next);
   };
