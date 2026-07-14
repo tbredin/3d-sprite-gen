@@ -93,6 +93,7 @@ export default function App() {
   const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
   const [charKey, setCharKey] = useState(0);
   const [locks, setLocks] = useState<PartLocks>({ ...EMPTY_LOCKS });
+  const [mirror, setMirror] = useState(false);
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
   );
@@ -304,6 +305,7 @@ export default function App() {
                     rotationX={rotationX}
                     rotationY={rotationY}
                     spec={spec}
+                    mirror={mirror}
                     rimLights={rimLights}
                     edgeOutline={edgeOutline}
                     displayPx={displayPx}
@@ -425,6 +427,20 @@ export default function App() {
           <div className="part-controls">
             <div className="stage-label">Parts</div>
             <div className="part-grid">
+              <div className="part-row">
+                <span className="part-name">mirror</span>
+                <div className="part-actions">
+                  <label className="part-lock">
+                    <input
+                      type="checkbox"
+                      checked={mirror}
+                      onChange={() => setMirror((v) => !v)}
+                      title="Flip character left/right (X-scale −1)"
+                    />
+                    Mirror
+                  </label>
+                </div>
+              </div>
               {PART_IDS.map((part) => (
                 <div key={part} className="part-row">
                   <span className="part-name">{part}</span>

@@ -70,6 +70,8 @@ type BakeProps = {
   rotationX: number;
   rotationY: number;
   spec: CharacterSpec;
+  /** Mirror character left/right (X-scale −1). */
+  mirror?: boolean;
   rimLights: RimLightSettings;
   /** Depth+normal discontinuity outline pass — see docs/SPIKE-depth-normal-edges.md. */
   edgeOutline?: EdgeOutlineSettings;
@@ -92,6 +94,7 @@ function BakeCapture({
   cameraHeight,
   rotationX,
   rotationY,
+  mirror,
   rimKey,
   edgeOutline,
   onCaptured,
@@ -105,6 +108,7 @@ function BakeCapture({
   cameraHeight: number;
   rotationX: number;
   rotationY: number;
+  mirror: boolean;
   /** Changes when lighting knobs move so the PNG rebakes. */
   rimKey: string;
   edgeOutline: EdgeOutlineSettings;
@@ -268,6 +272,7 @@ function BakeCapture({
     cameraHeight,
     rotationX,
     rotationY,
+    mirror,
     rimKey,
     target,
     bakeCam,
@@ -315,6 +320,7 @@ export function BakeCanvas({
   rotationX,
   rotationY,
   spec,
+  mirror = false,
   rimLights,
   edgeOutline = DEFAULT_EDGE_OUTLINE_SETTINGS,
   onCaptured,
@@ -391,7 +397,7 @@ export function BakeCanvas({
       />
       <group position={[0, CHARACTER_PIVOT_Y, 0]} rotation={[rotationX, rotationY, 0]}>
         <group position={[0, -CHARACTER_PIVOT_Y, 0]}>
-          <ChibiCharacter spec={spec} rotationY={rotationY} />
+          <ChibiCharacter spec={spec} rotationY={rotationY} mirror={mirror} />
         </group>
       </group>
       <BakeCapture
@@ -404,6 +410,7 @@ export function BakeCanvas({
         cameraHeight={cameraHeight}
         rotationX={rotationX}
         rotationY={rotationY}
+        mirror={mirror}
         rimKey={rimKey}
         edgeOutline={edgeOutline}
         onCaptured={onCaptured}

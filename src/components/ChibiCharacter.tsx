@@ -23,10 +23,13 @@ function disposeObject(root: Object3D) {
 export function ChibiCharacter({
   spec,
   rotationY = 0,
+  mirror = false,
 }: {
   spec: CharacterSpec;
   /** Body yaw from the iso facing control — drives FF-style face cheating. */
   rotationY?: number;
+  /** Flip left/right via X-scale −1; keeps feet on ground and facing yaw unchanged. */
+  mirror?: boolean;
 }) {
   const group = useMemo(() => assembleCharacter(spec), [spec]);
 
@@ -36,5 +39,9 @@ export function ChibiCharacter({
 
   useEffect(() => () => disposeObject(group), [group]);
 
-  return <primitive object={group} />;
+  return (
+    <group scale={[mirror ? -1 : 1, 1, 1]}>
+      <primitive object={group} />
+    </group>
+  );
 }
