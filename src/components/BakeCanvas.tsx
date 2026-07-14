@@ -257,6 +257,7 @@ function BakeCapture({
             edge.opacity,
             edge.dilate,
             edge.blur,
+            colors,
           );
         }
 

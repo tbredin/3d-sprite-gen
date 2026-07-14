@@ -1,6 +1,7 @@
 import {
   DEFAULT_OUTLINE_HEX,
   hexToRgb,
+  nearestPaletteColor,
   normalizePaletteHex,
 } from "./palette";
 
@@ -456,6 +457,9 @@ export function detectDepthNormalEdges(
 
 /**
  * Dilate / blur the strength field then composite with opacity over existing pixels.
+ * Soft blends leave intermediate RGBs off-palette — when `paletteColors` is set,
+ * the edge hex and every painted pixel are snapped to the nearest palette entry
+ * so the final bake stays Endesga-locked (same contract as post-quantize outlines).
  */
 export function applyEdgeMask(
   data: ImageData,
@@ -464,13 +468,20 @@ export function applyEdgeMask(
   opacity = 1,
   dilate = 0,
   blur = 0,
+  paletteColors?: string[],
 ): ImageData {
   const w = data.width;
   const h = data.height;
   let field = edges;
   field = dilateStrength(field, w, h, Math.round(dilate));
   field = blurStrength(field, w, h, Math.round(blur));
-  const [or, og, ob] = hexToRgb(edgeHex);
+  const paletteRgb = paletteColors?.length
+    ? paletteColors.map(hexToRgb)
+    : undefined;
+  let [or, og, ob] = hexToRgb(edgeHex);
+  if (paletteRgb) {
+    [or, og, ob] = nearestPaletteColor(or, og, ob, paletteRgb);
+  }
   const px = data.data;
   const op = clamp(opacity, 0, 1);
   for (let i = 0; i < field.length; i++) {
@@ -480,9 +491,15 @@ export function applyEdgeMask(
     const a = px[o + 3] / 255;
     if (a < 0.02) continue;
     const t = clamp(strength, 0, 1);
-    px[o] = Math.round(px[o] * (1 - t) + or * t);
-    px[o + 1] = Math.round(px[o + 1] * (1 - t) + og * t);
-    px[o + 2] = Math.round(px[o + 2] * (1 - t) + ob * t);
+    let r = Math.round(px[o] * (1 - t) + or * t);
+    let g = Math.round(px[o + 1] * (1 - t) + og * t);
+    let b = Math.round(px[o + 2] * (1 - t) + ob * t);
+    if (paletteRgb) {
+      [r, g, b] = nearestPaletteColor(r, g, b, paletteRgb);
+    }
+    px[o] = r;
+    px[o + 1] = g;
+    px[o + 2] = b;
     px[o + 3] = 255;
   }
   return data;
