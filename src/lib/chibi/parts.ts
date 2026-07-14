@@ -530,6 +530,17 @@ export function generateHair(opts: {
 }
 
 /**
+ * Helmet shells hug the egg skull from `generateHead`.
+ * Shell ≈ skullR × few %; egg axes match skin skull, slightly flatter on top.
+ * Closed styles replace the skull; `cap` overlays the crown only.
+ */
+const HEAD_TALL = 1.1;
+/** Match `generateHead` skull squash before shell inflate. */
+const SKULL_EGG = { x: 0.92, y: 1.05, z: 0.86 } as const;
+/** Thin shell just outside the skin skull — not a second balloon. */
+const HELMET_SHELL = 1.04;
+
+/**
  * Head gear. Closed styles (`knight`, `sciFi`) and deep cowls (`hood`) are
  * sized as *head replacements* matching `generateHead` egg proportions —
  * assembly hides the skin skull (and usually face/hair). `cap` stays an
@@ -550,108 +561,126 @@ export function generateHelmet(opts: {
   const top = LAYOUT.headTopY;
   const s = opts.scale ?? 1;
   const r = CHIBI.skullR * s;
-  /** Match generateHead vertical stretch. */
-  const tall = 1.1;
+  const tall = HEAD_TALL;
+  const shellR = r * HELMET_SHELL;
+  /** Flatter than skin egg so closed helms don't read as balloon heads. */
+  const shellEgg = {
+    x: SKULL_EGG.x,
+    y: SKULL_EGG.y * 0.96 * tall,
+    z: SKULL_EGG.z,
+  };
+  const skullPos = { x: 0, y: cy + 0.08 * tall, z: -0.04 };
 
   if (opts.style === "knight") {
-    // Closed plate helm = the head. Egg body + neck ring + visor slits.
+    // Closed plate helm = the head. Thin egg shell + bevor + visor slits.
     const slit = toon(opts.visor ?? "#2a2e3a");
-    const dome = new Mesh(new SphereGeometry(r * 1.08, 14, 12), mat);
-    dome.position.set(0, cy + 0.08 * tall, -0.02);
-    dome.scale.set(0.95, 1.08 * tall, 0.92);
+    const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
+    dome.position.set(skullPos.x, skullPos.y, skullPos.z);
+    dome.scale.set(shellEgg.x, shellEgg.y, shellEgg.z);
     g.add(dome);
 
-    const brow = new Mesh(new SphereGeometry(r * 0.78, 12, 8), mat);
-    brow.position.set(0, cy + r * 0.72 * tall, -0.02);
-    brow.scale.set(1.05, 0.45 * tall, 1.0);
-    g.add(brow);
-
-    // Chin / bevor — replaces the lowered jaw silhouette
+    // Brow ridge — flat strip, not a second brow sphere
     g.add(
       mesh(
-        new SphereGeometry(r * 0.72, 12, 10),
+        new BoxGeometry(r * 1.55, r * 0.14, r * 0.55),
         mat,
         0,
-        cy - r * 0.55 * tall,
-        r * 0.28,
+        cy + r * 0.38 * tall,
+        r * 0.35,
       ),
     );
+
+    // Tight bevor / chin plate hugging the jaw line
+    const bevor = new Mesh(new SphereGeometry(r * 0.48, 12, 10), mat);
+    bevor.position.set(0, cy - r * 0.72 * tall, r * 0.22);
+    bevor.scale.set(1.15, 0.7 * tall, 0.85);
+    g.add(bevor);
     g.add(
       mesh(
-        new CylinderGeometry(r * 0.95, r * 1.05, 0.18, 12),
+        new CylinderGeometry(r * 0.78, r * 0.88, 0.12, 12),
         mat,
         0,
-        cy - r * 0.95 * tall,
+        cy - r * 1.05 * tall,
         0.02,
       ),
     );
 
-    // Visor: horizontal slits + central ridge (reads at 32–48px)
-    const faceZ = r * 0.95;
-    g.add(mesh(new BoxGeometry(r * 1.35, 0.07, 0.1), slit, 0, cy + 0.06 * tall, faceZ));
-    g.add(mesh(new BoxGeometry(r * 0.85, 0.05, 0.08), slit, 0, cy - 0.08 * tall, faceZ + 0.02));
-    g.add(mesh(new BoxGeometry(0.06, r * 0.85, 0.09), mat, 0, cy - 0.01 * tall, faceZ + 0.01));
-    // Tiny crest so silhouette isn't a smooth blob from iso top-down
-    g.add(mesh(new BoxGeometry(0.05, 0.12, 0.28), mat, 0, top - 0.02, -0.02));
+    // Visor slits + central ridge (reads at 32–48px)
+    const faceZ = r * 0.92;
+    g.add(mesh(new BoxGeometry(r * 1.2, 0.06, 0.08), slit, 0, cy + 0.05 * tall, faceZ));
+    g.add(mesh(new BoxGeometry(r * 0.75, 0.045, 0.07), slit, 0, cy - 0.07 * tall, faceZ + 0.02));
+    g.add(mesh(new BoxGeometry(0.05, r * 0.7, 0.07), mat, 0, cy - 0.01 * tall, faceZ + 0.01));
+    // Short crest — silhouette punctuation without inflating height
+    g.add(mesh(new BoxGeometry(0.04, 0.06, 0.18), mat, 0, top - 0.06, -0.04));
   }
 
   if (opts.style === "cap") {
-    // Overlay: brim + soft dome on the crown (skull/face/hair stay)
-    const brim = new Mesh(new CylinderGeometry(r * 1.45, r * 1.45, 0.06, 12), mat);
-    brim.position.set(0, top - 0.06, 0.1);
+    // Overlay: small brim + shallow crown dome (does not replace skull)
+    const brim = new Mesh(new CylinderGeometry(r * 1.18, r * 1.18, 0.045, 12), mat);
+    brim.position.set(0, top - 0.1, 0.06);
     g.add(brim);
-    g.add(
-      mesh(
-        new SphereGeometry(r * 1.15, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5),
-        mat,
-        0,
-        cy + r * 0.35 * tall,
-        0,
-      ),
+    const crown = new Mesh(
+      new SphereGeometry(r * 0.9, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.48),
+      mat,
     );
+    crown.position.set(0, cy + r * 0.55 * tall, -0.02);
+    crown.scale.set(1.0, 0.85, 0.95);
+    g.add(crown);
   }
 
   if (opts.style === "sciFi") {
-    // Sealed dome = head. Soft egg + opaque visor band (no face mesh).
-    const dome = new Mesh(new SphereGeometry(r * 1.12, 14, 12), mat);
-    dome.position.set(0, cy + 0.08 * tall, -0.02);
-    dome.scale.set(0.98, 1.1 * tall, 0.95);
+    // Sealed dome = head. Same tight egg as knight; thin visor band.
+    const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
+    dome.position.set(skullPos.x, skullPos.y, skullPos.z);
+    dome.scale.set(shellEgg.x, shellEgg.y, shellEgg.z);
     g.add(dome);
 
-    const jaw = new Mesh(new SphereGeometry(r * 0.7, 12, 10), mat);
-    jaw.position.set(0, cy - r * 0.5 * tall, r * 0.2);
-    jaw.scale.set(1.05, 0.85, 0.9);
+    const jaw = new Mesh(new SphereGeometry(r * 0.42, 12, 10), mat);
+    jaw.position.set(0, cy - r * 0.65 * tall, r * 0.18);
+    jaw.scale.set(1.2, 0.65 * tall, 0.9);
     g.add(jaw);
 
     const visor = toon(opts.visor ?? "#5ad4a0");
     g.add(
       mesh(
-        new BoxGeometry(r * 1.85, r * 0.55, 0.14),
+        new BoxGeometry(r * 1.55, r * 0.32, 0.1),
         visor,
         0,
-        cy + 0.04 * tall,
-        r * 0.95,
+        cy + 0.02 * tall,
+        r * 0.9,
       ),
     );
-    // Antenna stub for silhouette punctuation under high iso
-    g.add(mesh(new CylinderGeometry(0.03, 0.03, 0.22, 6), mat, r * 0.55, top - 0.04, -0.08));
+    // Short antenna stub (kept under top bound)
+    g.add(
+      mesh(new CylinderGeometry(0.025, 0.025, 0.1, 6), mat, r * 0.45, top - 0.08, -0.06),
+    );
   }
 
   if (opts.style === "hood") {
-    // Replacement cowl: wrap where the skull was; face stays in the open window.
-    g.add(mesh(new SphereGeometry(r * 1.35, 12, 10), mat, 0, cy + 0.1 * tall, -0.12));
-    const crown = new Mesh(new SphereGeometry(r * 0.95, 12, 8), mat);
-    crown.position.set(0, cy + r * 0.85 * tall, -0.08);
-    crown.scale.set(1.1, 0.55 * tall, 1.0);
+    // Replacement cowl: head-sized egg pushed slightly aft; open face window.
+    const cowl = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
+    cowl.position.set(0, skullPos.y, -0.08);
+    cowl.scale.set(shellEgg.x * 1.02, shellEgg.y * 0.98, shellEgg.z * 1.05);
+    g.add(cowl);
+
+    // Flat crown fold — reads as fabric, not a stacked sphere lump
+    const crown = new Mesh(new SphereGeometry(r * 0.72, 12, 8), mat);
+    crown.position.set(0, cy + r * 0.72 * tall, -0.1);
+    crown.scale.set(1.05, 0.42 * tall, 1.0);
     g.add(crown);
-    // Side flaps frame the face without covering it
-    g.add(mesh(new SphereGeometry(r * 0.7, 10, 8), mat, -r * 1.05, cy + 0.02, 0.12));
-    g.add(mesh(new SphereGeometry(r * 0.7, 10, 8), mat, r * 1.05, cy + 0.02, 0.12));
-    g.add(mesh(new SphereGeometry(r * 0.5, 8, 6), mat, -r * 0.65, cy + 0.2 * tall, r * 0.55));
-    g.add(mesh(new SphereGeometry(r * 0.5, 8, 6), mat, r * 0.65, cy + 0.2 * tall, r * 0.55));
-    const drape = new Mesh(new CapsuleGeometry(r * 0.55, 0.3, 4, 8), mat);
-    drape.position.set(0, cy - r * 0.35 * tall, -r * 0.95);
-    drape.rotation.x = 0.5;
+
+    // Thin cheek flaps frame the opening without widening past the egg
+    for (const sSign of [-1, 1] as const) {
+      const flap = new Mesh(new SphereGeometry(r * 0.32, 10, 8), mat);
+      flap.position.set(sSign * r * 0.82, cy + 0.02, r * 0.15);
+      flap.scale.set(0.7, 1.15 * tall, 0.85);
+      g.add(flap);
+    }
+
+    // Short rear drape into the shoulders
+    const drape = new Mesh(new CapsuleGeometry(r * 0.35, 0.22, 4, 8), mat);
+    drape.position.set(0, cy - r * 0.4 * tall, -r * 0.75);
+    drape.rotation.x = 0.45;
     g.add(drape);
   }
 
@@ -756,9 +785,20 @@ export function generateTorso(opts: {
     );
     robe.position.set(0, midY - 0.04, 0);
     g.add(robe);
-    g.add(mesh(new SphereGeometry(0.52, 12, 10), body, 0, cy + 0.08, -0.1));
-    g.add(mesh(new SphereGeometry(0.24, 10, 8), body, -0.36, cy - 0.02, 0.1));
-    g.add(mesh(new SphereGeometry(0.24, 10, 8), body, 0.36, cy - 0.02, 0.1));
+    // Soft torso cowl — hugs skullR egg (few % shell), not a 0.52 balloon.
+    // Prefer `helmet: hood` for a true head-replacement cowl.
+    const tall = HEAD_TALL;
+    const skullR = CHIBI.skullR;
+    const cowl = new Mesh(new SphereGeometry(skullR * HELMET_SHELL, 12, 10), body);
+    cowl.position.set(0, cy + 0.08 * tall, -0.1);
+    cowl.scale.set(SKULL_EGG.x * 1.02, SKULL_EGG.y * 0.95 * tall, SKULL_EGG.z * 1.06);
+    g.add(cowl);
+    g.add(
+      mesh(new SphereGeometry(skullR * 0.28, 10, 8), body, -skullR * 0.85, cy - 0.02, 0.08),
+    );
+    g.add(
+      mesh(new SphereGeometry(skullR * 0.28, 10, 8), body, skullR * 0.85, cy - 0.02, 0.08),
+    );
     const cape = new Mesh(new CapsuleGeometry(0.24, 0.5, 4, 8), body);
     cape.position.set(0, midY - 0.1, -0.38);
     cape.rotation.x = 0.35;

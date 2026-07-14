@@ -37,25 +37,25 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     style: "cap",
     mount: "overlay",
     showFace: true,
-    notes: "Small brim hat on the crown; keep skull/face/hair.",
+    notes: "Shallow brim + crown dome; keep skull/face/hair.",
   },
   knight: {
     style: "knight",
     mount: "replace",
     showFace: false,
-    notes: "Closed plate helm — replaces skull; visor slits only, no face mesh.",
+    notes: "Closed plate egg (~skullR×1.04) — replaces skull; visor slits only.",
   },
   sciFi: {
     style: "sciFi",
     mount: "replace",
     showFace: false,
-    notes: "Sealed dome helm — replaces skull; glowing visor band, no face mesh.",
+    notes: "Sealed egg helm (~skullR×1.04) — replaces skull; thin visor band.",
   },
   hood: {
     style: "hood",
     mount: "replace",
     showFace: true,
-    notes: "Deep cowl replaces skull volume; face stays visible in the window.",
+    notes: "Head-sized cowl replaces skull; face stays in the window.",
   },
 };
 

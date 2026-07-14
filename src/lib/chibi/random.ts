@@ -52,12 +52,14 @@ const HAIR: HairStyle[] = [
   "mohawk",
 ];
 
+/** No deleted mega-domes — only head-hugging shells remain in the catalog. */
 const HELMET: HelmetStyle[] = [
   "none",
   "none",
   "none",
   "none",
   "none",
+  "cap",
   "cap",
   "hood",
   "knight",
@@ -248,9 +250,10 @@ function randomHead(skinHint?: string): HeadBits {
 }
 
 function randomTorso(helmetStyle?: HelmetStyle): TorsoBits {
+  // Avoid stacking `helmet: hood` with a torso cowl (double volume).
   const torsoStyle =
     helmetStyle === "hood"
-      ? pick(["hoodedRobe", "robe", "jacket"] as TorsoStyle[])
+      ? pick(["robe", "jacket", "plain"] as TorsoStyle[])
       : pick(TORSO);
   const cloth = pick(CLOTH);
   const trim = pickTrim(cloth);
