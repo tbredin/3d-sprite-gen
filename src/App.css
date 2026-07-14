@@ -428,7 +428,7 @@ button.ghost {
 }
 
 .light-profiles {
-  margin-bottom: 0.3rem;
+  margin: 0.35rem 0 0.3rem;
   padding-bottom: 0.28rem;
   border-bottom: 1px solid #3a415c;
 }
@@ -677,92 +677,6 @@ button.ghost {
 .outline-edge-sliders {
   margin-top: 0.35rem;
   padding-left: 0.35rem;
-}
-
-.light-subhead {
-  margin: 0.15rem 0 0.3rem;
-  font-size: 0.62rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-.light-profiles {
-  margin: 0.35rem 0 0.15rem;
-  padding-bottom: 0.28rem;
-  border-bottom: 1px solid #3a415c;
-}
-
-.light-profiles .light-subhead {
-  margin-bottom: 0.2rem;
-}
-
-.light-profile-save {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.25rem;
-  align-items: center;
-  margin-bottom: 0.2rem;
-}
-
-/* Beat `.panel input` which pins height: var(--control-h) = 2rem */
-.panel .light-profiles input.light-profile-name {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  flex: none;
-  align-self: center;
-  height: 1.25rem !important;
-  max-height: 1.25rem !important;
-  min-height: 0 !important;
-  padding: 0 0.3rem !important;
-  font: inherit;
-  font-size: 0.6rem !important;
-  line-height: 1 !important;
-  color: var(--text);
-  background: #0c0e16;
-  border: 1px solid #3a415c;
-}
-
-.panel .light-profiles .ghost {
-  box-sizing: border-box;
-  height: 1.25rem !important;
-  max-height: 1.25rem;
-  min-height: 0;
-  padding: 0 0.35rem !important;
-  font-size: 0.6rem;
-  line-height: 1;
-}
-
-.light-profile-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.12rem;
-}
-
-.light-profile-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.25rem;
-  min-height: 1.25rem;
-}
-
-.light-profile-label {
-  font-size: 0.6rem;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.light-profiles .hint {
-  margin: 0.1rem 0 0;
-  font-size: 0.62rem;
 }
 
 .spec-pre {
