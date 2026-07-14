@@ -3,16 +3,41 @@ import {
   BakeCanvas,
   saveSprite,
   DEFAULT_EDGE_OUTLINE_SETTINGS,
+  EDGE_BLUR_MAX,
+  EDGE_BLUR_MIN,
+  EDGE_BLUR_STEP,
   EDGE_DEPTH_MAX,
   EDGE_DEPTH_MIN,
   EDGE_DEPTH_STEP,
+  EDGE_DILATE_MAX,
+  EDGE_DILATE_MIN,
+  EDGE_DILATE_STEP,
+  EDGE_GAMMA_MAX,
+  EDGE_GAMMA_MIN,
+  EDGE_GAMMA_STEP,
   EDGE_NORMAL_MAX,
   EDGE_NORMAL_MIN,
   EDGE_NORMAL_STEP,
+  EDGE_OPACITY_MAX,
+  EDGE_OPACITY_MIN,
+  EDGE_OPACITY_STEP,
+  EDGE_SOFTNESS_MAX,
+  EDGE_SOFTNESS_MIN,
+  EDGE_SOFTNESS_STEP,
+  EDGE_WEIGHT_MAX,
+  EDGE_WEIGHT_MIN,
+  EDGE_WEIGHT_STEP,
   loadEdgeOutlineSettings,
   saveEdgeOutlineSettings,
   type EdgeOutlineSettings,
 } from "./components/BakeCanvas";
+import {
+  loadEdgeProfiles,
+  saveEdgeProfiles,
+  snapshotCurrentEdge,
+  type EdgeProfile,
+} from "./lib/edgeProfiles";
+import { normalizeEdgeOutlineSettings } from "./lib/edgeOutline";
 import { CollapseSection } from "./components/CollapseSection";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
 import { fetchStatus, type StatusResponse } from "./api";
@@ -137,6 +162,10 @@ export default function App() {
   const [edgeOutline, setEdgeOutline] = useState<EdgeOutlineSettings>(
     () => loadEdgeOutlineSettings(),
   );
+  const [edgeProfiles, setEdgeProfiles] = useState<EdgeProfile[]>(() =>
+    loadEdgeProfiles(),
+  );
+  const [edgeProfileName, setEdgeProfileName] = useState("");
   const [palette, setPalette] = useState<Palette | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
@@ -335,7 +364,7 @@ export default function App() {
 
   const patchEdgeOutline = (patch: Partial<EdgeOutlineSettings>) => {
     setEdgeOutline((prev) => {
-      const next = { ...prev, ...patch };
+      const next = normalizeEdgeOutlineSettings({ ...prev, ...patch });
       saveEdgeOutlineSettings(next);
       return next;
     });
@@ -349,6 +378,50 @@ export default function App() {
     const next = { ...DEFAULT_EDGE_OUTLINE_SETTINGS };
     saveEdgeOutlineSettings(next);
     setEdgeOutline(next);
+  };
+
+  const persistEdgeProfiles = (next: EdgeProfile[]) => {
+    saveEdgeProfiles(next);
+    setEdgeProfiles(next);
+  };
+
+  const saveEdgeProfile = () => {
+    const name = edgeProfileName.trim();
+    if (!name) return;
+    const settings = normalizeEdgeOutlineSettings(edgeOutline);
+    const existing = edgeProfiles.find(
+      (p) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) {
+      persistEdgeProfiles(
+        edgeProfiles.map((p) =>
+          p.id === existing.id
+            ? { ...p, name, settings, updatedAt: Date.now() }
+            : p,
+        ),
+      );
+    } else {
+      persistEdgeProfiles([
+        ...edgeProfiles,
+        snapshotCurrentEdge(settings, name),
+      ]);
+    }
+    setEdgeProfileName("");
+  };
+
+  const loadEdgeProfile = (id: string) => {
+    const profile = edgeProfiles.find((p) => p.id === id);
+    if (!profile) return;
+    const next = normalizeEdgeOutlineSettings(
+      profile.settings,
+      palette?.colors,
+    );
+    saveEdgeOutlineSettings(next);
+    setEdgeOutline(next);
+  };
+
+  const deleteEdgeProfile = (id: string) => {
+    persistEdgeProfiles(edgeProfiles.filter((p) => p.id !== id));
   };
 
   useEffect(() => {
@@ -695,22 +768,38 @@ export default function App() {
         <section className="panel panel-bake">
           <h2 className="panel-title">Baked PNG ({size}×{size})</h2>
 
-          {preview ? (
-            <img
-              className="pixel-preview"
-              src={preview}
-              alt="baked sprite"
-              width={displayPx}
-              height={displayPx}
-            />
-          ) : (
-            <div
-              className="pixel-empty"
-              style={{ width: displayPx, height: displayPx }}
-            >
-              Preparing…
+          <div className="bake-preview-row">
+            {preview ? (
+              <img
+                className="pixel-preview"
+                src={preview}
+                alt="baked sprite"
+                width={displayPx}
+                height={displayPx}
+              />
+            ) : (
+              <div
+                className="pixel-empty"
+                style={{ width: displayPx, height: displayPx }}
+              >
+                Preparing…
+              </div>
+            )}
+            <div className="bake-download-col">
+              <button
+                type="button"
+                className="download-btn"
+                onClick={() => preview && saveSprite(preview, size)}
+                disabled={!preview}
+              >
+                Download PNG
+              </button>
+              <p className="meta bake-meta">
+                {palette?.name ?? "…"} · sil #{outlineColors.silhouette} · seams #
+                {outlineColors.partSeams} · Endesga · live bake
+              </p>
             </div>
-          )}
+          </div>
 
           <CollapseSection
             title="Outlines"
@@ -808,6 +897,62 @@ export default function App() {
                 </div>
               </div>
             </div>
+            <div className="light-profiles">
+              <p className="light-subhead">Profiles</p>
+              <div className="light-profile-save">
+                <input
+                  type="text"
+                  className="light-profile-name"
+                  placeholder="Profile name"
+                  value={edgeProfileName}
+                  onChange={(e) => setEdgeProfileName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdgeProfile();
+                  }}
+                  aria-label="Edge detection profile name"
+                />
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={saveEdgeProfile}
+                  disabled={!edgeProfileName.trim()}
+                >
+                  Save current
+                </button>
+              </div>
+              {edgeProfiles.length === 0 ? (
+                <p className="hint">No saved profiles yet.</p>
+              ) : (
+                <ul className="light-profile-list">
+                  {edgeProfiles.map((profile) => (
+                    <li key={profile.id} className="light-profile-row">
+                      <span
+                        className="light-profile-label"
+                        title={profile.name}
+                      >
+                        {profile.name}
+                      </span>
+                      <div className="part-actions">
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => loadEdgeProfile(profile.id)}
+                        >
+                          Load
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => deleteEdgeProfile(profile.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <div className="light-grid outline-edge-sliders">
               <label className="light-slider">
                 <span className="light-slider-label">Depth</span>
@@ -847,28 +992,140 @@ export default function App() {
                   {edgeOutline.normalThresholdDeg.toFixed(0)}
                 </span>
               </label>
+              <label className="light-slider">
+                <span className="light-slider-label">D wgt</span>
+                <input
+                  type="range"
+                  min={EDGE_WEIGHT_MIN}
+                  max={EDGE_WEIGHT_MAX}
+                  step={EDGE_WEIGHT_STEP}
+                  value={edgeOutline.depthWeight}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ depthWeight: Number(e.target.value) })
+                  }
+                  title="Depth channel weight"
+                />
+                <span className="slider-val">
+                  {edgeOutline.depthWeight.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">N wgt</span>
+                <input
+                  type="range"
+                  min={EDGE_WEIGHT_MIN}
+                  max={EDGE_WEIGHT_MAX}
+                  step={EDGE_WEIGHT_STEP}
+                  value={edgeOutline.normalWeight}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ normalWeight: Number(e.target.value) })
+                  }
+                  title="Normal channel weight"
+                />
+                <span className="slider-val">
+                  {edgeOutline.normalWeight.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Soft</span>
+                <input
+                  type="range"
+                  min={EDGE_SOFTNESS_MIN}
+                  max={EDGE_SOFTNESS_MAX}
+                  step={EDGE_SOFTNESS_STEP}
+                  value={edgeOutline.softness}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ softness: Number(e.target.value) })
+                  }
+                  title="Soft response ramp width around thresholds"
+                />
+                <span className="slider-val">
+                  {edgeOutline.softness.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Gamma</span>
+                <input
+                  type="range"
+                  min={EDGE_GAMMA_MIN}
+                  max={EDGE_GAMMA_MAX}
+                  step={EDGE_GAMMA_STEP}
+                  value={edgeOutline.thresholdGamma}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ thresholdGamma: Number(e.target.value) })
+                  }
+                  title="Gamma on soft threshold response (>1 = gentler mid-range)"
+                />
+                <span className="slider-val">
+                  {edgeOutline.thresholdGamma.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Opacity</span>
+                <input
+                  type="range"
+                  min={EDGE_OPACITY_MIN}
+                  max={EDGE_OPACITY_MAX}
+                  step={EDGE_OPACITY_STEP}
+                  value={edgeOutline.opacity}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ opacity: Number(e.target.value) })
+                  }
+                  title="Edge paint opacity / strength"
+                />
+                <span className="slider-val">
+                  {edgeOutline.opacity.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Dilate</span>
+                <input
+                  type="range"
+                  min={EDGE_DILATE_MIN}
+                  max={EDGE_DILATE_MAX}
+                  step={EDGE_DILATE_STEP}
+                  value={edgeOutline.dilate}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ dilate: Number(e.target.value) })
+                  }
+                  title="Expand edge mask by N pixels"
+                />
+                <span className="slider-val">
+                  {edgeOutline.dilate.toFixed(0)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Blur</span>
+                <input
+                  type="range"
+                  min={EDGE_BLUR_MIN}
+                  max={EDGE_BLUR_MAX}
+                  step={EDGE_BLUR_STEP}
+                  value={edgeOutline.blur}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ blur: Number(e.target.value) })
+                  }
+                  title="Box-blur passes on edge strength before paint"
+                />
+                <span className="slider-val">
+                  {edgeOutline.blur.toFixed(0)}
+                </span>
+              </label>
             </div>
             <p className="hint">
               Silhouette and part seams each pick their own outline colour.
-              Edges draw internal creases from depth/normal discontinuities;
-              seams outline tagged part boundaries after the Endesga lock.
+              Edges use a soft depth/normal response (weights, softness, gamma,
+              opacity) so mid-slider settings stay gentle; dilate/blur thicken
+              after detect.
             </p>
           </CollapseSection>
-
-          <div className="bake-tools">
-            <button
-              type="button"
-              className="download-btn"
-              onClick={() => preview && saveSprite(preview, size)}
-              disabled={!preview}
-            >
-              Download PNG
-            </button>
-          </div>
-          <p className="meta">
-            {palette?.name ?? "…"} · sil #{outlineColors.silhouette} · seams #
-            {outlineColors.partSeams} · Endesga · live bake
-          </p>
 
           <CollapseSection
             title="Active spec"

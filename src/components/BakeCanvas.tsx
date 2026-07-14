@@ -45,12 +45,30 @@ import type { RimLightSettings } from "../lib/rimLights";
 
 export {
   DEFAULT_EDGE_OUTLINE_SETTINGS,
+  EDGE_BLUR_MAX,
+  EDGE_BLUR_MIN,
+  EDGE_BLUR_STEP,
   EDGE_DEPTH_MAX,
   EDGE_DEPTH_MIN,
   EDGE_DEPTH_STEP,
+  EDGE_DILATE_MAX,
+  EDGE_DILATE_MIN,
+  EDGE_DILATE_STEP,
+  EDGE_GAMMA_MAX,
+  EDGE_GAMMA_MIN,
+  EDGE_GAMMA_STEP,
   EDGE_NORMAL_MAX,
   EDGE_NORMAL_MIN,
   EDGE_NORMAL_STEP,
+  EDGE_OPACITY_MAX,
+  EDGE_OPACITY_MIN,
+  EDGE_OPACITY_STEP,
+  EDGE_SOFTNESS_MAX,
+  EDGE_SOFTNESS_MIN,
+  EDGE_SOFTNESS_STEP,
+  EDGE_WEIGHT_MAX,
+  EDGE_WEIGHT_MIN,
+  EDGE_WEIGHT_STEP,
   loadEdgeOutlineSettings,
   saveEdgeOutlineSettings,
   type EdgeOutlineSettings,
@@ -232,7 +250,15 @@ function BakeCapture({
             size,
             edge,
           );
-          applyEdgeMask(imageData, edges, edge.color);
+          applyEdgeMask(
+            imageData,
+            edges,
+            edge.color,
+            edge.opacity,
+            edge.dilate,
+            edge.blur,
+            colors,
+          );
         }
 
         applyPartOutline(
@@ -282,6 +308,13 @@ function BakeCapture({
     edgeOutline.color,
     edgeOutline.depthThreshold,
     edgeOutline.normalThresholdDeg,
+    edgeOutline.depthWeight,
+    edgeOutline.normalWeight,
+    edgeOutline.softness,
+    edgeOutline.thresholdGamma,
+    edgeOutline.opacity,
+    edgeOutline.dilate,
+    edgeOutline.blur,
   ]);
 
   return null;
