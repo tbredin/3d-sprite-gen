@@ -51,3 +51,8 @@ export function legsYawForLead(lead: LeadSide = DEFAULT_LEAD): number {
 export function resolveLeadSide(lead?: LeadSide): LeadSide {
   return lead ?? DEFAULT_LEAD;
 }
+
+/** Opposite fighting lead (right ↔ left). */
+export function oppositeLeadSide(lead?: LeadSide): LeadSide {
+  return resolveLeadSide(lead) === "right" ? "left" : "right";
+}

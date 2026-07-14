@@ -435,7 +435,7 @@ export default function App() {
                       type="checkbox"
                       checked={mirror}
                       onChange={() => setMirror((v) => !v)}
-                      title="Flip character left/right (X-scale −1)"
+                      title="Swap lead side (L↔R weapon / stance), same facing"
                     />
                     Mirror
                   </label>

@@ -108,6 +108,7 @@ export {
   LEGS_YAW_FRAC,
   leadSign,
   resolveLeadSide,
+  oppositeLeadSide,
   torsoYawForLead,
   legsYawForLead,
 } from "./stance";

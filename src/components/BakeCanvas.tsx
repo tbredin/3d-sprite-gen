@@ -70,7 +70,7 @@ type BakeProps = {
   rotationX: number;
   rotationY: number;
   spec: CharacterSpec;
-  /** Mirror character left/right (X-scale −1). */
+  /** Mirror character left/right by swapping leadSide (not X-scale). */
   mirror?: boolean;
   rimLights: RimLightSettings;
   /** Depth+normal discontinuity outline pass — see docs/SPIKE-depth-normal-edges.md. */

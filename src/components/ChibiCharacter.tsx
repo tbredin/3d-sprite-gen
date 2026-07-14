@@ -1,5 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo } from "react";
-import { assembleCharacter, applySpriteFaceCheat, type CharacterSpec } from "../lib/chibi";
+import {
+  assembleCharacter,
+  applySpriteFaceCheat,
+  oppositeLeadSide,
+  type CharacterSpec,
+} from "../lib/chibi";
 import type { Object3D } from "three";
 
 function disposeObject(root: Object3D) {
@@ -19,6 +24,23 @@ function disposeObject(root: Object3D) {
   });
 }
 
+/**
+ * True L↔R mirror of an asymmetric fighting stance: swap leadSide (and any
+ * explicit weapon hand) then reassemble. Avoids `scale.x = -1`, which conjugates
+ * the ~45° torso yaw and reads as an extra turn instead of a side swap.
+ */
+function mirroredSpec(spec: CharacterSpec): CharacterSpec {
+  const lead = oppositeLeadSide(spec.leadSide);
+  const next: CharacterSpec = { ...spec, leadSide: lead };
+  if (spec.weapon && spec.weapon.hand) {
+    next.weapon = {
+      ...spec.weapon,
+      hand: oppositeLeadSide(spec.weapon.hand),
+    };
+  }
+  return next;
+}
+
 /** R3F wrapper around assembleCharacter — rebuilds when spec identity changes. */
 export function ChibiCharacter({
   spec,
@@ -28,10 +50,18 @@ export function ChibiCharacter({
   spec: CharacterSpec;
   /** Body yaw from the iso facing control — drives FF-style face cheating. */
   rotationY?: number;
-  /** Flip left/right via X-scale −1; keeps feet on ground and facing yaw unchanged. */
+  /**
+   * Flip left/right by assembling the opposite lead (weapon + torso yaw + stance).
+   * Keeps body facing / BakeCanvas rotationY unchanged.
+   */
   mirror?: boolean;
 }) {
-  const group = useMemo(() => assembleCharacter(spec), [spec]);
+  const effectiveSpec = useMemo(
+    () => (mirror ? mirroredSpec(spec) : spec),
+    [spec, mirror],
+  );
+
+  const group = useMemo(() => assembleCharacter(effectiveSpec), [effectiveSpec]);
 
   useLayoutEffect(() => {
     applySpriteFaceCheat(group, rotationY);
@@ -39,9 +69,5 @@ export function ChibiCharacter({
 
   useEffect(() => () => disposeObject(group), [group]);
 
-  return (
-    <group scale={[mirror ? -1 : 1, 1, 1]}>
-      <primitive object={group} />
-    </group>
-  );
+  return <primitive object={group} />;
 }
