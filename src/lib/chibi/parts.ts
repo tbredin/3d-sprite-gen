@@ -805,6 +805,10 @@ export function generateHelmet(opts: {
   if (opts.style === "sciFi") {
     // Practical sealed infantry helm — hug the egg; angular plates, not a bulb.
     // Soldier preset. Slightly flatter / narrower than knight kettle.
+    // SciFi-only ×1.2 so the sealed infantry head matches body mass (not shared HELMET_SHELL).
+    const SCI_FI_SCALE = 1.2;
+    const r = CHIBI.skullR * s * SCI_FI_SCALE;
+    const shellR = r * HELMET_SHELL;
     const visorMat = toon(opts.visor ?? "#5ad4a0");
     const dark = toon("#1a1c2c");
 
