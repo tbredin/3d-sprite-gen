@@ -397,7 +397,7 @@ export default function App() {
           </CollapseSection>
 
           <CollapseSection
-            title="Edge detection (spike)"
+            title="Edge detection"
             open={edgesOpen}
             onToggle={() => setEdgesOpen((v) => !v)}
             actions={
