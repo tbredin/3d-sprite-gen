@@ -52,7 +52,7 @@ const HAIR: HairStyle[] = [
   "mohawk",
 ];
 
-/** No deleted mega-domes — only head-hugging shells remain in the catalog. */
+/** Head-hugging shells + cap overlay — no mega-domes. */
 const HELMET: HelmetStyle[] = [
   "none",
   "none",

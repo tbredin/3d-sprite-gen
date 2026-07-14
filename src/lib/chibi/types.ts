@@ -82,7 +82,8 @@ export type CharacterSpec = {
     visor?: string;
     /**
      * Mount mode is derived from style via `helmetModeFor` — closed helms
-     * replace the skull; caps overlay. See docs/SPIKE-helmet-head-replacements.md.
+     * replace the skull; `cap` overlays. See
+     * docs/SPIKE-helmet-head-replacements.md.
      */
   };
   face?: {

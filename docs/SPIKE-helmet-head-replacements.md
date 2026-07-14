@@ -21,9 +21,9 @@ Shared helpers live above `generateHelmet` in `parts.ts`:
 | Token | Value | Intent |
 | --- | --- | --- |
 | `SKULL_EGG` | `{ x: 0.92, y: 1.05, z: 0.86 }` | Match `generateHead` squash (× `HEAD_TALL` 1.1 on Y) |
-| `HELMET_SHELL` | `1.04` | Shell radius = `skullR × 1.04` — few % outside skin |
-| Closed Y | `SKULL_EGG.y × 0.96 × tall` | Slightly flatter top than skin egg |
-| Cap overlay | crown `≈ 0.9 × skullR`, brim `≈ 1.18 × skullR` | Sit on crown; do not expand skull silhouette much |
+| `HELMET_SHELL` | `0.98` | Shell radius = `skullR × 0.98` (~6% under prior 1.04) |
+| Closed axes | `SKULL_EGG × {0.98, 0.94×tall, 0.98}` | Slightly tighter / flatter than skin egg |
+| Cap overlay | crown `≈ 0.85 × skullR`, brim `≈ 1.12 × skullR` | Sit on crown; do not expand skull silhouette much |
 | Crest / antenna | short stubs only | Punctuate iso silhouette without inflating AABB |
 
 Prefer: thinner shells, tight jaw/bevor, flat brow strips (not second spheres),
@@ -53,15 +53,17 @@ anyway, but the spec stays honest). Random also avoids `helmet: hood` +
 | --- | --- | --- |
 | `none` | — | Skull + face + hair |
 | `cap` | overlay | Shallow brim + crown dome (ranger / pirate) |
-| `knight` | replace (closed) | Thin plate egg + bevor + visor slits |
-| `sciFi` | replace (closed) | Same tight egg + thin glowing visor band |
+| `knight` | replace (closed) | DS **Elite Knight** flat-top kettle + dual slits + T-nasal |
+| `sciFi` | replace (closed) | Tight egg + thin glowing visor band |
 | `hood` | replace (open) | Head-sized aft cowl; face window open |
 
-### Removed / rejected mega shapes
+### Knight rebuild (Elite Knight)
 
-No catalog styles deleted — the old absolute mega-domes (`SphereGeometry(0.52–0.62)`)
-and the post-replacement `r×1.08–1.35` balloon shells were **retuned away**, not
-kept as alternate picks. Random has no mega-style entries.
+The prior knight used a thin sphere shell plus an undersized `r×0.48` bevor and
+read as a **tiny wrong head** at iso. Replaced entirely with a flat-top kettle
+silhouette inspired by Dark Souls **Elite Knight** (Cathedral Knight kettle lids
+as secondary reference): flattened crown disc, broad brow band, dual horizontal
+visor slits + vertical nasal bar, fuller bevor. Still `mount: replace`.
 
 ### Related (not a helmet style)
 
@@ -73,21 +75,20 @@ kept as alternate picks. Random has no mega-style entries.
 
 - `helmetMode.ts` — catalog + mount tags
 - `assemble.ts` — skip head / face / hair for replacements
-- `parts.ts` `generateHelmet` — egg-hug shell constants; retuned knight /
-  sciFi / hood / cap; hoodedRobe torso cowl matched to skullR
-- `random.ts` — bald under replacements; no hood+hoodedRobe stack; slightly
-  more `cap` weight
+- `parts.ts` `generateHelmet` — egg-hug shell @ 0.98; Elite Knight kettle rebuild;
+  retuned sciFi / hood / cap; hoodedRobe torso cowl matched to skullR
+- `random.ts` — bald under replacements; no hood+hoodedRobe stack; cap weighted
 - `index.ts` — re-exports catalog helpers
 
 ## How to verify
 
 1. `npm run build` in this worktree
-2. Load **knight** + **soldier** presets — head reads as one closed helm at
-   roughly skull size (no balloon; short crest/antenna only)
-3. Load **ranger** / **pirate** — cap sits on hair/skull without a second dome
-4. Reroll head until `hood` — face/eyes visible inside a tight cowl
-5. Load **mage** / **cleric** — robe cowl hugs the taller egg, not a mega sphere
-6. Part-ID outline pass: helmet group still tags as `HEAD`
+2. Load **knight** — flat-top kettle + clear dual slits at ~skull size (no tiny stub)
+3. Load **soldier** — sciFi sealed egg, slightly under prior balloon
+4. Load **ranger** / **pirate** — cap sits on hair/skull
+5. Reroll head until `hood` — face/eyes visible inside a tight cowl
+6. Load **mage** / **cleric** — robe cowl hugs the taller egg
+7. Part-ID outline pass: helmet group still tags as `HEAD`
 
 ## What’s left
 

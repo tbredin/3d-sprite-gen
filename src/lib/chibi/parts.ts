@@ -531,14 +531,17 @@ export function generateHair(opts: {
 
 /**
  * Helmet shells hug the egg skull from `generateHead`.
- * Shell ≈ skullR × few %; egg axes match skin skull, slightly flatter on top.
+ * Shell ≈ skullR×0.96–1.00; egg axes match skin skull, slightly flatter on top.
  * Closed styles replace the skull; `cap` overlays the crown only.
  */
 const HEAD_TALL = 1.1;
-/** Match `generateHead` skull squash before shell inflate. */
+/** Match `generateHead` skull squash before shell scale. */
 const SKULL_EGG = { x: 0.92, y: 1.05, z: 0.86 } as const;
-/** Thin shell just outside the skin skull — not a second balloon. */
-const HELMET_SHELL = 1.04;
+/**
+ * Shell radius = skullR × HELMET_SHELL. ~6% under prior 1.04 so replacements
+ * sit at/under the skin egg (user feedback: still ~5–10% too big).
+ */
+const HELMET_SHELL = 0.98;
 
 /**
  * Head gear. Closed styles (`knight`, `sciFi`) and deep cowls (`hood`) are
@@ -563,64 +566,97 @@ export function generateHelmet(opts: {
   const r = CHIBI.skullR * s;
   const tall = HEAD_TALL;
   const shellR = r * HELMET_SHELL;
-  /** Flatter than skin egg so closed helms don't read as balloon heads. */
+  /** Flatter / slightly tighter than skin egg so closed helms stay compact. */
   const shellEgg = {
-    x: SKULL_EGG.x,
-    y: SKULL_EGG.y * 0.96 * tall,
-    z: SKULL_EGG.z,
+    x: SKULL_EGG.x * 0.98,
+    y: SKULL_EGG.y * 0.94 * tall,
+    z: SKULL_EGG.z * 0.98,
   };
   const skullPos = { x: 0, y: cy + 0.08 * tall, z: -0.04 };
 
   if (opts.style === "knight") {
-    // Closed plate helm = the head. Thin egg shell + bevor + visor slits.
-    const slit = toon(opts.visor ?? "#2a2e3a");
+    // Dark Souls Elite Knight–inspired flat-top kettle (closed head replacement).
+    // Flattened crown + dual horizontal slits + T-nasal — readable at 42–48px.
+    const slit = toon(opts.visor ?? "#1a1c2c");
+
+    // Main kettle body — egg with a flatter Y than other closed helms
     const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
     dome.position.set(skullPos.x, skullPos.y, skullPos.z);
-    dome.scale.set(shellEgg.x, shellEgg.y, shellEgg.z);
+    dome.scale.set(shellEgg.x * 1.02, shellEgg.y * 0.88, shellEgg.z * 1.0);
     g.add(dome);
 
-    // Brow ridge — flat strip, not a second brow sphere
+    // Flat kettle lid / crown disc (Elite Knight silhouette, not a sphere blob)
+    const lid = new Mesh(new CylinderGeometry(r * 0.72, r * 0.92, r * 0.22, 12), mat);
+    lid.position.set(0, cy + r * 0.78 * tall, -0.02);
+    g.add(lid);
     g.add(
       mesh(
-        new BoxGeometry(r * 1.55, r * 0.14, r * 0.55),
+        new CylinderGeometry(r * 0.55, r * 0.7, 0.05, 12),
         mat,
         0,
-        cy + r * 0.38 * tall,
-        r * 0.35,
+        cy + r * 0.92 * tall,
+        -0.02,
       ),
     );
 
-    // Tight bevor / chin plate hugging the jaw line
-    const bevor = new Mesh(new SphereGeometry(r * 0.48, 12, 10), mat);
-    bevor.position.set(0, cy - r * 0.72 * tall, r * 0.22);
-    bevor.scale.set(1.15, 0.7 * tall, 0.85);
+    // Broad brow band over the slits
+    g.add(
+      mesh(
+        new BoxGeometry(r * 1.7, r * 0.18, r * 0.42),
+        mat,
+        0,
+        cy + r * 0.22 * tall,
+        r * 0.55,
+      ),
+    );
+
+    // Jaw / bevor — fuller than the old tiny r×0.48 stub so the head reads solid
+    const bevor = new Mesh(new SphereGeometry(r * 0.62, 12, 10), mat);
+    bevor.position.set(0, cy - r * 0.55 * tall, r * 0.12);
+    bevor.scale.set(1.05, 0.72 * tall, 0.88);
     g.add(bevor);
     g.add(
       mesh(
-        new CylinderGeometry(r * 0.78, r * 0.88, 0.12, 12),
+        new CylinderGeometry(r * 0.7, r * 0.82, 0.1, 12),
         mat,
         0,
-        cy - r * 1.05 * tall,
+        cy - r * 0.95 * tall,
         0.02,
       ),
     );
 
-    // Visor slits + central ridge (reads at 32–48px)
-    const faceZ = r * 0.92;
-    g.add(mesh(new BoxGeometry(r * 1.2, 0.06, 0.08), slit, 0, cy + 0.05 * tall, faceZ));
-    g.add(mesh(new BoxGeometry(r * 0.75, 0.045, 0.07), slit, 0, cy - 0.07 * tall, faceZ + 0.02));
-    g.add(mesh(new BoxGeometry(0.05, r * 0.7, 0.07), mat, 0, cy - 0.01 * tall, faceZ + 0.01));
-    // Short crest — silhouette punctuation without inflating height
-    g.add(mesh(new BoxGeometry(0.04, 0.06, 0.18), mat, 0, top - 0.06, -0.04));
+    // Dual horizontal eye slits + T-nasal (Cathedral / Elite Knight visor read)
+    const faceZ = r * 0.95;
+    const slitY = cy + r * 0.08 * tall;
+    g.add(
+      mesh(new BoxGeometry(r * 1.35, r * 0.1, 0.09), slit, 0, slitY + r * 0.12, faceZ),
+    );
+    g.add(
+      mesh(new BoxGeometry(r * 1.15, r * 0.08, 0.08), slit, 0, slitY - r * 0.08, faceZ + 0.01),
+    );
+    g.add(
+      mesh(
+        new BoxGeometry(r * 0.1, r * 0.55, 0.08),
+        mat,
+        0,
+        slitY + r * 0.02,
+        faceZ + 0.02,
+      ),
+    );
+
+    // Short center crest ridge — silhouette punctuation, stays within AABB
+    g.add(
+      mesh(new BoxGeometry(r * 0.08, r * 0.12, r * 0.55), mat, 0, top - r * 0.28, -0.04),
+    );
   }
 
   if (opts.style === "cap") {
     // Overlay: small brim + shallow crown dome (does not replace skull)
-    const brim = new Mesh(new CylinderGeometry(r * 1.18, r * 1.18, 0.045, 12), mat);
+    const brim = new Mesh(new CylinderGeometry(r * 1.12, r * 1.12, 0.042, 12), mat);
     brim.position.set(0, top - 0.1, 0.06);
     g.add(brim);
     const crown = new Mesh(
-      new SphereGeometry(r * 0.9, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.48),
+      new SphereGeometry(r * 0.85, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.48),
       mat,
     );
     crown.position.set(0, cy + r * 0.55 * tall, -0.02);
@@ -629,7 +665,7 @@ export function generateHelmet(opts: {
   }
 
   if (opts.style === "sciFi") {
-    // Sealed dome = head. Same tight egg as knight; thin visor band.
+    // Sealed dome = head. Same tight egg shell; thin visor band.
     const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
     dome.position.set(skullPos.x, skullPos.y, skullPos.z);
     dome.scale.set(shellEgg.x, shellEgg.y, shellEgg.z);

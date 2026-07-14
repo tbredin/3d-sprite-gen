@@ -268,7 +268,7 @@ export default function App() {
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
         <p className="tagline feature-boost-note">
-          Helmets as head replacements with egg-hug scale (~4% over skull).
+          Helmet head replacements: Elite Knight kettle + shells ≈ skullR×0.98.
         </p>
       </header>
 

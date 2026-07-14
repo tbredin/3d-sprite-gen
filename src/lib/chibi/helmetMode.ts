@@ -43,13 +43,14 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     style: "knight",
     mount: "replace",
     showFace: false,
-    notes: "Closed plate egg (~skullR×1.04) — replaces skull; visor slits only.",
+    notes:
+      "DS Elite Knight flat-top kettle (~skullR×0.98) — closed replace; dual slits + T-nasal.",
   },
   sciFi: {
     style: "sciFi",
     mount: "replace",
     showFace: false,
-    notes: "Sealed egg helm (~skullR×1.04) — replaces skull; thin visor band.",
+    notes: "Sealed egg helm (~skullR×0.98) — replaces skull; thin visor band.",
   },
   hood: {
     style: "hood",
