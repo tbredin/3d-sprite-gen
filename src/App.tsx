@@ -268,7 +268,7 @@ export default function App() {
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
         <p className="tagline feature-boost-note">
-          Helmet heads: tight soldier helm, new hair / hats, and a goat head.
+          Helmet heads: soldier / hair / hats, goat head — plus shirtless goatman preset.
         </p>
       </header>
 

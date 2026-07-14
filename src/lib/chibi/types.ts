@@ -149,7 +149,8 @@ export type PresetId =
   | "ranger"
   | "barbarian"
   | "acolyte"
-  | "pirate";
+  | "pirate"
+  | "goatman";
 
 export const PRESET_IDS: PresetId[] = [
   "mage",
@@ -162,4 +163,5 @@ export const PRESET_IDS: PresetId[] = [
   "barbarian",
   "acolyte",
   "pirate",
+  "goatman",
 ];

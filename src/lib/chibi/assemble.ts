@@ -333,6 +333,25 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#8b5a2b" },
     weapon: { type: "sword", hand: "left", color: "#c7cfcc" },
   },
+  goatman: {
+    // Replace-mount goat head; tank torso = shirtless at chibi scale.
+    skin: "#c98a6a",
+    leadSide: "right",
+    head: { scale: 0.92 },
+    hair: { style: "bald", color: "#5a4030" },
+    face: { eyeColor: "#1a1c2c" },
+    helmet: { style: "goat", color: "#5a4030", visor: "#e8e4d8" },
+    torso: { style: "tank", color: "#c98a6a", trim: "#433455" },
+    accessories: { hem: "loincloth", hemColor: "#433455" },
+    arms: {
+      pose: "raise",
+      sleeveColor: "#c98a6a",
+      sleeveLength: 0.12,
+      handColor: "#c98a6a",
+    },
+    legs: { pose: "wide", pantColor: "#322947", bootColor: "#1a1c2c" },
+    weapon: { type: "sword", hand: "right", color: "#9aa4b0" },
+  },
 };
 
 export function getPreset(id: PresetId): CharacterSpec {
