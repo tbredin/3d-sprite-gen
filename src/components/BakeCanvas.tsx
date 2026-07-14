@@ -1,11 +1,16 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import {
+  DoubleSide,
+  MeshDepthMaterial,
+  MeshNormalMaterial,
   NearestFilter,
   OrthographicCamera,
+  RGBADepthPacking,
   RGBAFormat,
   UnsignedByteType,
   WebGLRenderTarget,
+  type Object3D,
 } from "three";
 import { placeIsoCamera, isoRimLightPositions, isoCameraPosition } from "../lib/isoCamera";
 import { ChibiCharacter } from "./ChibiCharacter";
@@ -19,19 +24,27 @@ import {
 } from "../lib/palette";
 import { renderPartGroupBuffer } from "../lib/chibi/idPass";
 import { decodePartGroupPixel } from "../lib/chibi/partGroups";
+import {
+  applyEdgeMask,
+  decodeDepthBuffer,
+  decodeNormalBuffer,
+  depthToWorldUnits,
+  detectDepthNormalEdges,
+  DEFAULT_EDGE_OPTIONS,
+  flipRowsRGBA,
+  type EdgeDetectOptions,
+} from "../lib/edgeOutline";
 import type { CharacterSpec } from "../lib/chibi";
 import type { RimLightSettings } from "../lib/rimLights";
 
-/** Flip a bottom-up WebGL readback into top-down image row order. */
-function flipRows(buffer: Uint8Array, size: number) {
-  const flipped = new Uint8ClampedArray(size * size * 4);
-  const row = size * 4;
-  for (let y = 0; y < size; y++) {
-    const src = (size - 1 - y) * row;
-    flipped.set(buffer.subarray(src, src + row), y * row);
-  }
-  return flipped;
-}
+export type EdgeOutlineSettings = EdgeDetectOptions & {
+  enabled: boolean;
+};
+
+export const DEFAULT_EDGE_OUTLINE_SETTINGS: EdgeOutlineSettings = {
+  enabled: false,
+  ...DEFAULT_EDGE_OPTIONS,
+};
 
 type BakeProps = {
   size: SpriteSize;
@@ -44,6 +57,8 @@ type BakeProps = {
   rotationY: number;
   spec: CharacterSpec;
   rimLights: RimLightSettings;
+  /** Depth+normal discontinuity outline pass — see docs/SPIKE-depth-normal-edges.md. */
+  edgeOutline?: EdgeOutlineSettings;
   onCaptured: (dataUrl: string) => void;
   /** CSS display size (NN upscale of the native size×size buffer). */
   displayPx?: number;
@@ -62,6 +77,7 @@ function BakeCapture({
   rotationX,
   rotationY,
   rimKey,
+  edgeOutline,
   onCaptured,
 }: {
   size: SpriteSize;
@@ -73,6 +89,7 @@ function BakeCapture({
   rotationY: number;
   /** Changes when lighting knobs move so the PNG rebakes. */
   rimKey: string;
+  edgeOutline: EdgeOutlineSettings;
   onCaptured: (dataUrl: string) => void;
 }) {
   const { gl, scene } = useThree();
@@ -88,12 +105,27 @@ function BakeCapture({
     [size],
   );
   const bakeCam = useMemo(() => new OrthographicCamera(), []);
+  const depthMaterial = useMemo(
+    () =>
+      new MeshDepthMaterial({ depthPacking: RGBADepthPacking, side: DoubleSide }),
+    [],
+  );
+  const normalMaterial = useMemo(() => new MeshNormalMaterial({ side: DoubleSide }), []);
   const onCapturedRef = useRef(onCaptured);
   onCapturedRef.current = onCaptured;
   const outlinePassRef = useRef(outlinePass);
   outlinePassRef.current = outlinePass;
+  const edgeOutlineRef = useRef(edgeOutline);
+  edgeOutlineRef.current = edgeOutline;
 
   useEffect(() => () => target.dispose(), [target]);
+  useEffect(
+    () => () => {
+      depthMaterial.dispose();
+      normalMaterial.dispose();
+    },
+    [depthMaterial, normalMaterial],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -113,18 +145,74 @@ function BakeCapture({
 
         const buffer = new Uint8Array(size * size * 4);
         gl.readRenderTargetPixels(target, 0, 0, size, size, buffer);
-        const flipped = flipRows(buffer, size);
+        const flipped = flipRowsRGBA(buffer, size);
 
         const pass = outlinePassRef.current;
         let idFlipped: Uint8Array | undefined;
-        // Skip the ID pass when seams are off — it is the expensive second render.
+        // Skip the ID pass when seams are off — it is an extra full render.
         if (pass.partSeams) {
           const idBuffer = renderPartGroupBuffer(gl, scene, bakeCam, size, target);
-          idFlipped = flipRows(idBuffer, size);
+          idFlipped = flipRowsRGBA(idBuffer, size);
         }
 
-        const imageData = new ImageData(flipped, size, size);
+        const opaqueMask = new Uint8Array(size * size);
+        for (let i = 0; i < size * size; i++) {
+          opaqueMask[i] = flipped[i * 4 + 3] >= 8 ? 1 : 0;
+        }
+
+        const imageData = new ImageData(new Uint8ClampedArray(flipped), size, size);
         quantizeImageData(imageData, colors);
+
+        // Internal creases first; silhouette + part seams paint on top.
+        const edge = edgeOutlineRef.current;
+        if (edge.enabled) {
+          const hiddenHulls: Object3D[] = [];
+          scene.traverse((obj) => {
+            if (obj.userData.isOutline && obj.visible) {
+              hiddenHulls.push(obj);
+              obj.visible = false;
+            }
+          });
+          const prevOverride = scene.overrideMaterial;
+
+          scene.overrideMaterial = depthMaterial;
+          gl.setRenderTarget(target);
+          gl.setClearColor(0x000000, 0);
+          gl.clear(true, true, true);
+          gl.render(scene, bakeCam);
+          const depthRaw = new Uint8Array(size * size * 4);
+          gl.readRenderTargetPixels(target, 0, 0, size, size, depthRaw);
+
+          scene.overrideMaterial = normalMaterial;
+          gl.clear(true, true, true);
+          gl.render(scene, bakeCam);
+          const normalRaw = new Uint8Array(size * size * 4);
+          gl.readRenderTargetPixels(target, 0, 0, size, size, normalRaw);
+
+          scene.overrideMaterial = prevOverride;
+          gl.setRenderTarget(prev);
+          for (const obj of hiddenHulls) obj.visible = true;
+
+          const depthFlipped = flipRowsRGBA(depthRaw, size);
+          const normalFlipped = flipRowsRGBA(normalRaw, size);
+          const depthPacked = decodeDepthBuffer(depthFlipped, size);
+          const depthWorld = new Float32Array(depthPacked.length);
+          for (let i = 0; i < depthPacked.length; i++) {
+            depthWorld[i] = depthToWorldUnits(depthPacked[i], bakeCam.near, bakeCam.far);
+          }
+          const normals = decodeNormalBuffer(normalFlipped, size);
+
+          const edges = detectDepthNormalEdges(
+            opaqueMask,
+            depthWorld,
+            normals,
+            size,
+            size,
+            edge,
+          );
+          applyEdgeMask(imageData, edges, outlineHex);
+        }
+
         applyPartOutline(
           imageData,
           outlineHex,
@@ -160,6 +248,11 @@ function BakeCapture({
     rimKey,
     target,
     bakeCam,
+    depthMaterial,
+    normalMaterial,
+    edgeOutline.enabled,
+    edgeOutline.depthThreshold,
+    edgeOutline.normalThresholdDeg,
   ]);
 
   return null;
@@ -191,6 +284,7 @@ export function BakeCanvas({
   rotationY,
   spec,
   rimLights,
+  edgeOutline = DEFAULT_EDGE_OUTLINE_SETTINGS,
   onCaptured,
   displayPx,
 }: BakeProps) {
@@ -271,6 +365,7 @@ export function BakeCanvas({
         rotationX={rotationX}
         rotationY={rotationY}
         rimKey={rimKey}
+        edgeOutline={edgeOutline}
         onCaptured={onCaptured}
       />
     </Canvas>
