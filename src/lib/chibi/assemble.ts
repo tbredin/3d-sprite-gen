@@ -14,7 +14,7 @@ import {
   generateTorso,
   generateWeapon,
 } from "./parts";
-import { resolveLeadSide, torsoYawForLead } from "./stance";
+import { legsYawForLead, resolveLeadSide, torsoYawForLead } from "./stance";
 
 /**
  * Assemble a full chibi from a declarative spec.
@@ -24,7 +24,7 @@ import { resolveLeadSide, torsoYawForLead } from "./stance";
  *   root  — facing +Z; BakeCanvas rotationY turns the whole sprite
  *     head / face / hair / helmet  — stay on root so faceCheat uses body yaw
  *     upperBody (yaw ≈ ±45°) — torso, hem, cape, arms (+ weapons)
- *     legs — planted on root with ipsilateral lead foot
+ *     legs (yaw ≈ 40% of torso) — planted ipsilateral lead; tracks ¾ body
  */
 export function assembleCharacter(spec: CharacterSpec): Group {
   const root = new Group();
@@ -127,6 +127,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     bootColor: spec.legs.bootColor,
     leadSide,
   });
+  legs.rotation.y = legsYawForLead(leadSide);
   root.add(legs);
   addHullOutlines(legs, 0.028);
   tagPartGroup(legs, PartGroupId.LEGS);
