@@ -31,6 +31,13 @@ import {
   saveEdgeOutlineSettings,
   type EdgeOutlineSettings,
 } from "./components/BakeCanvas";
+import {
+  loadEdgeProfiles,
+  saveEdgeProfiles,
+  snapshotCurrentEdge,
+  type EdgeProfile,
+} from "./lib/edgeProfiles";
+import { normalizeEdgeOutlineSettings } from "./lib/edgeOutline";
 import { CollapseSection } from "./components/CollapseSection";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
 import { fetchStatus, type StatusResponse } from "./api";
@@ -124,6 +131,10 @@ export default function App() {
   const [edgeOutline, setEdgeOutline] = useState<EdgeOutlineSettings>(
     () => loadEdgeOutlineSettings(),
   );
+  const [edgeProfiles, setEdgeProfiles] = useState<EdgeProfile[]>(() =>
+    loadEdgeProfiles(),
+  );
+  const [edgeProfileName, setEdgeProfileName] = useState("");
   const [palette, setPalette] = useState<Palette | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
@@ -241,7 +252,7 @@ export default function App() {
 
   const patchEdgeOutline = (patch: Partial<EdgeOutlineSettings>) => {
     setEdgeOutline((prev) => {
-      const next = { ...prev, ...patch };
+      const next = normalizeEdgeOutlineSettings({ ...prev, ...patch });
       saveEdgeOutlineSettings(next);
       return next;
     });
@@ -255,6 +266,50 @@ export default function App() {
     const next = { ...DEFAULT_EDGE_OUTLINE_SETTINGS };
     saveEdgeOutlineSettings(next);
     setEdgeOutline(next);
+  };
+
+  const persistEdgeProfiles = (next: EdgeProfile[]) => {
+    saveEdgeProfiles(next);
+    setEdgeProfiles(next);
+  };
+
+  const saveEdgeProfile = () => {
+    const name = edgeProfileName.trim();
+    if (!name) return;
+    const settings = normalizeEdgeOutlineSettings(edgeOutline);
+    const existing = edgeProfiles.find(
+      (p) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) {
+      persistEdgeProfiles(
+        edgeProfiles.map((p) =>
+          p.id === existing.id
+            ? { ...p, name, settings, updatedAt: Date.now() }
+            : p,
+        ),
+      );
+    } else {
+      persistEdgeProfiles([
+        ...edgeProfiles,
+        snapshotCurrentEdge(settings, name),
+      ]);
+    }
+    setEdgeProfileName("");
+  };
+
+  const loadEdgeProfile = (id: string) => {
+    const profile = edgeProfiles.find((p) => p.id === id);
+    if (!profile) return;
+    const next = normalizeEdgeOutlineSettings(
+      profile.settings,
+      palette?.colors,
+    );
+    saveEdgeOutlineSettings(next);
+    setEdgeOutline(next);
+  };
+
+  const deleteEdgeProfile = (id: string) => {
+    persistEdgeProfiles(edgeProfiles.filter((p) => p.id !== id));
   };
 
   useEffect(() => {
@@ -653,6 +708,62 @@ export default function App() {
                   )}
                 </div>
               </div>
+            </div>
+            <div className="light-profiles">
+              <p className="light-subhead">Profiles</p>
+              <div className="light-profile-save">
+                <input
+                  type="text"
+                  className="light-profile-name"
+                  placeholder="Profile name"
+                  value={edgeProfileName}
+                  onChange={(e) => setEdgeProfileName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdgeProfile();
+                  }}
+                  aria-label="Edge detection profile name"
+                />
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={saveEdgeProfile}
+                  disabled={!edgeProfileName.trim()}
+                >
+                  Save current
+                </button>
+              </div>
+              {edgeProfiles.length === 0 ? (
+                <p className="hint">No saved profiles yet.</p>
+              ) : (
+                <ul className="light-profile-list">
+                  {edgeProfiles.map((profile) => (
+                    <li key={profile.id} className="light-profile-row">
+                      <span
+                        className="light-profile-label"
+                        title={profile.name}
+                      >
+                        {profile.name}
+                      </span>
+                      <div className="part-actions">
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => loadEdgeProfile(profile.id)}
+                        >
+                          Load
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => deleteEdgeProfile(profile.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="light-grid outline-edge-sliders">
               <label className="light-slider">

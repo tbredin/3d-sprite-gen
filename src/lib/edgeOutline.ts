@@ -119,97 +119,106 @@ function clampOpt(
   return clamp(n, min, max);
 }
 
-export function loadEdgeOutlineSettings(
+/** Clamp / fill a partial snapshot into a full EdgeOutlineSettings. */
+export function normalizeEdgeOutlineSettings(
+  partial: Partial<EdgeOutlineSettings>,
   paletteColors?: string[],
 ): EdgeOutlineSettings {
   const fallback = { ...DEFAULT_EDGE_OUTLINE_SETTINGS };
+  let color =
+    typeof partial.color === "string"
+      ? normalizePaletteHex(partial.color)
+      : fallback.color;
+  if (!/^[0-9a-f]{6}$/.test(color)) color = fallback.color;
+  if (
+    paletteColors?.length &&
+    !paletteColors.some((c) => normalizePaletteHex(c) === color)
+  ) {
+    color = fallback.color;
+  }
+  return {
+    enabled: partial.enabled === true,
+    color,
+    depthThreshold: clampOpt(
+      partial.depthThreshold,
+      EDGE_DEPTH_MIN,
+      EDGE_DEPTH_MAX,
+      fallback.depthThreshold,
+    ),
+    normalThresholdDeg: clampOpt(
+      partial.normalThresholdDeg,
+      EDGE_NORMAL_MIN,
+      EDGE_NORMAL_MAX,
+      fallback.normalThresholdDeg,
+    ),
+    depthWeight: clampOpt(
+      partial.depthWeight,
+      EDGE_WEIGHT_MIN,
+      EDGE_WEIGHT_MAX,
+      fallback.depthWeight,
+    ),
+    normalWeight: clampOpt(
+      partial.normalWeight,
+      EDGE_WEIGHT_MIN,
+      EDGE_WEIGHT_MAX,
+      fallback.normalWeight,
+    ),
+    softness: clampOpt(
+      partial.softness,
+      EDGE_SOFTNESS_MIN,
+      EDGE_SOFTNESS_MAX,
+      fallback.softness,
+    ),
+    thresholdGamma: clampOpt(
+      partial.thresholdGamma,
+      EDGE_GAMMA_MIN,
+      EDGE_GAMMA_MAX,
+      fallback.thresholdGamma,
+    ),
+    opacity: clampOpt(
+      partial.opacity,
+      EDGE_OPACITY_MIN,
+      EDGE_OPACITY_MAX,
+      fallback.opacity,
+    ),
+    dilate: Math.round(
+      clampOpt(partial.dilate, EDGE_DILATE_MIN, EDGE_DILATE_MAX, fallback.dilate),
+    ),
+    blur: Math.round(
+      clampOpt(partial.blur, EDGE_BLUR_MIN, EDGE_BLUR_MAX, fallback.blur),
+    ),
+  };
+}
+
+export function loadEdgeOutlineSettings(
+  paletteColors?: string[],
+): EdgeOutlineSettings {
   try {
     const raw = localStorage.getItem(EDGE_OUTLINE_STORAGE_KEY);
-    if (!raw) return fallback;
+    if (!raw) return { ...DEFAULT_EDGE_OUTLINE_SETTINGS };
     const parsed = JSON.parse(raw) as Partial<EdgeOutlineSettings>;
-    let color =
-      typeof parsed.color === "string"
-        ? normalizePaletteHex(parsed.color)
-        : fallback.color;
-    if (!/^[0-9a-f]{6}$/.test(color)) color = fallback.color;
-    if (
-      paletteColors?.length &&
-      !paletteColors.some((c) => normalizePaletteHex(c) === color)
-    ) {
-      color = fallback.color;
-    }
-    return {
-      enabled: parsed.enabled === true,
-      color,
-      depthThreshold: clampOpt(
-        parsed.depthThreshold,
-        EDGE_DEPTH_MIN,
-        EDGE_DEPTH_MAX,
-        fallback.depthThreshold,
-      ),
-      normalThresholdDeg: clampOpt(
-        parsed.normalThresholdDeg,
-        EDGE_NORMAL_MIN,
-        EDGE_NORMAL_MAX,
-        fallback.normalThresholdDeg,
-      ),
-      depthWeight: clampOpt(
-        parsed.depthWeight,
-        EDGE_WEIGHT_MIN,
-        EDGE_WEIGHT_MAX,
-        fallback.depthWeight,
-      ),
-      normalWeight: clampOpt(
-        parsed.normalWeight,
-        EDGE_WEIGHT_MIN,
-        EDGE_WEIGHT_MAX,
-        fallback.normalWeight,
-      ),
-      softness: clampOpt(
-        parsed.softness,
-        EDGE_SOFTNESS_MIN,
-        EDGE_SOFTNESS_MAX,
-        fallback.softness,
-      ),
-      thresholdGamma: clampOpt(
-        parsed.thresholdGamma,
-        EDGE_GAMMA_MIN,
-        EDGE_GAMMA_MAX,
-        fallback.thresholdGamma,
-      ),
-      opacity: clampOpt(
-        parsed.opacity,
-        EDGE_OPACITY_MIN,
-        EDGE_OPACITY_MAX,
-        fallback.opacity,
-      ),
-      dilate: Math.round(
-        clampOpt(parsed.dilate, EDGE_DILATE_MIN, EDGE_DILATE_MAX, fallback.dilate),
-      ),
-      blur: Math.round(
-        clampOpt(parsed.blur, EDGE_BLUR_MIN, EDGE_BLUR_MAX, fallback.blur),
-      ),
-    };
+    return normalizeEdgeOutlineSettings(parsed, paletteColors);
   } catch {
-    return fallback;
+    return { ...DEFAULT_EDGE_OUTLINE_SETTINGS };
   }
 }
 
 export function saveEdgeOutlineSettings(settings: EdgeOutlineSettings) {
+  const n = normalizeEdgeOutlineSettings(settings);
   localStorage.setItem(
     EDGE_OUTLINE_STORAGE_KEY,
     JSON.stringify({
-      enabled: settings.enabled,
-      color: normalizePaletteHex(settings.color),
-      depthThreshold: settings.depthThreshold,
-      normalThresholdDeg: settings.normalThresholdDeg,
-      depthWeight: settings.depthWeight,
-      normalWeight: settings.normalWeight,
-      softness: settings.softness,
-      thresholdGamma: settings.thresholdGamma,
-      opacity: settings.opacity,
-      dilate: settings.dilate,
-      blur: settings.blur,
+      enabled: n.enabled,
+      color: n.color,
+      depthThreshold: n.depthThreshold,
+      normalThresholdDeg: n.normalThresholdDeg,
+      depthWeight: n.depthWeight,
+      normalWeight: n.normalWeight,
+      softness: n.softness,
+      thresholdGamma: n.thresholdGamma,
+      opacity: n.opacity,
+      dilate: n.dilate,
+      blur: n.blur,
     }),
   );
 }
