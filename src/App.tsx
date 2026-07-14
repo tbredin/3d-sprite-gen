@@ -81,6 +81,12 @@ import {
   type RimLightSettings,
 } from "./lib/rimLights";
 import {
+  loadLightingProfiles,
+  saveLightingProfiles,
+  snapshotCurrentLighting,
+  type LightingProfile,
+} from "./lib/lightingProfiles";
+import {
   DEFAULT_CAMERA_HEIGHT,
   loadCameraHeight,
   saveCameraHeight,
@@ -153,6 +159,10 @@ export default function App() {
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
   );
+  const [lightingProfiles, setLightingProfiles] = useState<LightingProfile[]>(
+    () => loadLightingProfiles(),
+  );
+  const [profileName, setProfileName] = useState("");
   const [outlineColors, setOutlineColors] = useState<OutlineColors>(() =>
     loadOutlineColors(),
   );
@@ -311,6 +321,50 @@ export default function App() {
     const next = { ...DEFAULT_RIM_LIGHTS };
     saveRimLightSettings(next);
     setRimLights(next);
+  };
+
+  const persistProfiles = (next: LightingProfile[]) => {
+    saveLightingProfiles(next);
+    setLightingProfiles(next);
+  };
+
+  const saveLightingProfile = () => {
+    const name = profileName.trim();
+    if (!name) return;
+    const existing = lightingProfiles.find(
+      (p) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) {
+      const next = lightingProfiles.map((p) =>
+        p.id === existing.id
+          ? {
+              ...p,
+              name,
+              settings: { ...rimLights },
+              updatedAt: Date.now(),
+            }
+          : p,
+      );
+      persistProfiles(next);
+    } else {
+      persistProfiles([
+        ...lightingProfiles,
+        snapshotCurrentLighting(rimLights, name),
+      ]);
+    }
+    setProfileName("");
+  };
+
+  const loadLightingProfile = (id: string) => {
+    const profile = lightingProfiles.find((p) => p.id === id);
+    if (!profile) return;
+    const next = { ...profile.settings };
+    saveRimLightSettings(next);
+    setRimLights(next);
+  };
+
+  const deleteLightingProfile = (id: string) => {
+    persistProfiles(lightingProfiles.filter((p) => p.id !== id));
   };
 
   const onPreviewPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -675,6 +729,59 @@ export default function App() {
               </button>
             }
           >
+            <div className="light-profiles">
+              <p className="light-subhead">Profiles</p>
+              <div className="light-profile-save">
+                <input
+                  type="text"
+                  className="light-profile-name"
+                  placeholder="Profile name"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveLightingProfile();
+                  }}
+                  aria-label="Lighting profile name"
+                />
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={saveLightingProfile}
+                  disabled={!profileName.trim()}
+                >
+                  Save current
+                </button>
+              </div>
+              {lightingProfiles.length === 0 ? (
+                <p className="hint">No saved profiles yet.</p>
+              ) : (
+                <ul className="light-profile-list">
+                  {lightingProfiles.map((profile) => (
+                    <li key={profile.id} className="light-profile-row">
+                      <span className="light-profile-label" title={profile.name}>
+                        {profile.name}
+                      </span>
+                      <div className="part-actions">
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => loadLightingProfile(profile.id)}
+                        >
+                          Load
+                        </button>
+                        <button
+                          type="button"
+                          className="ghost"
+                          onClick={() => deleteLightingProfile(profile.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <p className="hint">
               Ambience is the soft global fill. Red / blue are harsh{" "}
               <em>directional</em> rims from behind — raise Behind so they

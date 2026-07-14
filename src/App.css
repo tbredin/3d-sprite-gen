@@ -415,6 +415,55 @@ button.ghost {
   text-overflow: ellipsis;
 }
 
+.light-profiles {
+  margin-bottom: 0.45rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #3a415c;
+}
+
+.light-profile-save {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.light-profile-name {
+  width: 100%;
+  min-width: 0;
+  padding: 0.28rem 0.4rem;
+  font: inherit;
+  font-size: 0.72rem;
+  color: var(--text);
+  background: #0c0e16;
+  border: 1px solid #3a415c;
+}
+
+.light-profile-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.light-profile-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.light-profile-label {
+  font-size: 0.72rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .panel label.light-slider {
   display: grid;
   grid-template-columns: 2.5rem 1fr 1.85rem;
