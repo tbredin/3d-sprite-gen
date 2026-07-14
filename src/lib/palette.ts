@@ -137,6 +137,92 @@ export function applyPixelOutline(
   return data;
 }
 
+/**
+ * Single-pixel outline that also draws seams between differently-tagged
+ * part groups, not just the outer silhouette. `idBuffer` is an RGBA byte
+ * buffer at the same size/orientation as `data`, produced by
+ * `renderPartGroupBuffer` + decoded per-pixel with `decodePartGroupPixel`.
+ * Falls back to silhouette-only outlining when `idBuffer` is omitted.
+ */
+export function applyPartOutline(
+  data: ImageData,
+  outlineHex = DEFAULT_OUTLINE_HEX,
+  idBuffer?: Uint8Array | Uint8ClampedArray,
+  decodePixel?: (r: number, g: number, b: number, a: number) => number,
+): ImageData {
+  const { width: w, height: h, data: px } = data;
+  const [or, og, ob] = hexToRgb(outlineHex);
+  const opaque = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    opaque[i] = px[i * 4 + 3] >= 8 ? 1 : 0;
+  }
+
+  const partId = new Int16Array(w * h).fill(0);
+  if (idBuffer && decodePixel) {
+    for (let i = 0; i < w * h; i++) {
+      const o = i * 4;
+      partId[i] = decodePixel(idBuffer[o]!, idBuffer[o + 1]!, idBuffer[o + 2]!, idBuffer[o + 3]!);
+    }
+  }
+
+  const NEIGHBORS = [
+    [0, 1],
+    [0, -1],
+    [1, 0],
+    [-1, 0],
+  ] as const;
+  const outlinePixels = new Set<number>();
+
+  // Outer silhouette: transparent pixel touching an opaque one grows the ring.
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (opaque[i]) continue;
+      for (const [dy, dx] of NEIGHBORS) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        if (opaque[ny * w + nx]) {
+          outlinePixels.add(i);
+          break;
+        }
+      }
+    }
+  }
+
+  // Internal seams: opaque pixel bordering an opaque pixel from a different
+  // part. Only the lower-id side is repainted so a seam stays 1px wide
+  // instead of 2px (one line drawn on each side of the boundary).
+  if (idBuffer && decodePixel) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (!opaque[i] || partId[i] <= 0) continue;
+        for (const [dy, dx] of NEIGHBORS) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const ni = ny * w + nx;
+          if (!opaque[ni] || partId[ni] <= 0) continue;
+          if (partId[ni] !== partId[i] && partId[i] < partId[ni]) {
+            outlinePixels.add(i);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  for (const i of outlinePixels) {
+    const o = i * 4;
+    px[o] = or;
+    px[o + 1] = og;
+    px[o + 2] = ob;
+    px[o + 3] = 255;
+  }
+  return data;
+}
+
 export async function loadPalette(slug = "endesga-64"): Promise<Palette> {
   const res = await fetch(`/${slug}.json`);
   if (!res.ok) throw new Error(`palette ${slug} not found`);

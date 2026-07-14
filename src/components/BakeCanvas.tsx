@@ -11,12 +11,25 @@ import { placeIsoCamera, isoRimLightPositions, isoCameraPosition } from "../lib/
 import { ChibiCharacter } from "./ChibiCharacter";
 import { downloadDataUrl } from "../lib/capture";
 import {
-  applyPixelOutline,
+  applyPartOutline,
   quantizeImageData,
   type SpriteSize,
 } from "../lib/palette";
+import { renderPartGroupBuffer } from "../lib/chibi/idPass";
+import { decodePartGroupPixel } from "../lib/chibi/partGroups";
 import type { CharacterSpec } from "../lib/chibi";
 import type { RimLightSettings } from "../lib/rimLights";
+
+/** Flip a bottom-up WebGL readback into top-down image row order. */
+function flipRows(buffer: Uint8Array, size: number) {
+  const flipped = new Uint8ClampedArray(size * size * 4);
+  const row = size * 4;
+  for (let y = 0; y < size; y++) {
+    const src = (size - 1 - y) * row;
+    flipped.set(buffer.subarray(src, src + row), y * row);
+  }
+  return flipped;
+}
 
 type BakeProps = {
   size: SpriteSize;
@@ -93,17 +106,16 @@ function BakeCapture({
 
         const buffer = new Uint8Array(size * size * 4);
         gl.readRenderTargetPixels(target, 0, 0, size, size, buffer);
+        const flipped = flipRows(buffer, size);
 
-        const flipped = new Uint8ClampedArray(size * size * 4);
-        const row = size * 4;
-        for (let y = 0; y < size; y++) {
-          const src = (size - 1 - y) * row;
-          flipped.set(buffer.subarray(src, src + row), y * row);
-        }
+        // Reuses `target` for a second flat-color pass so opaque pixels can
+        // be split by part group, not just by silhouette.
+        const idBuffer = renderPartGroupBuffer(gl, scene, bakeCam, size, target);
+        const idFlipped = flipRows(idBuffer, size);
 
         const imageData = new ImageData(flipped, size, size);
         quantizeImageData(imageData, colors);
-        applyPixelOutline(imageData, outlineHex);
+        applyPartOutline(imageData, outlineHex, idFlipped, decodePartGroupPixel);
 
         const out = document.createElement("canvas");
         out.width = size;

@@ -1,6 +1,7 @@
 import { Group } from "three";
 import type { CharacterSpec, PresetId } from "./types";
 import { addHullOutlines } from "./outlines";
+import { PartGroupId, tagPartGroup } from "./partGroups";
 import {
   generateArms,
   generateCape,
@@ -28,15 +29,16 @@ export function assembleCharacter(spec: CharacterSpec): Group {
   });
   root.add(head);
   addHullOutlines(head, 0.03);
+  tagPartGroup(head, PartGroupId.HEAD);
 
   // Face stays un-outlined so eyes stay crisp
-  root.add(
-    generateFace({
-      skin: spec.skin,
-      eyeColor: spec.face?.eyeColor,
-      nose: spec.face?.nose,
-    }),
-  );
+  const face = generateFace({
+    skin: spec.skin,
+    eyeColor: spec.face?.eyeColor,
+    nose: spec.face?.nose,
+  });
+  root.add(face);
+  tagPartGroup(face, PartGroupId.HEAD);
 
   if (spec.hair) {
     const hair = generateHair({
@@ -46,6 +48,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     });
     root.add(hair);
     addHullOutlines(hair, 0.026);
+    tagPartGroup(hair, PartGroupId.HEAD);
   }
 
   if (spec.helmet && spec.helmet.style !== "none") {
@@ -56,6 +59,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     });
     root.add(helmet);
     addHullOutlines(helmet, 0.032);
+    tagPartGroup(helmet, PartGroupId.HEAD);
   }
 
   const torso = generateTorso({
@@ -66,6 +70,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
   });
   root.add(torso);
   addHullOutlines(torso, 0.03);
+  tagPartGroup(torso, PartGroupId.TORSO);
 
   const hem = spec.accessories?.hem ?? "none";
   if (hem !== "none") {
@@ -75,6 +80,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     });
     root.add(hemG);
     addHullOutlines(hemG, 0.024);
+    tagPartGroup(hemG, PartGroupId.ACCESSORY);
   }
 
   if (spec.accessories?.cape) {
@@ -86,6 +92,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     });
     root.add(cape);
     addHullOutlines(cape, 0.028);
+    tagPartGroup(cape, PartGroupId.ACCESSORY);
   }
 
   const arms = generateArms({
@@ -97,6 +104,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
   });
   root.add(arms.root);
   addHullOutlines(arms.root, 0.028);
+  tagPartGroup(arms.root, PartGroupId.ARMS);
 
   const legs = generateLegs({
     pose: spec.legs.pose,
@@ -105,6 +113,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
   });
   root.add(legs);
   addHullOutlines(legs, 0.028);
+  tagPartGroup(legs, PartGroupId.LEGS);
 
   if (spec.weapon && spec.weapon.type !== "none") {
     const hand =
@@ -115,6 +124,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     });
     hand.add(weapon);
     addHullOutlines(weapon, 0.022);
+    tagPartGroup(weapon, PartGroupId.WEAPON);
   }
 
   return root;
