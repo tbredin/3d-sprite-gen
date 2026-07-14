@@ -416,28 +416,42 @@ button.ghost {
 }
 
 .light-profiles {
-  margin-bottom: 0.45rem;
-  padding-bottom: 0.4rem;
+  margin-bottom: 0.3rem;
+  padding-bottom: 0.28rem;
   border-bottom: 1px solid #3a415c;
+}
+
+.light-profiles .light-subhead {
+  margin-bottom: 0.2rem;
 }
 
 .light-profile-save {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.35rem;
+  gap: 0.25rem;
   align-items: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.2rem;
 }
 
 .light-profile-name {
   width: 100%;
   min-width: 0;
-  padding: 0.28rem 0.4rem;
+  height: auto;
+  min-height: 1.35rem;
+  padding: 0.1rem 0.35rem;
   font: inherit;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
+  line-height: 1.2;
   color: var(--text);
   background: #0c0e16;
   border: 1px solid #3a415c;
+}
+
+.light-profiles .ghost {
+  padding: 0.1rem 0.35rem;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  height: auto;
 }
 
 .light-profile-list {
@@ -446,22 +460,28 @@ button.ghost {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.12rem;
 }
 
 .light-profile-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
+  min-height: 1.35rem;
 }
 
 .light-profile-label {
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.light-profiles .hint {
+  margin: 0.1rem 0 0;
+  font-size: 0.62rem;
 }
 
 .panel label.light-slider {
