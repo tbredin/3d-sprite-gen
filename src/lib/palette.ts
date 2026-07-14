@@ -61,13 +61,42 @@ export function quantizeImageData(
   return data;
 }
 
+/** Default bake outline — Endesga deep indigo (nearest classic near-black rim). */
+export const DEFAULT_OUTLINE_HEX = "1a1932";
+
+const OUTLINE_STORAGE_KEY = "3d-sprite-gen:outline-hex";
+
+export function normalizePaletteHex(hex: string): string {
+  return hex.replace("#", "").toLowerCase();
+}
+
+export function loadOutlineHex(paletteColors?: string[]): string {
+  const fallback = DEFAULT_OUTLINE_HEX;
+  try {
+    const raw = localStorage.getItem(OUTLINE_STORAGE_KEY);
+    if (!raw) return fallback;
+    const hex = normalizePaletteHex(raw);
+    if (!/^[0-9a-f]{6}$/.test(hex)) return fallback;
+    if (paletteColors?.length && !paletteColors.some((c) => normalizePaletteHex(c) === hex)) {
+      return fallback;
+    }
+    return hex;
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveOutlineHex(hex: string) {
+  localStorage.setItem(OUTLINE_STORAGE_KEY, normalizePaletteHex(hex));
+}
+
 /**
  * Single-pixel outline: every empty neighbour of an opaque pixel becomes outline.
  * Runs after quantize so the rim is one solid palette colour.
  */
 export function applyPixelOutline(
   data: ImageData,
-  outlineHex = "#1a1c2c",
+  outlineHex = DEFAULT_OUTLINE_HEX,
 ): ImageData {
   const { width: w, height: h, data: px } = data;
   const [or, og, ob] = hexToRgb(outlineHex);

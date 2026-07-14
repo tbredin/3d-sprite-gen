@@ -15,6 +15,7 @@ import type {
   CharacterSpec,
   HairStyle,
   HelmetStyle,
+  HemStyle,
   LegPose,
   TorsoStyle,
   WeaponType,
@@ -46,6 +47,16 @@ export function generateTorso(
   trim?: string,
 ): Pick<CharacterSpec, "torso"> {
   return { torso: { style, color, trim } };
+}
+
+/** Soft skirt / loincloth / cape extras. */
+export function generateAccessories(opts: {
+  hem?: HemStyle;
+  hemColor?: string;
+  cape?: boolean;
+  capeColor?: string;
+}): Pick<CharacterSpec, "accessories"> {
+  return { accessories: opts };
 }
 
 export function generateArms(opts: {
@@ -86,8 +97,15 @@ export {
   getPreset,
   PRESETS,
 } from "./assemble";
-export { randomCharacter } from "./random";
-export { ARM_POSES, armJointsForPose } from "./armPoses";
-export { LEG_POSES, legJointsForPose } from "./legPoses";
-export type { CharacterSpec, PresetId, ArmPose, LegPose } from "./types";
+export { randomCharacter, rerollPart, rerollPartColors, PART_IDS, EMPTY_LOCKS } from "./random";
+export type { PartId, PartLocks } from "./random";
+export { ARM_POSES, COMBAT_ARM_POSES, armJointsForPose } from "./armPoses";
+export { LEG_POSES, COMBAT_LEG_POSES, legJointsForPose } from "./legPoses";
+export type {
+  CharacterSpec,
+  PresetId,
+  ArmPose,
+  LegPose,
+  HemStyle,
+} from "./types";
 export { PRESET_IDS } from "./types";

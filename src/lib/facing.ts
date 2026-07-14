@@ -1,5 +1,10 @@
 /** Screen-facing presets on the fixed isometric camera. */
-export type FacingId = "away-tr" | "away-tl" | "toward-br" | "toward-bl";
+export type FacingId =
+  | "away-tr"
+  | "away-tl"
+  | "toward-br"
+  | "toward-bl"
+  | "custom";
 
 export type FacingPreset = {
   id: FacingId;
@@ -45,10 +50,19 @@ export const FACING_PRESETS: FacingPreset[] = [
   },
 ];
 
+export const CUSTOM_FACING: FacingPreset = {
+  id: "custom",
+  label: "Custom",
+  rotationY: 0,
+  conceptHint:
+    "isometric low-top-down view, custom free rotation, Sea of Stars / SNES JRPG angle",
+};
+
 export const DEFAULT_FACING: FacingId = "away-tr";
 
 export function getFacing(id: FacingId): FacingPreset {
-  return FACING_PRESETS.find((p) => p.id === id) ?? FACING_PRESETS[0];
+  if (id === "custom") return CUSTOM_FACING;
+  return FACING_PRESETS.find((p) => p.id === id) ?? FACING_PRESETS[0]!;
 }
 
 /** Full text sent into concept generation (character + facing). */

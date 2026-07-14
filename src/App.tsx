@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { BakeCanvas, saveSprite } from "./components/BakeCanvas";
+import { CollapseSection } from "./components/CollapseSection";
+import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
 import { fetchStatus, type StatusResponse } from "./api";
 import {
   DEFAULT_FACING,
@@ -8,16 +10,46 @@ import {
   type FacingId,
 } from "./lib/facing";
 import {
+  EMPTY_LOCKS,
   getPreset,
+  PART_IDS,
   PRESET_IDS,
   randomCharacter,
+  rerollPart,
+  rerollPartColors,
   type CharacterSpec,
+  type PartId,
+  type PartLocks,
   type PresetId,
 } from "./lib/chibi";
-import { loadPalette, type Palette, type SpriteSize } from "./lib/palette";
+import {
+  loadOutlineHex,
+  loadPalette,
+  saveOutlineHex,
+  type Palette,
+  type SpriteSize,
+} from "./lib/palette";
+import {
+  DEFAULT_RIM_LIGHTS,
+  loadRimLightSettings,
+  saveRimLightSettings,
+  type RimLightSettings,
+} from "./lib/rimLights";
 import "./App.css";
 
 const PITCH_LIMIT = Math.PI / 2 - 0.05;
+
+const LIGHT_ROWS = [
+  { key: "keyBrightness", label: "Key", min: 0, max: 4, step: 0.05, tone: "" },
+  { key: "ambientBrightness", label: "Amb", min: 0, max: 1.2, step: 0.02, tone: "" },
+  { key: "redBrightness", label: "R bri", min: 0, max: 8, step: 0.05, tone: "light-red" },
+  { key: "blueBrightness", label: "B bri", min: 0, max: 8, step: 0.05, tone: "light-blue" },
+  { key: "redBehind", label: "R beh", min: -1, max: 6, step: 0.05, tone: "light-red" },
+  { key: "blueBehind", label: "B beh", min: -1, max: 6, step: 0.05, tone: "light-blue" },
+  { key: "redSide", label: "R side", min: 0, max: 5, step: 0.05, tone: "light-red" },
+  { key: "blueSide", label: "B side", min: 0, max: 5, step: 0.05, tone: "light-blue" },
+  { key: "rimHeight", label: "Height", min: 0.2, max: 4, step: 0.05, tone: "" },
+] as const;
 
 function clampPitch(rad: number) {
   return Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, rad));
@@ -27,17 +59,22 @@ export default function App() {
   const [facing, setFacing] = useState<FacingId>(DEFAULT_FACING);
   const [rotationX, setRotationX] = useState(0);
   const [rotationY, setRotationY] = useState(getFacing(DEFAULT_FACING).rotationY);
-  const [size, setSize] = useState<SpriteSize>(64);
+  const [size, setSize] = useState<SpriteSize>(48);
   const [zoom, setZoom] = useState(1);
   const [presetId, setPresetId] = useState<PresetId | "random">("mage");
   const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
   const [charKey, setCharKey] = useState(0);
+  const [locks, setLocks] = useState<PartLocks>({ ...EMPTY_LOCKS });
+  const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
+    loadRimLightSettings(),
+  );
+  const [outlineHex, setOutlineHex] = useState(() => loadOutlineHex());
   const [palette, setPalette] = useState<Palette | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [captureRequest, setCaptureRequest] = useState(0);
   const [status, setStatus] = useState<StatusResponse | null>(null);
-  const [bakeBusy, setBakeBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [specOpen, setSpecOpen] = useState(false);
+  const [lightsOpen, setLightsOpen] = useState(false);
   const dragRef = useRef<{
     pointerId: number;
     x: number;
@@ -49,6 +86,7 @@ export default function App() {
   const displayPx = size * 4;
 
   const applyFacing = (id: FacingId) => {
+    if (id === "custom") return;
     setFacing(id);
     setRotationX(0);
     setRotationY(getFacing(id).rotationY);
@@ -62,8 +100,38 @@ export default function App() {
 
   const applyRandom = () => {
     setPresetId("random");
-    setSpec(randomCharacter());
+    setSpec((prev) => randomCharacter(locks, prev));
     setCharKey((k) => k + 1);
+  };
+
+  const toggleLock = (part: PartId) => {
+    setLocks((prev) => ({ ...prev, [part]: !prev[part] }));
+  };
+
+  const applyRerollPart = (part: PartId) => {
+    setPresetId("random");
+    setSpec((prev) => rerollPart(prev, part));
+    setCharKey((k) => k + 1);
+  };
+
+  const applyRerollColors = (part: PartId) => {
+    setPresetId("random");
+    setSpec((prev) => rerollPartColors(prev, part));
+    setCharKey((k) => k + 1);
+  };
+
+  const patchRimLights = (patch: Partial<RimLightSettings>) => {
+    setRimLights((prev) => {
+      const next = { ...prev, ...patch };
+      saveRimLightSettings(next);
+      return next;
+    });
+  };
+
+  const resetRimLights = () => {
+    const next = { ...DEFAULT_RIM_LIGHTS };
+    saveRimLightSettings(next);
+    setRimLights(next);
   };
 
   const onPreviewPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -83,6 +151,8 @@ export default function App() {
     if (!drag || drag.pointerId !== e.pointerId) return;
     const dx = e.clientX - drag.x;
     const dy = e.clientY - drag.y;
+    if (dx === 0 && dy === 0) return;
+    setFacing("custom");
     setRotationY(drag.rotY + dx * 0.012);
     setRotationX(clampPitch(drag.rotX + dy * 0.012));
   };
@@ -93,9 +163,17 @@ export default function App() {
     }
   };
 
+  const setOutlineColor = (hex: string) => {
+    saveOutlineHex(hex);
+    setOutlineHex(hex);
+  };
+
   useEffect(() => {
     loadPalette("endesga-64")
-      .then(setPalette)
+      .then((p) => {
+        setPalette(p);
+        setOutlineHex(loadOutlineHex(p.colors));
+      })
       .catch((e) => setError(String(e)));
     fetchStatus()
       .then(setStatus)
@@ -110,43 +188,99 @@ export default function App() {
       );
   }, []);
 
-  const onCaptured = (dataUrl: string) => {
-    setPreview(dataUrl);
-    setBakeBusy(false);
-  };
-
-  const bake = () => {
-    if (!palette) return;
-    setBakeBusy(true);
-    setError(null);
-    setCaptureRequest((n) => n + 1);
-  };
-
   return (
     <div className="app">
       <header className="header">
         <h1>3d Sprite Gen</h1>
         <p className="tagline">
-          Low-poly chibi from primitives → locked iso bake at{" "}
-          {size}×{size}px. Free / local only.
+          Procedural chibi → iso bake at {size}×{size}px · free / local
+          {status ? ` · ${status.mesh_backend}` : ""}
         </p>
       </header>
 
       <main className="layout">
-        <section className="panel mesh-panel">
-          <h2 className="panel-title">1. Character</h2>
-          <p className="hint tight">
-            Procedural chibi from box/sphere/cone parts. An LLM will later call
-            generators like <code>generateHair(&quot;spiky&quot;, …)</code> — presets
-            exercise the same assembly API now.
-          </p>
-          <p className="meta">
-            Backend: chibi-primitives
-            {status ? ` · ${status.mesh_backend}` : ""}
-          </p>
+        <section className="panel panel-character">
+          <h2 className="panel-title">Character</h2>
+
+          <div className="preview-row">
+            <div className="preview-main">
+              {palette ? (
+                <div
+                  className="canvas-wrap preview-bg-checker"
+                  style={{ width: displayPx, height: displayPx }}
+                  onPointerDown={onPreviewPointerDown}
+                  onPointerMove={onPreviewPointerMove}
+                  onPointerUp={onPreviewPointerUp}
+                  onPointerCancel={onPreviewPointerUp}
+                  title="Drag to rotate"
+                >
+                  <BakeCanvas
+                    key={`${presetId}-${charKey}-${size}`}
+                    size={size}
+                    colors={palette.colors}
+                    outlineHex={outlineHex}
+                    zoom={zoom}
+                    rotationX={rotationX}
+                    rotationY={rotationY}
+                    spec={spec}
+                    rimLights={rimLights}
+                    displayPx={displayPx}
+                    onCaptured={setPreview}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="pixel-empty"
+                  style={{ width: displayPx, height: displayPx }}
+                >
+                  Loading…
+                </div>
+              )}
+              <p className="meta drag-hint">Drag to rotate · NN preview · iso checker</p>
+            </div>
+
+            <div className="preview-side">
+              <label className="field">
+                Iso facing
+                <select
+                  value={facing}
+                  onChange={(e) => applyFacing(e.target.value as FacingId)}
+                >
+                  {FACING_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label}
+                    </option>
+                  ))}
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+              <label className="field">
+                Sprite size
+                <select
+                  value={size}
+                  onChange={(e) => setSize(Number(e.target.value) as SpriteSize)}
+                >
+                  <option value={32}>32</option>
+                  <option value={48}>48</option>
+                  <option value={64}>64</option>
+                </select>
+              </label>
+              <label className="field">
+                Zoom
+                <input
+                  type="range"
+                  min={0.7}
+                  max={1.6}
+                  step={0.05}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                />
+              </label>
+            </div>
+          </div>
 
           <div className="char-picker">
-            <label>
+            <label className="field">
               Preset
               <select
                 value={presetId === "random" ? "" : presetId}
@@ -164,133 +298,146 @@ export default function App() {
                 ))}
               </select>
             </label>
-            <button type="button" onClick={applyRandom}>
-              Random character
+            <button type="button" className="field-matched" onClick={applyRandom}>
+              Random
             </button>
           </div>
 
-          <div className="spec-summary">
-            <div className="stage-label">Active spec</div>
-            <pre className="spec-pre">{JSON.stringify(spec, null, 2)}</pre>
+          <div className="part-controls">
+            <div className="stage-label">Parts</div>
+            <div className="part-grid">
+              {PART_IDS.map((part) => (
+                <div key={part} className="part-row">
+                  <span className="part-name">{part}</span>
+                  <div className="part-actions">
+                    <label className="part-lock">
+                      <input
+                        type="checkbox"
+                        checked={locks[part]}
+                        onChange={() => toggleLock(part)}
+                      />
+                      Lock
+                    </label>
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => applyRerollPart(part)}
+                      disabled={locks[part]}
+                      title={
+                        locks[part]
+                          ? "Unlock to reroll this part"
+                          : "Reroll this part"
+                      }
+                    >
+                      Reroll
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => applyRerollColors(part)}
+                    >
+                      Colors
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          <CollapseSection
+            title="Lighting"
+            open={lightsOpen}
+            onToggle={() => setLightsOpen((v) => !v)}
+            actions={
+              <button type="button" className="ghost" onClick={resetRimLights}>
+                Reset
+              </button>
+            }
+          >
+            <div className="light-grid">
+              {LIGHT_ROWS.map((row) => (
+                <label
+                  key={row.key}
+                  className={`light-slider${row.tone ? ` ${row.tone}` : ""}`}
+                >
+                  <span className="light-slider-label">{row.label}</span>
+                  <input
+                    type="range"
+                    min={row.min}
+                    max={row.max}
+                    step={row.step}
+                    value={rimLights[row.key]}
+                    onChange={(e) =>
+                      patchRimLights({
+                        [row.key]: Number(e.target.value),
+                      })
+                    }
+                    title={row.label}
+                  />
+                  <span className="slider-val">
+                    {rimLights[row.key].toFixed(2)}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </CollapseSection>
 
           {error ? <p className="error">{error}</p> : null}
         </section>
 
-        <section className="panel stage">
-          <h2 className="panel-title">2. Iso preview ({size}×{size} native)</h2>
+        <section className="panel panel-bake">
+          <h2 className="panel-title">Baked PNG ({size}×{size})</h2>
 
-          <div className="row stage-controls">
-            <label>
-              Iso facing
-              <select
-                value={facing}
-                onChange={(e) => applyFacing(e.target.value as FacingId)}
-              >
-                {FACING_PRESETS.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Sprite size
-              <select
-                value={size}
-                onChange={(e) => setSize(Number(e.target.value) as SpriteSize)}
-              >
-                <option value={32}>32</option>
-                <option value={48}>48</option>
-                <option value={64}>64</option>
-              </select>
-            </label>
-          </div>
-
-          <label className="zoom-label">
-            Zoom
-            <input
-              type="range"
-              min={0.7}
-              max={1.6}
-              step={0.05}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
+          {preview ? (
+            <img
+              className="pixel-preview"
+              src={preview}
+              alt="baked sprite"
+              width={displayPx}
+              height={displayPx}
             />
-          </label>
-
-          {palette ? (
-            <>
-              <div
-                className="canvas-wrap"
-                style={{ width: displayPx, height: displayPx }}
-                onPointerDown={onPreviewPointerDown}
-                onPointerMove={onPreviewPointerMove}
-                onPointerUp={onPreviewPointerUp}
-                onPointerCancel={onPreviewPointerUp}
-              >
-                <BakeCanvas
-                  key={`${presetId}-${charKey}-${size}`}
-                  size={size}
-                  colors={palette.colors}
-                  zoom={zoom}
-                  rotationX={rotationX}
-                  rotationY={rotationY}
-                  spec={spec}
-                  displayPx={displayPx}
-                  captureRequest={captureRequest}
-                  onCaptured={onCaptured}
-                />
-              </div>
-              <p className="meta drag-hint">
-                Drag to rotate · render buffer is {size}×{size} NN-upscaled to{" "}
-                {displayPx}px
-              </p>
-            </>
           ) : (
-            <p>Loading palette…</p>
+            <div
+              className="pixel-empty"
+              style={{ width: displayPx, height: displayPx }}
+            >
+              Preparing…
+            </div>
           )}
 
-          <div className="preview-block">
-            <div className="bake-header">
-              <h2 className="panel-title">3. Baked PNG ({size}×{size})</h2>
-              <div className="inline-actions">
-                <button
-                  type="button"
-                  onClick={bake}
-                  disabled={!palette || bakeBusy}
-                >
-                  {bakeBusy ? "Baking…" : "Bake frame"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => preview && saveSprite(preview, size)}
-                  disabled={!preview}
-                >
-                  Download PNG
-                </button>
-              </div>
-            </div>
-            {preview ? (
-              <img
-                className="pixel-preview"
-                src={preview}
-                alt="baked sprite"
-                width={displayPx}
-                height={displayPx}
-              />
-            ) : (
-              <div
-                className="pixel-empty"
-                style={{ width: displayPx, height: displayPx }}
-              >
-                Bake a frame
-              </div>
-            )}
-            <p className="meta">
-              Palette: {palette?.name ?? "…"} · 1px outline · Endesga lock
-            </p>
+          <div className="bake-tools">
+            <label className="field outline-color-label">
+              Sprite outline
+              {palette ? (
+                <OutlineSwatchSelect
+                  colors={palette.colors}
+                  value={outlineHex}
+                  onChange={setOutlineColor}
+                />
+              ) : (
+                <span className="hint">Loading palette…</span>
+              )}
+            </label>
+            <button
+              type="button"
+              className="download-btn"
+              onClick={() => preview && saveSprite(preview, size)}
+              disabled={!preview}
+            >
+              Download PNG
+            </button>
           </div>
+          <p className="meta">
+            {palette?.name ?? "…"} · outline #{outlineHex} · Endesga · live bake
+          </p>
+
+          <CollapseSection
+            title="Active spec"
+            open={specOpen}
+            onToggle={() => setSpecOpen((v) => !v)}
+          >
+            <pre className="spec-pre">{JSON.stringify(spec, null, 2)}</pre>
+          </CollapseSection>
         </section>
       </main>
     </div>

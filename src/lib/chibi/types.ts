@@ -33,6 +33,7 @@ export type TorsoStyle =
 
 export type ArmPose =
   | "idle"
+  | "ready"
   | "hang"
   | "walk"
   | "extended"
@@ -45,6 +46,7 @@ export type ArmPose =
 
 export type LegPose =
   | "stand"
+  | "ready"
   | "wide"
   | "walk"
   | "stride"
@@ -53,6 +55,9 @@ export type LegPose =
   | "kneel";
 
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
+
+/** Soft lower garment — fills the silhouette under a short torso. */
+export type HemStyle = "none" | "skirt" | "loincloth";
 
 export type CharacterSpec = {
   skin: string;
@@ -80,6 +85,13 @@ export type CharacterSpec = {
     style: TorsoStyle;
     color: string;
     trim?: string;
+  };
+  /** Optional skirt / loincloth / cape — often present on JRPG chibis. */
+  accessories?: {
+    hem?: HemStyle;
+    hemColor?: string;
+    cape?: boolean;
+    capeColor?: string;
   };
   arms: {
     pose: ArmPose;
