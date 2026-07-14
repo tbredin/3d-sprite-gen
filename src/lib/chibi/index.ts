@@ -98,6 +98,12 @@ export {
   PRESETS,
 } from "./assemble";
 export { applySpriteFaceCheat } from "./faceCheat";
+export {
+  HELMET_CATALOG,
+  helmetModeFor,
+  isHeadReplacement,
+} from "./helmetMode";
+export type { HelmetMount, HelmetMode } from "./helmetMode";
 export { randomCharacter, rerollPart, rerollPartColors, PART_IDS, EMPTY_LOCKS } from "./random";
 export type { PartId, PartLocks } from "./random";
 export { ARM_POSES, COMBAT_ARM_POSES, armJointsForPose } from "./armPoses";

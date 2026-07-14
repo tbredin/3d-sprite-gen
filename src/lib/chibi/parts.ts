@@ -529,10 +529,18 @@ export function generateHair(opts: {
   return g;
 }
 
+/**
+ * Head gear. Closed styles (`knight`, `sciFi`) and deep cowls (`hood`) are
+ * sized as *head replacements* matching `generateHead` egg proportions —
+ * assembly hides the skin skull (and usually face/hair). `cap` stays an
+ * overlay sitting on the crown.
+ */
 export function generateHelmet(opts: {
   style: "none" | "knight" | "cap" | "sciFi" | "hood";
   color: string;
   visor?: string;
+  /** Match CharacterSpec.head.scale so replacements align with body. */
+  scale?: number;
 }): Group {
   const g = new Group();
   g.name = "helmet";
@@ -540,61 +548,109 @@ export function generateHelmet(opts: {
   const mat = toon(opts.color);
   const cy = LAYOUT.headCenterY;
   const top = LAYOUT.headTopY;
+  const s = opts.scale ?? 1;
+  const r = CHIBI.skullR * s;
+  /** Match generateHead vertical stretch. */
+  const tall = 1.1;
 
   if (opts.style === "knight") {
+    // Closed plate helm = the head. Egg body + neck ring + visor slits.
     const slit = toon(opts.visor ?? "#2a2e3a");
-    const dome = new Mesh(
-      new SphereGeometry(0.52, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.58),
-      mat,
-    );
-    dome.position.set(0, cy + 0.14, 0);
+    const dome = new Mesh(new SphereGeometry(r * 1.08, 14, 12), mat);
+    dome.position.set(0, cy + 0.08 * tall, -0.02);
+    dome.scale.set(0.95, 1.08 * tall, 0.92);
     g.add(dome);
-    g.add(mesh(new CylinderGeometry(0.48, 0.52, 0.44, 12), mat, 0, cy + 0.02, 0.02));
-    g.add(mesh(new CylinderGeometry(0.56, 0.48, 0.22, 12), mat, 0, cy - 0.28, 0.03));
-    g.add(mesh(new CylinderGeometry(0.52, 0.52, 0.07, 12), mat, 0, cy + 0.14, 0.04));
-    g.add(mesh(new BoxGeometry(0.55, 0.06, 0.1), slit, 0, cy + 0.07, 0.5));
-    g.add(mesh(new BoxGeometry(0.3, 0.045, 0.08), slit, 0, cy - 0.06, 0.52));
-    g.add(mesh(new BoxGeometry(0.055, 0.32, 0.09), mat, 0, cy + 0.01, 0.52));
-    g.add(mesh(new BoxGeometry(0.05, 0.1, 0.28), mat, 0, top - 0.04, -0.02));
+
+    const brow = new Mesh(new SphereGeometry(r * 0.78, 12, 8), mat);
+    brow.position.set(0, cy + r * 0.72 * tall, -0.02);
+    brow.scale.set(1.05, 0.45 * tall, 1.0);
+    g.add(brow);
+
+    // Chin / bevor — replaces the lowered jaw silhouette
+    g.add(
+      mesh(
+        new SphereGeometry(r * 0.72, 12, 10),
+        mat,
+        0,
+        cy - r * 0.55 * tall,
+        r * 0.28,
+      ),
+    );
+    g.add(
+      mesh(
+        new CylinderGeometry(r * 0.95, r * 1.05, 0.18, 12),
+        mat,
+        0,
+        cy - r * 0.95 * tall,
+        0.02,
+      ),
+    );
+
+    // Visor: horizontal slits + central ridge (reads at 32–48px)
+    const faceZ = r * 0.95;
+    g.add(mesh(new BoxGeometry(r * 1.35, 0.07, 0.1), slit, 0, cy + 0.06 * tall, faceZ));
+    g.add(mesh(new BoxGeometry(r * 0.85, 0.05, 0.08), slit, 0, cy - 0.08 * tall, faceZ + 0.02));
+    g.add(mesh(new BoxGeometry(0.06, r * 0.85, 0.09), mat, 0, cy - 0.01 * tall, faceZ + 0.01));
+    // Tiny crest so silhouette isn't a smooth blob from iso top-down
+    g.add(mesh(new BoxGeometry(0.05, 0.12, 0.28), mat, 0, top - 0.02, -0.02));
   }
 
   if (opts.style === "cap") {
-    const brim = new Mesh(new CylinderGeometry(0.58, 0.58, 0.06, 12), mat);
-    brim.position.set(0, top - 0.08, 0.12);
+    // Overlay: brim + soft dome on the crown (skull/face/hair stay)
+    const brim = new Mesh(new CylinderGeometry(r * 1.45, r * 1.45, 0.06, 12), mat);
+    brim.position.set(0, top - 0.06, 0.1);
     g.add(brim);
     g.add(
       mesh(
-        new SphereGeometry(0.5, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5),
+        new SphereGeometry(r * 1.15, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5),
         mat,
         0,
-        cy + 0.14,
+        cy + r * 0.35 * tall,
         0,
       ),
     );
   }
 
   if (opts.style === "sciFi") {
-    g.add(mesh(new SphereGeometry(0.56, 12, 10), mat, 0, cy + 0.1, 0));
+    // Sealed dome = head. Soft egg + opaque visor band (no face mesh).
+    const dome = new Mesh(new SphereGeometry(r * 1.12, 14, 12), mat);
+    dome.position.set(0, cy + 0.08 * tall, -0.02);
+    dome.scale.set(0.98, 1.1 * tall, 0.95);
+    g.add(dome);
+
+    const jaw = new Mesh(new SphereGeometry(r * 0.7, 12, 10), mat);
+    jaw.position.set(0, cy - r * 0.5 * tall, r * 0.2);
+    jaw.scale.set(1.05, 0.85, 0.9);
+    g.add(jaw);
+
+    const visor = toon(opts.visor ?? "#5ad4a0");
     g.add(
       mesh(
-        new BoxGeometry(0.78, 0.22, 0.15),
-        toon(opts.visor ?? "#5ad4a0"),
+        new BoxGeometry(r * 1.85, r * 0.55, 0.14),
+        visor,
         0,
-        cy + 0.08,
-        0.5,
+        cy + 0.04 * tall,
+        r * 0.95,
       ),
     );
+    // Antenna stub for silhouette punctuation under high iso
+    g.add(mesh(new CylinderGeometry(0.03, 0.03, 0.22, 6), mat, r * 0.55, top - 0.04, -0.08));
   }
 
   if (opts.style === "hood") {
-    // Deep cowl framing the face like a sprite hood window
-    g.add(mesh(new SphereGeometry(0.62, 12, 10), mat, 0, cy + 0.14, -0.1));
-    g.add(mesh(new SphereGeometry(0.32, 10, 8), mat, -0.45, cy + 0.02, 0.18));
-    g.add(mesh(new SphereGeometry(0.32, 10, 8), mat, 0.45, cy + 0.02, 0.18));
-    g.add(mesh(new SphereGeometry(0.24, 8, 6), mat, -0.28, cy + 0.18, 0.32));
-    g.add(mesh(new SphereGeometry(0.24, 8, 6), mat, 0.28, cy + 0.18, 0.32));
-    const drape = new Mesh(new CapsuleGeometry(0.24, 0.28, 4, 8), mat);
-    drape.position.set(0, cy - 0.18, -0.38);
+    // Replacement cowl: wrap where the skull was; face stays in the open window.
+    g.add(mesh(new SphereGeometry(r * 1.35, 12, 10), mat, 0, cy + 0.1 * tall, -0.12));
+    const crown = new Mesh(new SphereGeometry(r * 0.95, 12, 8), mat);
+    crown.position.set(0, cy + r * 0.85 * tall, -0.08);
+    crown.scale.set(1.1, 0.55 * tall, 1.0);
+    g.add(crown);
+    // Side flaps frame the face without covering it
+    g.add(mesh(new SphereGeometry(r * 0.7, 10, 8), mat, -r * 1.05, cy + 0.02, 0.12));
+    g.add(mesh(new SphereGeometry(r * 0.7, 10, 8), mat, r * 1.05, cy + 0.02, 0.12));
+    g.add(mesh(new SphereGeometry(r * 0.5, 8, 6), mat, -r * 0.65, cy + 0.2 * tall, r * 0.55));
+    g.add(mesh(new SphereGeometry(r * 0.5, 8, 6), mat, r * 0.65, cy + 0.2 * tall, r * 0.55));
+    const drape = new Mesh(new CapsuleGeometry(r * 0.55, 0.3, 4, 8), mat);
+    drape.position.set(0, cy - r * 0.35 * tall, -r * 0.95);
     drape.rotation.x = 0.5;
     g.add(drape);
   }

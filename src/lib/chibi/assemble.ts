@@ -1,5 +1,6 @@
 import { Group } from "three";
 import type { CharacterSpec, PresetId } from "./types";
+import { helmetModeFor } from "./helmetMode";
 import { addHullOutlines } from "./outlines";
 import { PartGroupId, tagPartGroup } from "./partGroups";
 import {
@@ -25,6 +26,10 @@ import { resolveLeadSide, torsoYawForLead } from "./stance";
  *     head / face / hair / helmet  — stay on root so faceCheat uses body yaw
  *     upperBody (yaw ≈ ±45°) — torso, hem, cape, arms (+ weapons)
  *     legs — planted on root with ipsilateral lead foot
+ *
+ * Full-head helmets (`helmetMode.mount === "replace"`) skip the skin skull
+ * (and hair); closed helms also skip face/eyes so the replacement mesh is
+ * the readable head silhouette.
  */
 export function assembleCharacter(spec: CharacterSpec): Group {
   const root = new Group();
@@ -32,24 +37,34 @@ export function assembleCharacter(spec: CharacterSpec): Group {
 
   const leadSide = resolveLeadSide(spec.leadSide);
 
-  const head = generateHead({
-    skin: spec.skin,
-    scale: spec.head?.scale ?? 1,
-  });
-  root.add(head);
-  addHullOutlines(head, 0.03);
-  tagPartGroup(head, PartGroupId.HEAD);
+  const helmetMode = helmetModeFor(spec.helmet?.style);
+  const replaceHead = helmetMode.mount === "replace";
+  const showFace = !replaceHead || helmetMode.showFace;
+  const headScale = spec.head?.scale ?? 1;
 
-  // Face stays un-outlined so eyes stay crisp
-  const face = generateFace({
-    skin: spec.skin,
-    eyeColor: spec.face?.eyeColor,
-    nose: spec.face?.nose,
-  });
-  root.add(face);
-  tagPartGroup(face, PartGroupId.HEAD);
+  if (!replaceHead) {
+    const head = generateHead({
+      skin: spec.skin,
+      scale: headScale,
+    });
+    root.add(head);
+    addHullOutlines(head, 0.03);
+    tagPartGroup(head, PartGroupId.HEAD);
+  }
 
-  if (spec.hair) {
+  // Face stays un-outlined so eyes stay crisp (skipped under closed helms)
+  if (showFace) {
+    const face = generateFace({
+      skin: spec.skin,
+      eyeColor: spec.face?.eyeColor,
+      nose: spec.face?.nose,
+    });
+    root.add(face);
+    tagPartGroup(face, PartGroupId.HEAD);
+  }
+
+  // Hair is under / inside replacements — skip so it doesn't poke out
+  if (!replaceHead && spec.hair) {
     const hair = generateHair({
       style: spec.hair.style,
       color: spec.hair.color,
@@ -65,6 +80,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
       style: spec.helmet.style,
       color: spec.helmet.color,
       visor: spec.helmet.visor,
+      scale: headScale,
     });
     root.add(helmet);
     addHullOutlines(helmet, 0.032);

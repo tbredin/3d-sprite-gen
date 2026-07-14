@@ -80,6 +80,10 @@ export type CharacterSpec = {
     style: HelmetStyle;
     color: string;
     visor?: string;
+    /**
+     * Mount mode is derived from style via `helmetModeFor` — closed helms
+     * replace the skull; caps overlay. See docs/SPIKE-helmet-head-replacements.md.
+     */
   };
   face?: {
     eyeColor?: string;

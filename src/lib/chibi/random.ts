@@ -1,4 +1,5 @@
 import { COMBAT_ARM_POSES } from "./armPoses";
+import { isHeadReplacement } from "./helmetMode";
 import { COMBAT_LEG_POSES } from "./legPoses";
 import type { LeadSide } from "./stance";
 import { DEFAULT_LEAD } from "./stance";
@@ -220,7 +221,7 @@ function randomHead(skinHint?: string): HeadBits {
   const helmetStyle = pick(HELMET);
   const hairColor = pick(HAIR_COLORS);
   const hair =
-    helmetStyle === "knight" || helmetStyle === "sciFi"
+    isHeadReplacement(helmetStyle)
       ? { style: "bald" as const, color: hairColor, complexity: 1 }
       : {
           style: pick(HAIR),
