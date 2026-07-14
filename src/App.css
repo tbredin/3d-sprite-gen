@@ -482,6 +482,36 @@ button.ghost {
   height: auto;
 }
 
+
+/* Outline toggles reuse part-row; checkbox label fills the left. */
+.part-row > label.part-lock {
+  flex: 1 1 auto;
+}
+
+.part-actions .outline-swatch-select {
+  width: 6.75rem;
+}
+
+.part-actions .outline-swatch-trigger {
+  height: 1.35rem;
+  padding: 0 0.3rem;
+}
+
+.part-actions .outline-swatch-hex {
+  font-size: 0.65rem;
+}
+
+.part-actions .outline-swatch-menu {
+  left: auto;
+  right: 0;
+  width: 10rem;
+}
+
+.outline-edge-sliders {
+  margin-top: 0.35rem;
+  padding-left: 0.35rem;
+}
+
 .spec-pre {
   margin: 0;
   max-height: 280px;

@@ -35,28 +35,34 @@ import {
   decodeNormalBuffer,
   depthToWorldUnits,
   detectDepthNormalEdges,
-  DEFAULT_EDGE_OPTIONS,
+  DEFAULT_EDGE_OUTLINE_SETTINGS,
   flipRowsRGBA,
-  type EdgeDetectOptions,
+  type EdgeOutlineSettings,
 } from "../lib/edgeOutline";
 import type { CharacterSpec } from "../lib/chibi";
 import { CHARACTER_PIVOT_Y } from "../lib/chibi/units";
 import type { RimLightSettings } from "../lib/rimLights";
 
-export type EdgeOutlineSettings = EdgeDetectOptions & {
-  enabled: boolean;
-};
-
-export const DEFAULT_EDGE_OUTLINE_SETTINGS: EdgeOutlineSettings = {
-  enabled: false,
-  ...DEFAULT_EDGE_OPTIONS,
-};
+export {
+  DEFAULT_EDGE_OUTLINE_SETTINGS,
+  EDGE_DEPTH_MAX,
+  EDGE_DEPTH_MIN,
+  EDGE_DEPTH_STEP,
+  EDGE_NORMAL_MAX,
+  EDGE_NORMAL_MIN,
+  EDGE_NORMAL_STEP,
+  loadEdgeOutlineSettings,
+  saveEdgeOutlineSettings,
+  type EdgeOutlineSettings,
+} from "../lib/edgeOutline";
 
 type BakeProps = {
   size: SpriteSize;
   colors: string[];
-  /** Endesga hex (no #) for the 1px baked outline. */
-  outlineHex: string;
+  /** Endesga hex (no #) for the outer silhouette rim. */
+  silhouetteOutlineHex: string;
+  /** Endesga hex (no #) for internal part-seam outlines. */
+  partSeamsOutlineHex: string;
   outlinePass?: OutlinePassSettings;
   zoom: number;
   /** 1 = classic iso elevation; higher = steeper camera. */
@@ -79,7 +85,8 @@ type BakeProps = {
 function BakeCapture({
   size,
   colors,
-  outlineHex,
+  silhouetteOutlineHex,
+  partSeamsOutlineHex,
   outlinePass,
   zoom,
   cameraHeight,
@@ -91,7 +98,8 @@ function BakeCapture({
 }: {
   size: SpriteSize;
   colors: string[];
-  outlineHex: string;
+  silhouetteOutlineHex: string;
+  partSeamsOutlineHex: string;
   outlinePass: OutlinePassSettings;
   zoom: number;
   cameraHeight: number;
@@ -220,12 +228,15 @@ function BakeCapture({
             size,
             edge,
           );
-          applyEdgeMask(imageData, edges, outlineHex);
+          applyEdgeMask(imageData, edges, edge.color);
         }
 
         applyPartOutline(
           imageData,
-          outlineHex,
+          {
+            silhouette: silhouetteOutlineHex,
+            partSeams: partSeamsOutlineHex,
+          },
           idFlipped,
           idFlipped ? decodePartGroupPixel : undefined,
           pass,
@@ -249,7 +260,8 @@ function BakeCapture({
     scene,
     size,
     colors,
-    outlineHex,
+    silhouetteOutlineHex,
+    partSeamsOutlineHex,
     outlinePass.silhouette,
     outlinePass.partSeams,
     zoom,
@@ -262,6 +274,7 @@ function BakeCapture({
     depthMaterial,
     normalMaterial,
     edgeOutline.enabled,
+    edgeOutline.color,
     edgeOutline.depthThreshold,
     edgeOutline.normalThresholdDeg,
   ]);
@@ -294,7 +307,8 @@ function IsoCameraSquare({
 export function BakeCanvas({
   size,
   colors,
-  outlineHex,
+  silhouetteOutlineHex,
+  partSeamsOutlineHex,
   outlinePass = DEFAULT_OUTLINE_PASS,
   zoom,
   cameraHeight = DEFAULT_CAMERA_HEIGHT,
@@ -383,7 +397,8 @@ export function BakeCanvas({
       <BakeCapture
         size={size}
         colors={colors}
-        outlineHex={outlineHex}
+        silhouetteOutlineHex={silhouetteOutlineHex}
+        partSeamsOutlineHex={partSeamsOutlineHex}
         outlinePass={outlinePass}
         zoom={zoom}
         cameraHeight={cameraHeight}

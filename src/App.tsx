@@ -3,6 +3,14 @@ import {
   BakeCanvas,
   saveSprite,
   DEFAULT_EDGE_OUTLINE_SETTINGS,
+  EDGE_DEPTH_MAX,
+  EDGE_DEPTH_MIN,
+  EDGE_DEPTH_STEP,
+  EDGE_NORMAL_MAX,
+  EDGE_NORMAL_MIN,
+  EDGE_NORMAL_STEP,
+  loadEdgeOutlineSettings,
+  saveEdgeOutlineSettings,
   type EdgeOutlineSettings,
 } from "./components/BakeCanvas";
 import { CollapseSection } from "./components/CollapseSection";
@@ -29,12 +37,14 @@ import {
   type PresetId,
 } from "./lib/chibi";
 import {
+  DEFAULT_OUTLINE_COLORS,
   DEFAULT_OUTLINE_PASS,
-  loadOutlineHex,
+  loadOutlineColors,
   loadOutlinePassSettings,
   loadPalette,
-  saveOutlineHex,
+  saveOutlineColors,
   saveOutlinePassSettings,
+  type OutlineColors,
   type OutlinePassSettings,
   type Palette,
   type SpriteSize,
@@ -86,12 +96,14 @@ export default function App() {
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
   );
-  const [outlineHex, setOutlineHex] = useState(() => loadOutlineHex());
+  const [outlineColors, setOutlineColors] = useState<OutlineColors>(() =>
+    loadOutlineColors(),
+  );
   const [outlinePass, setOutlinePass] = useState<OutlinePassSettings>(() =>
     loadOutlinePassSettings(),
   );
   const [edgeOutline, setEdgeOutline] = useState<EdgeOutlineSettings>(
-    () => ({ ...DEFAULT_EDGE_OUTLINE_SETTINGS }),
+    () => loadEdgeOutlineSettings(),
   );
   const [palette, setPalette] = useState<Palette | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -100,7 +112,6 @@ export default function App() {
   const [specOpen, setSpecOpen] = useState(false);
   const [lightsOpen, setLightsOpen] = useState(false);
   const [outlinesOpen, setOutlinesOpen] = useState(true);
-  const [edgesOpen, setEdgesOpen] = useState(false);
   const dragRef = useRef<{
     pointerId: number;
     x: number;
@@ -193,9 +204,12 @@ export default function App() {
     }
   };
 
-  const setOutlineColor = (hex: string) => {
-    saveOutlineHex(hex);
-    setOutlineHex(hex);
+  const patchOutlineColor = (patch: Partial<OutlineColors>) => {
+    setOutlineColors((prev) => {
+      const next = { ...prev, ...patch };
+      saveOutlineColors(next);
+      return next;
+    });
   };
 
   const patchOutlinePass = (patch: Partial<OutlinePassSettings>) => {
@@ -207,14 +221,29 @@ export default function App() {
   };
 
   const patchEdgeOutline = (patch: Partial<EdgeOutlineSettings>) => {
-    setEdgeOutline((prev) => ({ ...prev, ...patch }));
+    setEdgeOutline((prev) => {
+      const next = { ...prev, ...patch };
+      saveEdgeOutlineSettings(next);
+      return next;
+    });
+  };
+
+  const setEdgeColor = (hex: string) => {
+    patchEdgeOutline({ color: hex });
+  };
+
+  const resetEdgeOutline = () => {
+    const next = { ...DEFAULT_EDGE_OUTLINE_SETTINGS };
+    saveEdgeOutlineSettings(next);
+    setEdgeOutline(next);
   };
 
   useEffect(() => {
     loadPalette("endesga-64")
       .then((p) => {
         setPalette(p);
-        setOutlineHex(loadOutlineHex(p.colors));
+        setOutlineColors(loadOutlineColors(p.colors));
+        setEdgeOutline(loadEdgeOutlineSettings(p.colors));
       })
       .catch((e) => setError(String(e)));
     fetchStatus()
@@ -239,8 +268,7 @@ export default function App() {
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
         <p className="tagline feature-boost-note">
-          Feature boost: FF-style camera-facing faces + chunkier weapons for 32–64px
-          readability
+          Main: readable FF eyes, ¾ fighting stance, outline/edge controls.
         </p>
       </header>
 
@@ -264,7 +292,8 @@ export default function App() {
                     key={`${presetId}-${charKey}-${size}`}
                     size={size}
                     colors={palette.colors}
-                    outlineHex={outlineHex}
+                    silhouetteOutlineHex={outlineColors.silhouette}
+                    partSeamsOutlineHex={outlineColors.partSeams}
                     outlinePass={outlinePass}
                     zoom={zoom}
                     cameraHeight={cameraHeight}
@@ -468,73 +497,6 @@ export default function App() {
             </div>
           </CollapseSection>
 
-          <CollapseSection
-            title="Edge detection"
-            open={edgesOpen}
-            onToggle={() => setEdgesOpen((v) => !v)}
-            actions={
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => setEdgeOutline({ ...DEFAULT_EDGE_OUTLINE_SETTINGS })}
-              >
-                Reset
-              </button>
-            }
-          >
-            <label className="field">
-              <input
-                type="checkbox"
-                checked={edgeOutline.enabled}
-                onChange={(e) => patchEdgeOutline({ enabled: e.target.checked })}
-              />
-              {" "}Depth + normal internal creases
-            </label>
-            <div className="light-grid">
-              <label className="light-slider">
-                <span className="light-slider-label">Depth</span>
-                <input
-                  type="range"
-                  min={0.01}
-                  max={0.3}
-                  step={0.01}
-                  value={edgeOutline.depthThreshold}
-                  disabled={!edgeOutline.enabled}
-                  onChange={(e) =>
-                    patchEdgeOutline({ depthThreshold: Number(e.target.value) })
-                  }
-                  title="Depth delta threshold (world units)"
-                />
-                <span className="slider-val">
-                  {edgeOutline.depthThreshold.toFixed(2)}
-                </span>
-              </label>
-              <label className="light-slider">
-                <span className="light-slider-label">Normal°</span>
-                <input
-                  type="range"
-                  min={5}
-                  max={90}
-                  step={1}
-                  value={edgeOutline.normalThresholdDeg}
-                  disabled={!edgeOutline.enabled}
-                  onChange={(e) =>
-                    patchEdgeOutline({ normalThresholdDeg: Number(e.target.value) })
-                  }
-                  title="Normal angle threshold (degrees)"
-                />
-                <span className="slider-val">
-                  {edgeOutline.normalThresholdDeg.toFixed(0)}
-                </span>
-              </label>
-            </div>
-            <p className="hint">
-              Draws internal crease lines from baked depth/normal
-              discontinuities (limb-over-torso overlaps, joints) — silhouette
-              rim still comes from the existing pixel outline.
-            </p>
-          </CollapseSection>
-
           {error ? <p className="error">{error}</p> : null}
         </section>
 
@@ -567,47 +529,137 @@ export default function App() {
                 type="button"
                 className="ghost"
                 onClick={() => {
-                  const next = { ...DEFAULT_OUTLINE_PASS };
-                  saveOutlinePassSettings(next);
-                  setOutlinePass(next);
+                  const nextPass = { ...DEFAULT_OUTLINE_PASS };
+                  const nextColors = { ...DEFAULT_OUTLINE_COLORS };
+                  saveOutlinePassSettings(nextPass);
+                  saveOutlineColors(nextColors);
+                  setOutlinePass(nextPass);
+                  setOutlineColors(nextColors);
+                  resetEdgeOutline();
                 }}
               >
                 Reset
               </button>
             }
           >
-            <label className="field">
-              <input
-                type="checkbox"
-                checked={outlinePass.silhouette}
-                onChange={(e) => patchOutlinePass({ silhouette: e.target.checked })}
-              />
-              {" "}Outer silhouette
-            </label>
-            <label className="field">
-              <input
-                type="checkbox"
-                checked={outlinePass.partSeams}
-                onChange={(e) => patchOutlinePass({ partSeams: e.target.checked })}
-              />
-              {" "}Part seams (head / torso / arms / legs / weapon)
-            </label>
-            <label className="field outline-color-label">
-              Outline color
-              {palette ? (
-                <OutlineSwatchSelect
-                  colors={palette.colors}
-                  value={outlineHex}
-                  onChange={setOutlineColor}
-                  disabled={!outlinePass.silhouette && !outlinePass.partSeams}
+            <div className="part-grid">
+              <div className="part-row">
+                <label className="part-lock">
+                  <input
+                    type="checkbox"
+                    checked={outlinePass.silhouette}
+                    onChange={(e) =>
+                      patchOutlinePass({ silhouette: e.target.checked })
+                    }
+                  />
+                  Silhouette
+                </label>
+                <div className="part-actions">
+                  {palette ? (
+                    <OutlineSwatchSelect
+                      colors={palette.colors}
+                      value={outlineColors.silhouette}
+                      onChange={(hex) => patchOutlineColor({ silhouette: hex })}
+                      disabled={!outlinePass.silhouette}
+                    />
+                  ) : (
+                    <span className="hint">…</span>
+                  )}
+                </div>
+              </div>
+              <div className="part-row">
+                <label className="part-lock">
+                  <input
+                    type="checkbox"
+                    checked={outlinePass.partSeams}
+                    onChange={(e) =>
+                      patchOutlinePass({ partSeams: e.target.checked })
+                    }
+                  />
+                  Part seams
+                </label>
+                <div className="part-actions">
+                  {palette ? (
+                    <OutlineSwatchSelect
+                      colors={palette.colors}
+                      value={outlineColors.partSeams}
+                      onChange={(hex) => patchOutlineColor({ partSeams: hex })}
+                      disabled={!outlinePass.partSeams}
+                    />
+                  ) : (
+                    <span className="hint">…</span>
+                  )}
+                </div>
+              </div>
+              <div className="part-row">
+                <label className="part-lock">
+                  <input
+                    type="checkbox"
+                    checked={edgeOutline.enabled}
+                    onChange={(e) =>
+                      patchEdgeOutline({ enabled: e.target.checked })
+                    }
+                  />
+                  Edge detection
+                </label>
+                <div className="part-actions">
+                  {palette ? (
+                    <OutlineSwatchSelect
+                      colors={palette.colors}
+                      value={edgeOutline.color}
+                      onChange={setEdgeColor}
+                      disabled={!edgeOutline.enabled}
+                    />
+                  ) : (
+                    <span className="hint">…</span>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="light-grid outline-edge-sliders">
+              <label className="light-slider">
+                <span className="light-slider-label">Depth</span>
+                <input
+                  type="range"
+                  min={EDGE_DEPTH_MIN}
+                  max={EDGE_DEPTH_MAX}
+                  step={EDGE_DEPTH_STEP}
+                  value={edgeOutline.depthThreshold}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({ depthThreshold: Number(e.target.value) })
+                  }
+                  title="Depth delta threshold (world units). Higher = fewer edges."
                 />
-              ) : (
-                <span className="hint">Loading palette…</span>
-              )}
-            </label>
+                <span className="slider-val">
+                  {edgeOutline.depthThreshold.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Normal°</span>
+                <input
+                  type="range"
+                  min={EDGE_NORMAL_MIN}
+                  max={EDGE_NORMAL_MAX}
+                  step={EDGE_NORMAL_STEP}
+                  value={edgeOutline.normalThresholdDeg}
+                  disabled={!edgeOutline.enabled}
+                  onChange={(e) =>
+                    patchEdgeOutline({
+                      normalThresholdDeg: Number(e.target.value),
+                    })
+                  }
+                  title="Normal angle threshold (degrees). Higher = fewer edges."
+                />
+                <span className="slider-val">
+                  {edgeOutline.normalThresholdDeg.toFixed(0)}
+                </span>
+              </label>
+            </div>
             <p className="hint">
-              Seams outline boundaries between tagged part groups after the
-              Endesga lock. Turn seams off to skip the extra ID render pass.
+              Silhouette and part seams each pick their own outline colour.
+              Edges draw internal creases from depth/normal discontinuities;
+              seams outline tagged part boundaries after the Endesga lock.
             </p>
           </CollapseSection>
 
@@ -622,7 +674,8 @@ export default function App() {
             </button>
           </div>
           <p className="meta">
-            {palette?.name ?? "…"} · outline #{outlineHex} · Endesga · live bake
+            {palette?.name ?? "…"} · sil #{outlineColors.silhouette} · seams #
+            {outlineColors.partSeams} · Endesga · live bake
           </p>
 
           <CollapseSection

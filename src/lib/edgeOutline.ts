@@ -1,4 +1,8 @@
-import { hexToRgb } from "./palette";
+import {
+  DEFAULT_OUTLINE_HEX,
+  hexToRgb,
+  normalizePaletteHex,
+} from "./palette";
 
 /**
  * Depth + normal discontinuity outline pass (spike).
@@ -20,11 +24,98 @@ export type EdgeDetectOptions = {
   normalThresholdDeg: number;
 };
 
-/** Defaults tuned by eye against the ~2.1-unit-tall chibi rig at 48px. */
+/** Slider / clamp bounds — higher threshold = fewer, more selective edges. */
+export const EDGE_DEPTH_MIN = 0.01;
+export const EDGE_DEPTH_MAX = 0.5;
+export const EDGE_DEPTH_STEP = 0.01;
+export const EDGE_NORMAL_MIN = 5;
+export const EDGE_NORMAL_MAX = 99;
+export const EDGE_NORMAL_STEP = 1;
+
+/**
+ * Defaults tuned by eye against the ~2.1-unit-tall chibi rig at 48px.
+ * Raised above the old 0.15 / 60° pair: at bake resolution curved surfaces
+ * routinely exceed those, so the usable "few edges" range sat past the old
+ * slider caps (0.30 depth / 90° normal).
+ */
 export const DEFAULT_EDGE_OPTIONS: EdgeDetectOptions = {
-  depthThreshold: 0.15,
-  normalThresholdDeg: 60,
+  depthThreshold: 0.28,
+  normalThresholdDeg: 75,
 };
+
+export type EdgeOutlineSettings = EdgeDetectOptions & {
+  enabled: boolean;
+  /** Endesga hex (no #) for depth/normal crease pixels — independent of silhouette outline. */
+  color: string;
+};
+
+/** Matches the previous shared outline default so enabling edges doesn't jump colour. */
+export const DEFAULT_EDGE_OUTLINE_SETTINGS: EdgeOutlineSettings = {
+  enabled: false,
+  color: DEFAULT_OUTLINE_HEX,
+  ...DEFAULT_EDGE_OPTIONS,
+};
+
+/** v2: wider depth/normal ranges + more selective defaults. */
+const EDGE_OUTLINE_STORAGE_KEY = "3d-sprite-gen:edge-outline-v2";
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
+export function loadEdgeOutlineSettings(
+  paletteColors?: string[],
+): EdgeOutlineSettings {
+  const fallback = { ...DEFAULT_EDGE_OUTLINE_SETTINGS };
+  try {
+    const raw = localStorage.getItem(EDGE_OUTLINE_STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<EdgeOutlineSettings>;
+    let color =
+      typeof parsed.color === "string"
+        ? normalizePaletteHex(parsed.color)
+        : fallback.color;
+    if (!/^[0-9a-f]{6}$/.test(color)) color = fallback.color;
+    if (
+      paletteColors?.length &&
+      !paletteColors.some((c) => normalizePaletteHex(c) === color)
+    ) {
+      color = fallback.color;
+    }
+    return {
+      enabled: parsed.enabled === true,
+      color,
+      depthThreshold:
+        typeof parsed.depthThreshold === "number" &&
+        Number.isFinite(parsed.depthThreshold)
+          ? clamp(parsed.depthThreshold, EDGE_DEPTH_MIN, EDGE_DEPTH_MAX)
+          : fallback.depthThreshold,
+      normalThresholdDeg:
+        typeof parsed.normalThresholdDeg === "number" &&
+        Number.isFinite(parsed.normalThresholdDeg)
+          ? clamp(
+              parsed.normalThresholdDeg,
+              EDGE_NORMAL_MIN,
+              EDGE_NORMAL_MAX,
+            )
+          : fallback.normalThresholdDeg,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveEdgeOutlineSettings(settings: EdgeOutlineSettings) {
+  localStorage.setItem(
+    EDGE_OUTLINE_STORAGE_KEY,
+    JSON.stringify({
+      enabled: settings.enabled,
+      color: normalizePaletteHex(settings.color),
+      depthThreshold: settings.depthThreshold,
+      normalThresholdDeg: settings.normalThresholdDeg,
+    }),
+  );
+}
 
 const UNPACK_DOWNSCALE = 255 / 256;
 
@@ -184,13 +275,13 @@ export function detectDepthNormalEdges(
   return edges;
 }
 
-/** Composite an edge mask as solid 1px outline colour, in place. */
+/** Composite an edge mask as solid 1px edge colour, in place. */
 export function applyEdgeMask(
   data: ImageData,
   edges: Uint8Array,
-  outlineHex: string,
+  edgeHex: string,
 ): ImageData {
-  const [or, og, ob] = hexToRgb(outlineHex);
+  const [or, og, ob] = hexToRgb(edgeHex);
   const px = data.data;
   for (let i = 0; i < edges.length; i++) {
     if (!edges[i]) continue;

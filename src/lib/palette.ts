@@ -64,30 +64,70 @@ export function quantizeImageData(
 /** Default bake outline — Endesga deep indigo (nearest classic near-black rim). */
 export const DEFAULT_OUTLINE_HEX = "1a1932";
 
-const OUTLINE_STORAGE_KEY = "3d-sprite-gen:outline-hex";
+/** Per-pass outline colours (silhouette rim vs internal part seams). */
+export type OutlineColors = {
+  silhouette: string;
+  partSeams: string;
+};
+
+export const DEFAULT_OUTLINE_COLORS: OutlineColors = {
+  silhouette: DEFAULT_OUTLINE_HEX,
+  partSeams: DEFAULT_OUTLINE_HEX,
+};
+
+const OUTLINE_COLORS_STORAGE_KEY = "3d-sprite-gen:outline-colors-v1";
+/** Pre-split storage — migrated once into both colours when v1 is absent. */
+const OUTLINE_HEX_LEGACY_KEY = "3d-sprite-gen:outline-hex";
 
 export function normalizePaletteHex(hex: string): string {
   return hex.replace("#", "").toLowerCase();
 }
 
-export function loadOutlineHex(paletteColors?: string[]): string {
-  const fallback = DEFAULT_OUTLINE_HEX;
+function sanitizeOutlineHex(raw: string, paletteColors?: string[]): string | null {
+  const hex = normalizePaletteHex(raw);
+  if (!/^[0-9a-f]{6}$/.test(hex)) return null;
+  if (paletteColors?.length && !paletteColors.some((c) => normalizePaletteHex(c) === hex)) {
+    return null;
+  }
+  return hex;
+}
+
+export function loadOutlineColors(paletteColors?: string[]): OutlineColors {
+  const fallback = { ...DEFAULT_OUTLINE_COLORS };
   try {
-    const raw = localStorage.getItem(OUTLINE_STORAGE_KEY);
-    if (!raw) return fallback;
-    const hex = normalizePaletteHex(raw);
-    if (!/^[0-9a-f]{6}$/.test(hex)) return fallback;
-    if (paletteColors?.length && !paletteColors.some((c) => normalizePaletteHex(c) === hex)) {
-      return fallback;
+    const raw = localStorage.getItem(OUTLINE_COLORS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<OutlineColors>;
+      return {
+        silhouette:
+          (typeof parsed.silhouette === "string" &&
+            sanitizeOutlineHex(parsed.silhouette, paletteColors)) ||
+          fallback.silhouette,
+        partSeams:
+          (typeof parsed.partSeams === "string" &&
+            sanitizeOutlineHex(parsed.partSeams, paletteColors)) ||
+          fallback.partSeams,
+      };
     }
-    return hex;
+    const legacy = localStorage.getItem(OUTLINE_HEX_LEGACY_KEY);
+    if (legacy) {
+      const hex = sanitizeOutlineHex(legacy, paletteColors) ?? fallback.silhouette;
+      return { silhouette: hex, partSeams: hex };
+    }
+    return fallback;
   } catch {
     return fallback;
   }
 }
 
-export function saveOutlineHex(hex: string) {
-  localStorage.setItem(OUTLINE_STORAGE_KEY, normalizePaletteHex(hex));
+export function saveOutlineColors(colors: OutlineColors) {
+  localStorage.setItem(
+    OUTLINE_COLORS_STORAGE_KEY,
+    JSON.stringify({
+      silhouette: normalizePaletteHex(colors.silhouette),
+      partSeams: normalizePaletteHex(colors.partSeams),
+    }),
+  );
 }
 
 /** Which outline passes run after palette quantize. */
@@ -176,10 +216,11 @@ export function applyPixelOutline(
  * buffer at the same size/orientation as `data`, produced by
  * `renderPartGroupBuffer` + decoded per-pixel with `decodePartGroupPixel`.
  * Falls back to silhouette-only outlining when `idBuffer` is omitted.
+ * Silhouette rim and part seams each use their own palette hex.
  */
 export function applyPartOutline(
   data: ImageData,
-  outlineHex = DEFAULT_OUTLINE_HEX,
+  colors: OutlineColors = DEFAULT_OUTLINE_COLORS,
   idBuffer?: Uint8Array | Uint8ClampedArray,
   decodePixel?: (r: number, g: number, b: number, a: number) => number,
   pass: OutlinePassSettings = DEFAULT_OUTLINE_PASS,
@@ -187,7 +228,8 @@ export function applyPartOutline(
   if (!pass.silhouette && !pass.partSeams) return data;
 
   const { width: w, height: h, data: px } = data;
-  const [or, og, ob] = hexToRgb(outlineHex);
+  const [sr, sg, sb] = hexToRgb(colors.silhouette);
+  const [pr, pg, pb] = hexToRgb(colors.partSeams);
   const opaque = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     opaque[i] = px[i * 4 + 3] >= 8 ? 1 : 0;
@@ -208,7 +250,8 @@ export function applyPartOutline(
     [1, 0],
     [-1, 0],
   ] as const;
-  const outlinePixels = new Set<number>();
+  const silhouettePixels = new Set<number>();
+  const seamPixels = new Set<number>();
 
   // Outer silhouette: transparent pixel touching an opaque one grows the ring.
   if (pass.silhouette) {
@@ -221,7 +264,7 @@ export function applyPartOutline(
           const ny = y + dy;
           if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
           if (opaque[ny * w + nx]) {
-            outlinePixels.add(i);
+            silhouettePixels.add(i);
             break;
           }
         }
@@ -244,7 +287,7 @@ export function applyPartOutline(
           const ni = ny * w + nx;
           if (!opaque[ni] || partId[ni] <= 0) continue;
           if (partId[ni] !== partId[i] && partId[i] < partId[ni]) {
-            outlinePixels.add(i);
+            seamPixels.add(i);
             break;
           }
         }
@@ -252,11 +295,18 @@ export function applyPartOutline(
     }
   }
 
-  for (const i of outlinePixels) {
+  for (const i of silhouettePixels) {
     const o = i * 4;
-    px[o] = or;
-    px[o + 1] = og;
-    px[o + 2] = ob;
+    px[o] = sr;
+    px[o + 1] = sg;
+    px[o + 2] = sb;
+    px[o + 3] = 255;
+  }
+  for (const i of seamPixels) {
+    const o = i * 4;
+    px[o] = pr;
+    px[o + 1] = pg;
+    px[o + 2] = pb;
     px[o + 3] = 255;
   }
   return data;
