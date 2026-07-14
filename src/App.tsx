@@ -613,14 +613,20 @@ export default function App() {
                 Preparing…
               </div>
             )}
-            <button
-              type="button"
-              className="download-btn"
-              onClick={() => preview && saveSprite(preview, size)}
-              disabled={!preview}
-            >
-              Download PNG
-            </button>
+            <div className="bake-download-col">
+              <button
+                type="button"
+                className="download-btn"
+                onClick={() => preview && saveSprite(preview, size)}
+                disabled={!preview}
+              >
+                Download PNG
+              </button>
+              <p className="meta bake-meta">
+                {palette?.name ?? "…"} · sil #{outlineColors.silhouette} · seams #
+                {outlineColors.partSeams} · Endesga · live bake
+              </p>
+            </div>
           </div>
 
           <CollapseSection
@@ -948,11 +954,6 @@ export default function App() {
               after detect.
             </p>
           </CollapseSection>
-
-          <p className="meta">
-            {palette?.name ?? "…"} · sil #{outlineColors.silhouette} · seams #
-            {outlineColors.partSeams} · Endesga · live bake
-          </p>
 
           <CollapseSection
             title="Active spec"
