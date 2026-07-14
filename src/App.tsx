@@ -268,7 +268,7 @@ export default function App() {
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
         <p className="tagline feature-boost-note">
-          Main: readable FF eyes, ¾ fighting stance, outline/edge controls.
+          Helmets as head replacements with egg-hug scale (~4% over skull).
         </p>
       </header>
 
