@@ -1,5 +1,6 @@
 import { Group } from "three";
 import type { CharacterSpec, PresetId } from "./types";
+import { helmetModeFor } from "./helmetMode";
 import { addHullOutlines } from "./outlines";
 import { PartGroupId, tagPartGroup } from "./partGroups";
 import {
@@ -25,6 +26,10 @@ import { legsYawForLead, resolveLeadSide, torsoYawForLead } from "./stance";
  *     head / face / hair / helmet  — stay on root so faceCheat uses body yaw
  *     upperBody (yaw ≈ ±45°) — torso, hem, cape, arms (+ weapons)
  *     legs (yaw ≈ 40% of torso) — planted ipsilateral lead; tracks ¾ body
+ *
+ * Full-head helmets (`helmetMode.mount === "replace"`) skip the skin skull
+ * (and hair); closed helms also skip face/eyes so the replacement mesh is
+ * the readable head silhouette.
  */
 export function assembleCharacter(spec: CharacterSpec): Group {
   const root = new Group();
@@ -32,24 +37,37 @@ export function assembleCharacter(spec: CharacterSpec): Group {
 
   const leadSide = resolveLeadSide(spec.leadSide);
 
-  const head = generateHead({
-    skin: spec.skin,
-    scale: spec.head?.scale ?? 1,
-  });
-  root.add(head);
-  addHullOutlines(head, 0.03);
-  tagPartGroup(head, PartGroupId.HEAD);
+  const helmetMode = helmetModeFor(spec.helmet?.style);
+  const replaceHead = helmetMode.mount === "replace";
+  const showFace = !replaceHead || helmetMode.showFace;
+  const headScale = spec.head?.scale ?? 1;
 
-  // Face stays un-outlined so eyes stay crisp
-  const face = generateFace({
-    skin: spec.skin,
-    eyeColor: spec.face?.eyeColor,
-    nose: spec.face?.nose,
-  });
-  root.add(face);
-  tagPartGroup(face, PartGroupId.HEAD);
+  if (!replaceHead) {
+    const head = generateHead({
+      skin: spec.skin,
+      scale: headScale,
+    });
+    root.add(head);
+    addHullOutlines(head, 0.03);
+    tagPartGroup(head, PartGroupId.HEAD);
+  }
 
-  if (spec.hair) {
+  // Face stays un-outlined so eyes stay crisp (skipped under closed helms)
+  if (showFace) {
+    const face = generateFace({
+      skin: spec.skin,
+      eyeColor: spec.face?.eyeColor,
+      nose: spec.face?.nose,
+      // Independent of head.scale — scientist bumps face without touching hair.
+      scale: spec.face?.scale ?? 1,
+    });
+    root.add(face);
+    tagPartGroup(face, PartGroupId.HEAD);
+  }
+
+  // Hair is under / inside replacements — skip so it doesn't poke out.
+  // Hair geometry is intentionally not multiplied by head.scale.
+  if (!replaceHead && spec.hair) {
     const hair = generateHair({
       style: spec.hair.style,
       color: spec.hair.color,
@@ -65,6 +83,7 @@ export function assembleCharacter(spec: CharacterSpec): Group {
       style: spec.helmet.style,
       color: spec.helmet.color,
       visor: spec.helmet.visor,
+      scale: headScale,
     });
     root.add(helmet);
     addHullOutlines(helmet, 0.032);
@@ -192,7 +211,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     skin: "#c98a6a",
     leadSide: "right",
     head: { scale: 0.9 },
-    hair: { style: "undercut", color: "#2a2035", complexity: 5 },
+    hair: { style: "bald", color: "#2a2035" },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "sciFi", color: "#3a3555", visor: "#5ad4a0" },
     torso: { style: "chestplate", color: "#5ad4a0", trim: "#2a2540" },
@@ -222,9 +241,10 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   scientist: {
     skin: "#f0c8a0",
     leadSide: "right",
-    head: { scale: 0.94 },
+    // Bare skull + mohawk (no helmet). Skull ×1.1; face ×1.1; hair stays world-sized.
+    head: { scale: 0.94 * 1.1 },
     hair: { style: "mohawk", color: "#e83b3b", complexity: 6 },
-    face: { eyeColor: "#3d6e70", nose: true },
+    face: { eyeColor: "#3d6e70", nose: true, scale: 1.1 },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "jacket", color: "#c7cfcc", trim: "#3d6e70" },
     accessories: { hem: "none" },
@@ -317,6 +337,25 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     },
     legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#8b5a2b" },
     weapon: { type: "sword", hand: "left", color: "#c7cfcc" },
+  },
+  goatman: {
+    // Replace-mount goat head; tank torso = shirtless at chibi scale.
+    skin: "#c98a6a",
+    leadSide: "right",
+    head: { scale: 0.92 },
+    hair: { style: "bald", color: "#5a4030" },
+    face: { eyeColor: "#1a1c2c" },
+    helmet: { style: "goat", color: "#5a4030", visor: "#e8e4d8" },
+    torso: { style: "tank", color: "#c98a6a", trim: "#433455" },
+    accessories: { hem: "loincloth", hemColor: "#433455" },
+    arms: {
+      pose: "raise",
+      sleeveColor: "#c98a6a",
+      sleeveLength: 0.12,
+      handColor: "#c98a6a",
+    },
+    legs: { pose: "wide", pantColor: "#322947", bootColor: "#1a1c2c" },
+    weapon: { type: "sword", hand: "right", color: "#9aa4b0" },
   },
 };
 

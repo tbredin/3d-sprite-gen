@@ -18,9 +18,25 @@ export type HairStyle =
   | "curls"
   | "topknot"
   | "fringe"
-  | "twinTails";
+  | "twinTails"
+  | "pixie"
+  | "messy"
+  | "dreads"
+  | "mullet"
+  | "pompadour"
+  | "sidePart"
+  | "wavy";
 
-export type HelmetStyle = "none" | "knight" | "cap" | "sciFi" | "hood";
+export type HelmetStyle =
+  | "none"
+  | "knight"
+  | "cap"
+  | "sciFi"
+  | "hood"
+  | "crown"
+  | "wizard"
+  | "bandana"
+  | "goat";
 
 export type TorsoStyle =
   | "plain"
@@ -52,7 +68,8 @@ export type LegPose =
   | "stride"
   | "crouch"
   | "lunge"
-  | "kneel";
+  | "kneel"
+  | "guard";
 
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 
@@ -80,11 +97,21 @@ export type CharacterSpec = {
     style: HelmetStyle;
     color: string;
     visor?: string;
+    /**
+     * Mount mode is derived from style via `helmetModeFor` — closed helms
+     * replace the skull; `cap` overlays. See
+     * docs/SPIKE-helmet-head-replacements.md.
+     */
   };
   face?: {
     eyeColor?: string;
     /** Soft sphere nose. */
     nose?: boolean;
+    /**
+     * Optional multiplier for eye/mouth/nose layout (default 1).
+     * Independent of `head.scale` so hair can stay fixed (scientist).
+     */
+    scale?: number;
   };
   torso: {
     style: TorsoStyle;
@@ -127,7 +154,8 @@ export type PresetId =
   | "ranger"
   | "barbarian"
   | "acolyte"
-  | "pirate";
+  | "pirate"
+  | "goatman";
 
 export const PRESET_IDS: PresetId[] = [
   "mage",
@@ -140,4 +168,5 @@ export const PRESET_IDS: PresetId[] = [
   "barbarian",
   "acolyte",
   "pirate",
+  "goatman",
 ];

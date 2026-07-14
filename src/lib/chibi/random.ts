@@ -1,4 +1,5 @@
 import { COMBAT_ARM_POSES } from "./armPoses";
+import { isHeadReplacement } from "./helmetMode";
 import { COMBAT_LEG_POSES } from "./legPoses";
 import type { LeadSide } from "./stance";
 import { DEFAULT_LEAD } from "./stance";
@@ -49,8 +50,19 @@ const HAIR: HairStyle[] = [
   "topknot",
   "afro",
   "mohawk",
+  "pixie",
+  "pixie",
+  "messy",
+  "messy",
+  "dreads",
+  "mullet",
+  "pompadour",
+  "sidePart",
+  "wavy",
+  "wavy",
 ];
 
+/** Head-hugging shells + overlays — no mega-domes. */
 const HELMET: HelmetStyle[] = [
   "none",
   "none",
@@ -58,9 +70,14 @@ const HELMET: HelmetStyle[] = [
   "none",
   "none",
   "cap",
+  "cap",
+  "bandana",
+  "crown",
+  "wizard",
   "hood",
   "knight",
   "sciFi",
+  "goat",
 ];
 
 const TORSO: TorsoStyle[] = [
@@ -220,7 +237,7 @@ function randomHead(skinHint?: string): HeadBits {
   const helmetStyle = pick(HELMET);
   const hairColor = pick(HAIR_COLORS);
   const hair =
-    helmetStyle === "knight" || helmetStyle === "sciFi"
+    isHeadReplacement(helmetStyle)
       ? { style: "bald" as const, color: hairColor, complexity: 1 }
       : {
           style: pick(HAIR),
@@ -237,19 +254,27 @@ function randomHead(skinHint?: string): HeadBits {
     },
     helmet: {
       style: helmetStyle,
-      color: helmetStyle === "none" ? pick(CLOTH) : pick(CLOTH),
+      color:
+        helmetStyle === "goat"
+          ? pick(["#5a4030", "#8b5a2b", "#433455", "#c98a6a", "#e8e4d8"])
+          : pick(CLOTH),
       visor:
         helmetStyle === "sciFi" || helmetStyle === "knight"
           ? pick(CLOTH)
-          : undefined,
+          : helmetStyle === "goat"
+            ? pick(["#e8e4d8", "#c7cfcc", "#f0d48a", "#ffe0bd"])
+            : helmetStyle === "crown" || helmetStyle === "wizard"
+              ? pick(["#f5e07a", "#e83b3b", "#c7cfcc", "#5ad4a0"])
+              : undefined,
     },
   };
 }
 
 function randomTorso(helmetStyle?: HelmetStyle): TorsoBits {
+  // Avoid stacking `helmet: hood` with a torso cowl (double volume).
   const torsoStyle =
     helmetStyle === "hood"
-      ? pick(["hoodedRobe", "robe", "jacket"] as TorsoStyle[])
+      ? pick(["robe", "jacket", "plain"] as TorsoStyle[])
       : pick(TORSO);
   const cloth = pick(CLOTH);
   const trim = pickTrim(cloth);
