@@ -92,11 +92,18 @@ collar, thin glowing visor + dark slit inset. Not a glass dome.
 Egg-hug + `head.scale` 0.9 made the sealed head look tiny vs body; `REPLACE_HEAD_BOOST`
 `×1.3` on sciFi radius (was `×1.2`, still undersized). Same boost on **goat**.
 
-### Goat / horns
+### Goat / horns + muzzle
 
-Goat uses the same `×1.3` radius boost. Horns: thicker/taller two-cone stack
-(`r×0.2 / r×0.65` base + `r×0.12 / r×0.55` tip, tips higher) so forks read at
-42–48px.
+Goat uses the same `×1.3` radius boost (`REPLACE_HEAD_BOOST`). Feedback after the
+first pass: horns floated above the skull as tiny sticks, and the nose read as a
+detached oval.
+
+Rebuild:
+- **Horns** — root sphere plugs sunk into the cranial shell + three overlapping
+  cones per side (stump `r×0.3`, mid `r×0.2`, tip `r×0.1`) curving up/back like
+  ram horns so they weld into one silhouette at 42–48px.
+- **Muzzle** — box bridge → mid box → forward cone tip welded to face front;
+  nostrils recessed into the tip (no floating nose sphere).
 
 ### Related (not a helmet style)
 

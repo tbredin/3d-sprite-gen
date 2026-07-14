@@ -82,7 +82,7 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     mount: "replace",
     showFace: false,
     notes:
-      "Animal head (×1.3 boost) — tall thick horns, snout, ears; hides human skull/face.",
+      "Animal head (×1.3 boost) — ram horns rooted in skull, welded muzzle; hides human face.",
   },
 };
 

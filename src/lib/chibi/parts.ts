@@ -979,58 +979,107 @@ export function generateHelmet(opts: {
   }
 
   if (opts.style === "goat") {
-    // Full animal head replacement — horns / snout / ears read at 42–48px.
+    // Full animal head replacement — one welded silhouette at 42–48px.
     // Same ×1.3 boost as sciFi (no boost left goat as tiny as pre-bump soldier).
     const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
     const shellR = r * HELMET_SHELL;
     const fur = mat;
     const horn = toon(opts.visor ?? "#e8e4d8");
     const dark = toon("#2a2035");
+    const eggX = shellEgg.x * 0.95;
+    const eggY = shellEgg.y * 0.92;
+    const eggZ = shellEgg.z * 0.95;
 
     const skull = new Mesh(new SphereGeometry(shellR, 14, 12), fur);
     skull.position.set(skullPos.x, skullPos.y, skullPos.z);
-    skull.scale.set(shellEgg.x * 0.95, shellEgg.y * 0.92, shellEgg.z * 0.95);
+    skull.scale.set(eggX, eggY, eggZ);
     g.add(skull);
 
-    // Snout block — proud forward for silhouette
-    const snout = new Mesh(new CapsuleGeometry(r * 0.28, r * 0.42, 4, 8), fur);
-    snout.position.set(0, cy - r * 0.25 * tall, r * 0.85);
-    snout.rotation.x = Math.PI / 2;
-    g.add(snout);
-    g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), fur, 0, cy - r * 0.35 * tall, r * 1.15));
-    g.add(mesh(new SphereGeometry(0.045, 6, 5), dark, -0.06, cy - r * 0.32 * tall, r * 1.28));
-    g.add(mesh(new SphereGeometry(0.045, 6, 5), dark, 0.06, cy - r * 0.32 * tall, r * 1.28));
+    // Connected muzzle — box/cone stack welded into face front (no floating nose oval).
+    const muzzleY = cy - r * 0.18 * tall;
+    const bridge = new Mesh(new BoxGeometry(r * 0.9, r * 0.58, r * 0.55), fur);
+    bridge.position.set(0, muzzleY, r * 0.42);
+    g.add(bridge);
+    const mid = new Mesh(new BoxGeometry(r * 0.68, r * 0.44, r * 0.5), fur);
+    mid.position.set(0, muzzleY - r * 0.06 * tall, r * 0.85);
+    g.add(mid);
+    // Tip points +Z (ConeGeometry apex is local +Y → rotX +π/2)
+    const tip = new Mesh(new ConeGeometry(r * 0.3, r * 0.4, 7), fur);
+    tip.position.set(0, muzzleY - r * 0.1 * tall, r * 1.18);
+    tip.rotation.x = Math.PI / 2;
+    g.add(tip);
+    // Nostrils recessed into tip face — part of muzzle, not detached spheres ahead
+    g.add(
+      mesh(
+        new SphereGeometry(r * 0.07, 6, 5),
+        dark,
+        -r * 0.1,
+        muzzleY - r * 0.04 * tall,
+        r * 1.32,
+      ),
+    );
+    g.add(
+      mesh(
+        new SphereGeometry(r * 0.07, 6, 5),
+        dark,
+        r * 0.1,
+        muzzleY - r * 0.04 * tall,
+        r * 1.32,
+      ),
+    );
 
-    // Curved horns — thicker / taller so forks read at 42–48px (were ~r×0.8 total)
+    // Ram horns — thick overlapping cones with roots sunk into cranial shell.
+    // Prior two-cone tips floated above the skull and read as tiny sticks.
     for (const side of [-1, 1] as const) {
-      const base = new Mesh(new ConeGeometry(r * 0.2, r * 0.65, 6), horn);
-      base.position.set(side * r * 0.58, cy + r * 0.62 * tall, -r * 0.18);
-      base.rotation.z = side * 0.5;
-      base.rotation.x = -0.4;
-      g.add(base);
-      const tip = new Mesh(new ConeGeometry(r * 0.12, r * 0.55, 6), horn);
-      tip.position.set(side * r * 0.95, cy + r * 1.25 * tall, -r * 0.32);
-      tip.rotation.z = side * 0.22;
-      tip.rotation.x = -0.6;
-      g.add(tip);
+      // Root plug inside upper temple so horns grow out of bone, not hover above
+      const rootX = side * shellR * eggX * 0.55;
+      const rootY = skullPos.y + shellR * eggY * 0.42;
+      const rootZ = skullPos.z - shellR * eggZ * 0.2;
+      g.add(mesh(new SphereGeometry(r * 0.26, 8, 6), horn, rootX, rootY, rootZ));
+
+      const stump = new Mesh(new ConeGeometry(r * 0.3, r * 0.7, 7), horn);
+      stump.position.set(side * r * 0.48, skullPos.y + r * 0.72 * tall, skullPos.z - r * 0.22);
+      stump.rotation.z = side * 0.55;
+      stump.rotation.x = -0.5;
+      g.add(stump);
+
+      const midHorn = new Mesh(new ConeGeometry(r * 0.2, r * 0.78, 7), horn);
+      midHorn.position.set(
+        side * r * 0.72,
+        skullPos.y + r * 1.28 * tall,
+        skullPos.z - r * 0.52,
+      );
+      midHorn.rotation.z = side * 0.32;
+      midHorn.rotation.x = -0.85;
+      g.add(midHorn);
+
+      const hornTip = new Mesh(new ConeGeometry(r * 0.1, r * 0.58, 6), horn);
+      hornTip.position.set(
+        side * r * 0.82,
+        skullPos.y + r * 1.72 * tall,
+        skullPos.z - r * 0.88,
+      );
+      hornTip.rotation.z = side * 0.12;
+      hornTip.rotation.x = -1.1;
+      g.add(hornTip);
     }
 
     // Floppy / pointed goat ears
     for (const side of [-1, 1] as const) {
-      const ear = new Mesh(new ConeGeometry(r * 0.16, r * 0.38, 5), fur);
-      ear.position.set(side * r * 0.95, cy + r * 0.15 * tall, 0.05);
+      const ear = new Mesh(new ConeGeometry(r * 0.18, r * 0.42, 5), fur);
+      ear.position.set(side * r * 0.95, cy + r * 0.12 * tall, 0.05);
       ear.rotation.z = side * 1.1;
       ear.rotation.x = 0.2;
       g.add(ear);
     }
 
     // Dark eye pits for animal face read without human eyes
-    g.add(mesh(new SphereGeometry(0.07, 8, 6), dark, -r * 0.32, cy + r * 0.05 * tall, r * 0.7));
-    g.add(mesh(new SphereGeometry(0.07, 8, 6), dark, r * 0.32, cy + r * 0.05 * tall, r * 0.7));
+    g.add(mesh(new SphereGeometry(0.08, 8, 6), dark, -r * 0.34, cy + r * 0.08 * tall, r * 0.62));
+    g.add(mesh(new SphereGeometry(0.08, 8, 6), dark, r * 0.34, cy + r * 0.08 * tall, r * 0.62));
 
     // Short beard tuft under chin
     g.add(
-      mesh(new ConeGeometry(r * 0.1, r * 0.28, 5), fur, 0, cy - r * 0.85 * tall, r * 0.45),
+      mesh(new ConeGeometry(r * 0.12, r * 0.3, 5), fur, 0, cy - r * 0.82 * tall, r * 0.5),
     );
   }
 
