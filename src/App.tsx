@@ -267,8 +267,12 @@ export default function App() {
           Procedural chibi → iso bake at {size}×{size}px · free / local
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
-        <p className="tagline feature-boost-note">
-          Main: readable FF eyes, ¾ fighting stance, outline/edge controls.
+        <p
+          className={`tagline feature-boost-note${
+            __GIT_BRANCH__ !== "main" ? " branch-not-main" : ""
+          }`}
+        >
+          {__GIT_BRANCH__}
         </p>
       </header>
 

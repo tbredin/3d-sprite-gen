@@ -72,9 +72,9 @@ Tuning knobs: `WEAPON_READABILITY` at the top of `parts.ts`.
 
 ### UI note
 
-`App.tsx` now shows a small note under the header ("Feature boost: FF4–6
-near-profile faces…") so the spike is self-documenting.
-Mesh changes are the primary deliverable; this is just a label.
+The header shows the current git branch name (injected at Vite build/dev
+time), not a hand-maintained feature blurb. Mesh changes remain the
+primary deliverable.
 
 ## How to verify visually
 

@@ -54,8 +54,12 @@ body {
 
 .feature-boost-note {
   margin-top: -0.5rem;
-  color: #5ad4a0;
+  color: var(--muted);
   font-size: 0.72rem;
+}
+
+.feature-boost-note.branch-not-main {
+  color: #eb005e;
 }
 
 .layout {
