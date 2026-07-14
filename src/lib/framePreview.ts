@@ -1,6 +1,6 @@
 /** Match server `image_prep.detect_cell_size` for instant client preview. */
 
-const CELL_CANDIDATES = [64, 48, 32] as const;
+const CELL_CANDIDATES = [64, 48, 42, 32] as const;
 
 export function detectCellSize(
   width: number,
