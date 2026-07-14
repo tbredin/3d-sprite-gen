@@ -817,7 +817,7 @@ export default function App() {
               spellCheck={false}
               onChange={(e) => onSpecTextChange(e.target.value)}
               aria-label="CharacterSpec JSON"
-              rows={18}
+              rows={10}
             />
             {specParseError ? (
               <p className="error spec-parse-error">{specParseError}</p>
