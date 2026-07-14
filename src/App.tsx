@@ -3,6 +3,7 @@ import {
   BakeCanvas,
   saveSprite,
   DEFAULT_EDGE_OUTLINE_SETTINGS,
+  DEFAULT_SELECTIVE_OUTLINE,
   EDGE_BLUR_MAX,
   EDGE_BLUR_MIN,
   EDGE_BLUR_STEP,
@@ -27,9 +28,25 @@ import {
   EDGE_WEIGHT_MAX,
   EDGE_WEIGHT_MIN,
   EDGE_WEIGHT_STEP,
+  SEL_OUT_ANGLE_MAX,
+  SEL_OUT_ANGLE_MIN,
+  SEL_OUT_ANGLE_STEP,
+  SEL_OUT_DARKEN_MAX,
+  SEL_OUT_DARKEN_MIN,
+  SEL_OUT_DARKEN_STEP,
+  SEL_OUT_LIT_MAX,
+  SEL_OUT_LIT_MIN,
+  SEL_OUT_LIT_STEP,
+  SEL_OUT_TINT_MAX,
+  SEL_OUT_TINT_MIN,
+  SEL_OUT_TINT_STEP,
   loadEdgeOutlineSettings,
+  loadSelectiveOutline,
   saveEdgeOutlineSettings,
+  saveSelectiveOutline,
+  normalizeSelectiveOutline,
   type EdgeOutlineSettings,
+  type SelectiveOutlineSettings,
 } from "./components/BakeCanvas";
 import {
   loadEdgeProfiles,
@@ -182,6 +199,8 @@ export default function App() {
   const [edgeOutline, setEdgeOutline] = useState<EdgeOutlineSettings>(
     () => loadEdgeOutlineSettings(),
   );
+  const [selectiveOutline, setSelectiveOutline] =
+    useState<SelectiveOutlineSettings>(() => loadSelectiveOutline());
   const [edgeProfiles, setEdgeProfiles] = useState<EdgeProfile[]>(() =>
     loadEdgeProfiles(),
   );
@@ -438,6 +457,14 @@ export default function App() {
     });
   };
 
+  const patchSelectiveOutline = (patch: Partial<SelectiveOutlineSettings>) => {
+    setSelectiveOutline((prev) => {
+      const next = normalizeSelectiveOutline({ ...prev, ...patch });
+      saveSelectiveOutline(next);
+      return next;
+    });
+  };
+
   const setEdgeColor = (hex: string) => {
     patchEdgeOutline({ color: hex });
   };
@@ -454,6 +481,12 @@ export default function App() {
       saveBayerDitherSettings(next);
       return next;
     });
+  };
+
+  const resetSelectiveOutline = () => {
+    const next = { ...DEFAULT_SELECTIVE_OUTLINE };
+    saveSelectiveOutline(next);
+    setSelectiveOutline(next);
   };
 
   const persistEdgeProfiles = (next: EdgeProfile[]) => {
@@ -570,6 +603,7 @@ export default function App() {
                     rimLights={rimLights}
                     edgeOutline={edgeOutline}
                     bayerDither={bayerDither}
+                    selectiveOutline={selectiveOutline}
                     displayPx={displayPx}
                     onCaptured={setPreview}
                   />
@@ -929,8 +963,8 @@ export default function App() {
                 {outlineColors.partSeams}
                 {bayerDither.enabled
                   ? ` · Bayer ${bayerDither.strength.toFixed(2)}`
-                  : ""}{" "}
-                · Endesga · live bake
+                  : ""}
+                {selectiveOutline.enabled ? " · sel-out" : ""} · Endesga · live bake
               </p>
             </div>
           </div>
@@ -993,6 +1027,7 @@ export default function App() {
                   setOutlinePass(nextPass);
                   setOutlineColors(nextColors);
                   resetEdgeOutline();
+                  resetSelectiveOutline();
                 }}
               >
                 Reset
@@ -1052,6 +1087,36 @@ export default function App() {
                 <label className="part-lock">
                   <input
                     type="checkbox"
+                    checked={selectiveOutline.enabled}
+                    onChange={(e) =>
+                      patchSelectiveOutline({ enabled: e.target.checked })
+                    }
+                    disabled={!outlinePass.silhouette && !outlinePass.partSeams}
+                  />
+                  Selective outline
+                </label>
+                <div className="part-actions">
+                  <label className="part-lock" title="Also tint part-seam pixels">
+                    <input
+                      type="checkbox"
+                      checked={selectiveOutline.applyToSeams}
+                      onChange={(e) =>
+                        patchSelectiveOutline({
+                          applyToSeams: e.target.checked,
+                        })
+                      }
+                      disabled={
+                        !selectiveOutline.enabled || !outlinePass.partSeams
+                      }
+                    />
+                    Seams
+                  </label>
+                </div>
+              </div>
+              <div className="part-row">
+                <label className="part-lock">
+                  <input
+                    type="checkbox"
                     checked={edgeOutline.enabled}
                     onChange={(e) =>
                       patchEdgeOutline({ enabled: e.target.checked })
@@ -1072,6 +1137,84 @@ export default function App() {
                   )}
                 </div>
               </div>
+            </div>
+            <div className="light-grid outline-edge-sliders">
+              <label className="light-slider">
+                <span className="light-slider-label">Tint</span>
+                <input
+                  type="range"
+                  min={SEL_OUT_TINT_MIN}
+                  max={SEL_OUT_TINT_MAX}
+                  step={SEL_OUT_TINT_STEP}
+                  value={selectiveOutline.tintStrength}
+                  disabled={!selectiveOutline.enabled}
+                  onChange={(e) =>
+                    patchSelectiveOutline({
+                      tintStrength: Number(e.target.value),
+                    })
+                  }
+                  title="0 = fixed swatch; 1 = fully darker-of-adjacent"
+                />
+                <span className="slider-val">
+                  {selectiveOutline.tintStrength.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Darken</span>
+                <input
+                  type="range"
+                  min={SEL_OUT_DARKEN_MIN}
+                  max={SEL_OUT_DARKEN_MAX}
+                  step={SEL_OUT_DARKEN_STEP}
+                  value={selectiveOutline.darken}
+                  disabled={!selectiveOutline.enabled}
+                  onChange={(e) =>
+                    patchSelectiveOutline({ darken: Number(e.target.value) })
+                  }
+                  title="Crush adjacent body colour toward black before palette snap"
+                />
+                <span className="slider-val">
+                  {selectiveOutline.darken.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Lit thin</span>
+                <input
+                  type="range"
+                  min={SEL_OUT_LIT_MIN}
+                  max={SEL_OUT_LIT_MAX}
+                  step={SEL_OUT_LIT_STEP}
+                  value={selectiveOutline.litThin}
+                  disabled={!selectiveOutline.enabled}
+                  onChange={(e) =>
+                    patchSelectiveOutline({ litThin: Number(e.target.value) })
+                  }
+                  title="Lighten / drop silhouette rim facing the light (keep moderate at 42–48px)"
+                />
+                <span className="slider-val">
+                  {selectiveOutline.litThin.toFixed(2)}
+                </span>
+              </label>
+              <label className="light-slider">
+                <span className="light-slider-label">Light°</span>
+                <input
+                  type="range"
+                  min={SEL_OUT_ANGLE_MIN}
+                  max={SEL_OUT_ANGLE_MAX}
+                  step={SEL_OUT_ANGLE_STEP}
+                  value={selectiveOutline.lightAngleDeg}
+                  disabled={!selectiveOutline.enabled}
+                  onChange={(e) =>
+                    patchSelectiveOutline({
+                      lightAngleDeg: Number(e.target.value),
+                    })
+                  }
+                  title="Light direction for thinning (0=right, 90=up, 135=top-left)"
+                />
+                <span className="slider-val">
+                  {Math.round(selectiveOutline.lightAngleDeg)}°
+                </span>
+              </label>
             </div>
             <div className="light-profiles">
               <p className="light-subhead">Profiles</p>
