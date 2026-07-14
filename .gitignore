@@ -1,0 +1,13 @@
+node_modules
+dist
+.venv
+vendor
+models/*
+!models/.gitkeep
+generations
+.DS_Store
+*.pyc
+__pycache__
+.pytest_cache
+.env
+*.log
