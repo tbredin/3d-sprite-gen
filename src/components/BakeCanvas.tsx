@@ -21,6 +21,7 @@ import {
 import { ChibiCharacter } from "./ChibiCharacter";
 import { downloadDataUrl } from "../lib/capture";
 import {
+  applyPartOutline,
   DEFAULT_BAYER_DITHER,
   DEFAULT_OUTLINE_PASS,
   quantizeImageData,
@@ -40,34 +41,9 @@ import {
   flipRowsRGBA,
   type EdgeOutlineSettings,
 } from "../lib/edgeOutline";
-import {
-  applySelectivePartOutline,
-  DEFAULT_SELECTIVE_OUTLINE,
-  type SelectiveOutlineSettings,
-} from "../lib/selectiveOutline";
 import type { CharacterSpec } from "../lib/chibi";
 import { CHARACTER_PIVOT_Y } from "../lib/chibi/units";
 import type { RimLightSettings } from "../lib/rimLights";
-
-export {
-  DEFAULT_SELECTIVE_OUTLINE,
-  SEL_OUT_ANGLE_MAX,
-  SEL_OUT_ANGLE_MIN,
-  SEL_OUT_ANGLE_STEP,
-  SEL_OUT_DARKEN_MAX,
-  SEL_OUT_DARKEN_MIN,
-  SEL_OUT_DARKEN_STEP,
-  SEL_OUT_LIT_MAX,
-  SEL_OUT_LIT_MIN,
-  SEL_OUT_LIT_STEP,
-  SEL_OUT_TINT_MAX,
-  SEL_OUT_TINT_MIN,
-  SEL_OUT_TINT_STEP,
-  loadSelectiveOutline,
-  normalizeSelectiveOutline,
-  saveSelectiveOutline,
-  type SelectiveOutlineSettings,
-} from "../lib/selectiveOutline";
 
 export {
   DEFAULT_EDGE_OUTLINE_SETTINGS,
@@ -121,8 +97,6 @@ type BakeProps = {
   edgeOutline?: EdgeOutlineSettings;
   /** Bayer ordered dither before Endesga lock — see docs/SPIKE-bayer-dither.md. */
   bayerDither?: BayerDitherSettings;
-  /** Sel-out tinted / lit-thinned silhouette — see docs/SPIKE-selective-outline.md. */
-  selectiveOutline?: SelectiveOutlineSettings;
   onCaptured: (dataUrl: string) => void;
   /** CSS display size (NN upscale of the native size×size buffer). */
   displayPx?: number;
@@ -146,7 +120,6 @@ function BakeCapture({
   rimKey,
   edgeOutline,
   bayerDither,
-  selectiveOutline,
   onCaptured,
 }: {
   size: SpriteSize;
@@ -163,7 +136,6 @@ function BakeCapture({
   rimKey: string;
   edgeOutline: EdgeOutlineSettings;
   bayerDither: BayerDitherSettings;
-  selectiveOutline: SelectiveOutlineSettings;
   onCaptured: (dataUrl: string) => void;
 }) {
   const { gl, scene } = useThree();
@@ -193,8 +165,6 @@ function BakeCapture({
   edgeOutlineRef.current = edgeOutline;
   const bayerDitherRef = useRef(bayerDither);
   bayerDitherRef.current = bayerDither;
-  const selectiveOutlineRef = useRef(selectiveOutline);
-  selectiveOutlineRef.current = selectiveOutline;
 
   useEffect(() => () => target.dispose(), [target]);
   useEffect(
@@ -299,7 +269,7 @@ function BakeCapture({
           );
         }
 
-        applySelectivePartOutline(
+        applyPartOutline(
           imageData,
           {
             silhouette: silhouetteOutlineHex,
@@ -308,8 +278,6 @@ function BakeCapture({
           idFlipped,
           idFlipped ? decodePartGroupPixel : undefined,
           pass,
-          selectiveOutlineRef.current,
-          colors,
         );
 
         const out = document.createElement("canvas");
@@ -357,12 +325,6 @@ function BakeCapture({
     edgeOutline.blur,
     bayerDither.enabled,
     bayerDither.strength,
-    selectiveOutline.enabled,
-    selectiveOutline.tintStrength,
-    selectiveOutline.darken,
-    selectiveOutline.litThin,
-    selectiveOutline.lightAngleDeg,
-    selectiveOutline.applyToSeams,
   ]);
 
   return null;
@@ -405,7 +367,6 @@ export function BakeCanvas({
   rimLights,
   edgeOutline = DEFAULT_EDGE_OUTLINE_SETTINGS,
   bayerDither = DEFAULT_BAYER_DITHER,
-  selectiveOutline = DEFAULT_SELECTIVE_OUTLINE,
   onCaptured,
   displayPx,
 }: BakeProps) {
@@ -505,7 +466,6 @@ export function BakeCanvas({
         rimKey={rimKey}
         edgeOutline={edgeOutline}
         bayerDither={bayerDither}
-        selectiveOutline={selectiveOutline}
         onCaptured={onCaptured}
       />
     </Canvas>
