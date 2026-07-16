@@ -250,23 +250,16 @@ function headGallery(shape: HeadShape): CharacterSpec {
 }
 
 export const PRESETS: Record<PresetId, CharacterSpec> = {
-  /** Twelve construction skeletons — same hair/body; pick favourites to hone. */
-  headSphere: headGallery("sphere"),
-  headCapsule: headGallery("capsule"),
-  headOnion: headGallery("onion"),
-  headApple: headGallery("apple"),
-  headTeardrop: headGallery("teardrop"),
-  headBoxy: headGallery("boxy"),
-  headGourd: headGallery("gourd"),
-  headWedge: headGallery("wedge"),
-  headPancake: headGallery("pancake"),
-  headLozenge: headGallery("lozenge"),
-  headPeanut: headGallery("peanut"),
-  headDisc: headGallery("disc"),
+  /** Lozenge-family gallery — same hair/body; pick one to hone. */
+  headClassic: headGallery("classic"),
+  headSoft: headGallery("soft"),
+  headCheek: headGallery("cheek"),
+  headBrow: headGallery("brow"),
+  headSlim: headGallery("slim"),
   mage: {
     skin: "#e4a672",
     leadSide: "right",
-    head: { shape: "sphere", scale: 0.98 },
+    head: { shape: "classic", scale: 0.98 },
     hair: { style: "long", color: "#5b3d8a", complexity: 5 },
     face: { eyeColor: "#2a1c4a", nose: true },
     helmet: { style: "hood", color: "#3d6e70" },
@@ -288,7 +281,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   knight: {
     skin: "#e4a672",
     leadSide: "right",
-    head: { shape: "boxy", scale: 0.92 },
+    head: { shape: "slim", scale: 0.92 },
     hair: { style: "bald", color: "#433455" },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "knight", color: "#9aa4b0", visor: "#2a2e3a" },
@@ -315,7 +308,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   soldier: {
     skin: "#c98a6a",
     leadSide: "right",
-    head: { shape: "wedge", scale: 0.92 },
+    head: { shape: "slim", scale: 0.92 },
     hair: { style: "bald", color: "#2a2035" },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "sciFi", color: "#3a3555", visor: "#5ad4a0" },
@@ -340,7 +333,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   rogue: {
     skin: "#e4a672",
     leadSide: "right",
-    head: { shape: "peanut", scale: 0.98 },
+    head: { shape: "cheek", scale: 0.98 },
     hair: { style: "spiky", color: "#f0d48a", complexity: 6 },
     face: { eyeColor: "#2a6ebd", nose: false },
     helmet: { style: "bandana", color: "#322947" },
@@ -362,7 +355,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   scientist: {
     skin: "#f0c8a0",
     leadSide: "right",
-    head: { shape: "apple", scale: 1.05 },
+    head: { shape: "soft", scale: 1.05 },
     hair: { style: "mohawk", color: "#e83b3b", complexity: 6 },
     face: { eyeColor: "#3d6e70", nose: true, scale: 1.05 },
     helmet: { style: "none", color: "#000000" },
@@ -386,7 +379,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   cleric: {
     skin: "#f0c8a0",
     leadSide: "right",
-    head: { shape: "onion", scale: 0.96 },
+    head: { shape: "brow", scale: 0.96 },
     hair: { style: "bob", color: "#e8e4d8", complexity: 4 },
     face: { eyeColor: "#3d6e70", nose: true },
     helmet: { style: "none", color: "#000000" },
@@ -408,7 +401,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   ranger: {
     skin: "#d4a574",
     leadSide: "right",
-    head: { shape: "teardrop", scale: 0.96 },
+    head: { shape: "classic", scale: 0.96 },
     hair: { style: "braid", color: "#6b3a1f", complexity: 5 },
     face: { eyeColor: "#2a4550", nose: true },
     helmet: { style: "cap", color: "#3d5c40" },
@@ -433,7 +426,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   barbarian: {
     skin: "#c98a6a",
     leadSide: "right",
-    head: { shape: "gourd", scale: 1 },
+    head: { shape: "cheek", scale: 1 },
     hair: { style: "topknot", color: "#1a1c2c", complexity: 6 },
     face: { eyeColor: "#e83b3b", nose: true },
     helmet: { style: "none", color: "#000000" },
@@ -460,7 +453,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   acolyte: {
     skin: "#ffe0bd",
     leadSide: "right",
-    head: { shape: "pancake", scale: 1 },
+    head: { shape: "soft", scale: 1 },
     hair: { style: "fringe", color: "#3a9bb5", complexity: 5 },
     face: { eyeColor: "#5a2a7a", nose: false },
     helmet: { style: "none", color: "#000000" },
@@ -482,7 +475,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   pirate: {
     skin: "#e4a672",
     leadSide: "left",
-    head: { shape: "peanut", scale: 0.98 },
+    head: { shape: "cheek", scale: 0.98 },
     hair: { style: "messy", color: "#1a1c2c", complexity: 6 },
     face: { eyeColor: "#1a1c2c", nose: true },
     helmet: { style: "bandana", color: "#e83b3b" },
@@ -510,7 +503,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   goatman: {
     skin: "#c98a6a",
     leadSide: "right",
-    head: { shape: "boxy", scale: 0.95 },
+    head: { shape: "slim", scale: 0.95 },
     hair: { style: "bald", color: "#5a4030" },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "goat", color: "#5a4030", visor: "#e8e4d8" },

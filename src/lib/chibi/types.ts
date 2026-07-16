@@ -75,36 +75,17 @@ export type LegPose =
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 
 /**
- * Twelve distinct head *construction skeletons* (gallery presets).
- * Not Y-scale variants — each builds the skull differently.
+ * Lozenge-family skull variants (same soft-diamond construction).
+ * Gallery presets `headClassic`…`headSlim` — pick one to hone further.
  */
-export type HeadShape =
-  | "sphere"
-  | "capsule"
-  | "onion"
-  | "apple"
-  | "teardrop"
-  | "boxy"
-  | "gourd"
-  | "wedge"
-  | "pancake"
-  | "lozenge"
-  | "peanut"
-  | "disc";
+export type HeadShape = "classic" | "soft" | "cheek" | "brow" | "slim";
 
 export const HEAD_SHAPES: HeadShape[] = [
-  "sphere",
-  "capsule",
-  "onion",
-  "apple",
-  "teardrop",
-  "boxy",
-  "gourd",
-  "wedge",
-  "pancake",
-  "lozenge",
-  "peanut",
-  "disc",
+  "classic",
+  "soft",
+  "cheek",
+  "brow",
+  "slim",
 ];
 
 /** Soft lower garment — fills the silhouette under a short torso. */
@@ -131,8 +112,8 @@ export type CharacterSpec = {
   leadSide?: "left" | "right";
   head?: {
     /**
-     * Skull construction skeleton. Default `"sphere"`.
-     * Compare the twelve `head*` gallery presets, then pick favourites to hone.
+     * Lozenge-family skull. Default `"classic"`.
+     * Compare the five `head*` gallery presets, then pick one to hone.
      */
     shape?: HeadShape;
     /** Overall head scale (hair stays world-sized). */
@@ -210,18 +191,11 @@ export type CharacterSpec = {
 };
 
 export type PresetId =
-  | "headSphere"
-  | "headCapsule"
-  | "headOnion"
-  | "headApple"
-  | "headTeardrop"
-  | "headBoxy"
-  | "headGourd"
-  | "headWedge"
-  | "headPancake"
-  | "headLozenge"
-  | "headPeanut"
-  | "headDisc"
+  | "headClassic"
+  | "headSoft"
+  | "headCheek"
+  | "headBrow"
+  | "headSlim"
   | "mage"
   | "knight"
   | "soldier"
@@ -236,18 +210,11 @@ export type PresetId =
 
 /** Human-readable labels for the preset picker. */
 export const PRESET_LABELS: Record<PresetId, string> = {
-  headSphere: "1 · sphere (single ball)",
-  headCapsule: "2 · capsule (vertical pill)",
-  headOnion: "3 · onion (stacked spheres)",
-  headApple: "4 · apple (wide + flat chin)",
-  headTeardrop: "5 · teardrop (wide crown)",
-  headBoxy: "6 · boxy (soft block)",
-  headGourd: "7 · gourd (two balls)",
-  headWedge: "8 · wedge (angled face slab)",
-  headPancake: "9 · pancake (flat / wide)",
-  headLozenge: "10 · lozenge (soft diamond)",
-  headPeanut: "11 · peanut (wide cheeks)",
-  headDisc: "12 · disc (tipped face plate)",
+  headClassic: "1 · lozenge classic",
+  headSoft: "2 · lozenge soft",
+  headCheek: "3 · lozenge cheek",
+  headBrow: "4 · lozenge brow",
+  headSlim: "5 · lozenge slim",
   mage: "mage",
   knight: "knight",
   soldier: "soldier",
@@ -262,18 +229,11 @@ export const PRESET_LABELS: Record<PresetId, string> = {
 };
 
 export const PRESET_IDS: PresetId[] = [
-  "headSphere",
-  "headCapsule",
-  "headOnion",
-  "headApple",
-  "headTeardrop",
-  "headBoxy",
-  "headGourd",
-  "headWedge",
-  "headPancake",
-  "headLozenge",
-  "headPeanut",
-  "headDisc",
+  "headClassic",
+  "headSoft",
+  "headCheek",
+  "headBrow",
+  "headSlim",
   "mage",
   "knight",
   "soldier",
