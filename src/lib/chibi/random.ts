@@ -14,6 +14,7 @@ import type {
   TorsoStyle,
   WeaponType,
 } from "./types";
+import { HEAD_SHAPES } from "./types";
 
 export type PartId = "head" | "torso" | "arms" | "legs";
 
@@ -260,11 +261,14 @@ function randomHead(skinHint?: string): HeadBits {
         };
   return {
     skin,
-    head: { scale: 0.9 + Math.random() * 0.08 },
+    head: {
+      shape: pick(HEAD_SHAPES),
+      scale: 0.94 + Math.random() * 0.08,
+    },
     hair,
     face: {
       eyeColor: pick(EYES),
-      nose: Math.random() < 0.6,
+      nose: Math.random() < 0.45,
     },
     helmet: {
       style: helmetStyle,

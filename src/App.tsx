@@ -56,6 +56,7 @@ import {
   getPreset,
   PART_IDS,
   PRESET_IDS,
+  PRESET_LABELS,
   randomCharacter,
   rerollPart,
   rerollPartColors,
@@ -162,10 +163,10 @@ export default function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
-  const [presetId, setPresetId] = useState<PresetId | "random">("mage");
-  const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
+  const [presetId, setPresetId] = useState<PresetId | "random">("headMochi");
+  const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("headMochi"));
   const [specText, setSpecText] = useState(() =>
-    JSON.stringify(getPreset("mage"), null, 2),
+    JSON.stringify(getPreset("headMochi"), null, 2),
   );
   const [specParseError, setSpecParseError] = useState<string | null>(null);
   const specFileRef = useRef<HTMLInputElement>(null);
@@ -821,7 +822,7 @@ export default function App() {
                 ) : null}
                 {PRESET_IDS.map((id) => (
                   <option key={id} value={id}>
-                    {id}
+                    {PRESET_LABELS[id]}
                   </option>
                 ))}
               </select>

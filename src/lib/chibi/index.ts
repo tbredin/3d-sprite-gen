@@ -131,5 +131,6 @@ export type {
   LegPose,
   HemStyle,
   BackLoadout,
+  HeadShape,
 } from "./types";
-export { PRESET_IDS } from "./types";
+export { PRESET_IDS, PRESET_LABELS, HEAD_SHAPES } from "./types";

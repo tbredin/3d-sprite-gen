@@ -73,6 +73,22 @@ export type LegPose =
 
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 
+/**
+ * Cute grimdark-chibi skull silhouettes — pick one in the head-* gallery presets.
+ * - dumpling: soft ball, ultra-cute
+ * - mochi: tall soft SD egg (Sea of Stars / Octopath)
+ * - cheeky: huge cheeks, tiny chin
+ * - solemn: quieter longer face for medieval grit (still soft, not adult)
+ */
+export type HeadShape = "dumpling" | "mochi" | "cheeky" | "solemn";
+
+export const HEAD_SHAPES: HeadShape[] = [
+  "dumpling",
+  "mochi",
+  "cheeky",
+  "solemn",
+];
+
 /** Soft lower garment — fills the silhouette under a short torso. */
 export type HemStyle = "none" | "skirt" | "loincloth";
 
@@ -96,7 +112,12 @@ export type CharacterSpec = {
    */
   leadSide?: "left" | "right";
   head?: {
-    /** Egg-shaped JRPG head scale (slightly under hair shell). */
+    /**
+     * Skull silhouette language. Default `"mochi"`.
+     * Compare the `headDumpling` / `headMochi` / `headCheeky` / `headSolemn` presets.
+     */
+    shape?: HeadShape;
+    /** Overall head scale (hair stays world-sized). */
     scale?: number;
   };
   hair?: {
@@ -171,6 +192,10 @@ export type CharacterSpec = {
 };
 
 export type PresetId =
+  | "headDumpling"
+  | "headMochi"
+  | "headCheeky"
+  | "headSolemn"
   | "mage"
   | "knight"
   | "soldier"
@@ -183,7 +208,30 @@ export type PresetId =
   | "pirate"
   | "goatman";
 
+/** Human-readable labels for the preset picker. */
+export const PRESET_LABELS: Record<PresetId, string> = {
+  headDumpling: "Head A · dumpling (cute ball)",
+  headMochi: "Head B · mochi (soft SD)",
+  headCheeky: "Head C · cheeky (puff cheeks)",
+  headSolemn: "Head D · solemn (quiet medieval)",
+  mage: "mage",
+  knight: "knight",
+  soldier: "soldier",
+  rogue: "rogue",
+  scientist: "scientist",
+  cleric: "cleric",
+  ranger: "ranger",
+  barbarian: "barbarian",
+  acolyte: "acolyte",
+  pirate: "pirate",
+  goatman: "goatman",
+};
+
 export const PRESET_IDS: PresetId[] = [
+  "headDumpling",
+  "headMochi",
+  "headCheeky",
+  "headSolemn",
   "mage",
   "knight",
   "soldier",
