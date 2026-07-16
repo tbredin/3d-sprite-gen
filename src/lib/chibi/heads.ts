@@ -23,16 +23,14 @@ function mesh(
   return m;
 }
 
-export const DEFAULT_HEAD_SHAPE: HeadShape = "mochi";
+/** Default: classic anime chibi (gallery lead — red hair). */
+export const DEFAULT_HEAD_SHAPE: HeadShape = "anime";
 
 /**
  * Tip the face plane up toward the iso camera (~35° elevation).
- * Negative X = face normal (+Z) leans toward +Y so eyes/mouth aren't
- * foreshortened into a flat strip when looking down.
  */
-export const ISO_FACE_TILT = -0.42;
+export const ISO_FACE_TILT = -0.4;
 
-/** Shared face layout keyed by skull language — eyes sit on the face pad. */
 export type FaceLayout = {
   eyeW: number;
   eyeH: number;
@@ -42,228 +40,302 @@ export type FaceLayout = {
   irisH: number;
   eyeSpacing: number;
   eyeZ: number;
-  /** Eyes sit high on the tall skull so mouth/chin clear below under iso. */
   eyeLift: number;
   browW: number;
   browH: number;
   browDepth: number;
   mouthWidth: number;
-  /** Large drop — vertical separation is the whole point under iso crush. */
   mouthDrop: number;
 };
 
-/**
- * Soft anime eyes with *wide vertical spacing* for isometric foreshortening.
- * Features that look correct in an orthographic front view collapse from above;
- * these numbers overshoot on purpose.
- */
+/** Big soft anime eyes + vertical spacing for iso foreshortening. */
 export const FACE_BY_SHAPE: Record<HeadShape, FaceLayout> = {
-  dumpling: {
+  anime: {
+    eyeW: 0.25,
+    eyeH: 0.2,
+    eyeDepth: 0.034,
+    eyeTopWiden: 1.1,
+    irisW: 0.165,
+    irisH: 0.15,
+    eyeSpacing: 0.168,
+    eyeZ: CHIBI.skullR * 0.94,
+    eyeLift: 0.1,
+    browW: 0.24,
+    browH: 0.042,
+    browDepth: 0.026,
+    mouthWidth: 0.07,
+    mouthDrop: 0.4,
+  },
+  round: {
     eyeW: 0.24,
-    eyeH: 0.19,
+    eyeH: 0.185,
     eyeDepth: 0.032,
     eyeTopWiden: 1.08,
     irisW: 0.155,
     irisH: 0.14,
     eyeSpacing: 0.17,
-    eyeZ: CHIBI.skullR * 0.95,
-    eyeLift: 0.1,
-    browW: 0.24,
-    browH: 0.045,
-    browDepth: 0.026,
-    mouthWidth: 0.075,
-    mouthDrop: 0.38,
-  },
-  mochi: {
-    eyeW: 0.225,
-    eyeH: 0.175,
-    eyeDepth: 0.03,
-    eyeTopWiden: 1.1,
-    irisW: 0.145,
-    irisH: 0.128,
-    eyeSpacing: 0.16,
-    eyeZ: CHIBI.skullR * 0.92,
-    eyeLift: 0.12,
+    eyeZ: CHIBI.skullR * 0.96,
+    eyeLift: 0.08,
     browW: 0.23,
-    browH: 0.044,
-    browDepth: 0.026,
-    mouthWidth: 0.078,
-    mouthDrop: 0.42,
-  },
-  cheeky: {
-    eyeW: 0.235,
-    eyeH: 0.185,
-    eyeDepth: 0.032,
-    eyeTopWiden: 1.06,
-    irisW: 0.15,
-    irisH: 0.135,
-    eyeSpacing: 0.18,
-    eyeZ: CHIBI.skullR * 0.98,
-    eyeLift: 0.11,
-    browW: 0.22,
     browH: 0.04,
     browDepth: 0.024,
-    mouthWidth: 0.065,
+    mouthWidth: 0.072,
+    mouthDrop: 0.36,
+  },
+  tall: {
+    eyeW: 0.22,
+    eyeH: 0.17,
+    eyeDepth: 0.03,
+    eyeTopWiden: 1.08,
+    irisW: 0.14,
+    irisH: 0.125,
+    eyeSpacing: 0.155,
+    eyeZ: CHIBI.skullR * 0.92,
+    eyeLift: 0.12,
+    browW: 0.22,
+    browH: 0.042,
+    browDepth: 0.024,
+    mouthWidth: 0.068,
+    mouthDrop: 0.42,
+  },
+  puff: {
+    eyeW: 0.245,
+    eyeH: 0.19,
+    eyeDepth: 0.032,
+    eyeTopWiden: 1.06,
+    irisW: 0.16,
+    irisH: 0.145,
+    eyeSpacing: 0.18,
+    eyeZ: CHIBI.skullR * 0.98,
+    eyeLift: 0.1,
+    browW: 0.22,
+    browH: 0.038,
+    browDepth: 0.022,
+    mouthWidth: 0.06,
+    mouthDrop: 0.38,
+  },
+  doll: {
+    eyeW: 0.26,
+    eyeH: 0.21,
+    eyeDepth: 0.034,
+    eyeTopWiden: 1.12,
+    irisW: 0.17,
+    irisH: 0.155,
+    eyeSpacing: 0.175,
+    eyeZ: CHIBI.skullR * 0.95,
+    eyeLift: 0.06,
+    browW: 0.25,
+    browH: 0.04,
+    browDepth: 0.024,
+    mouthWidth: 0.055,
+    mouthDrop: 0.42,
+  },
+  bean: {
+    eyeW: 0.23,
+    eyeH: 0.175,
+    eyeDepth: 0.03,
+    eyeTopWiden: 1.06,
+    irisW: 0.148,
+    irisH: 0.132,
+    eyeSpacing: 0.175,
+    eyeZ: CHIBI.skullR * 0.97,
+    eyeLift: 0.07,
+    browW: 0.23,
+    browH: 0.04,
+    browDepth: 0.024,
+    mouthWidth: 0.075,
+    mouthDrop: 0.34,
+  },
+  sharp: {
+    eyeW: 0.215,
+    eyeH: 0.165,
+    eyeDepth: 0.028,
+    eyeTopWiden: 1.04,
+    irisW: 0.138,
+    irisH: 0.12,
+    eyeSpacing: 0.15,
+    eyeZ: CHIBI.skullR * 0.9,
+    eyeLift: 0.11,
+    browW: 0.23,
+    browH: 0.046,
+    browDepth: 0.026,
+    mouthWidth: 0.06,
     mouthDrop: 0.4,
   },
-  solemn: {
-    eyeW: 0.21,
-    eyeH: 0.16,
-    eyeDepth: 0.028,
-    eyeTopWiden: 1.05,
-    irisW: 0.132,
-    irisH: 0.115,
-    eyeSpacing: 0.152,
-    eyeZ: CHIBI.skullR * 0.9,
-    eyeLift: 0.08,
+  baby: {
+    eyeW: 0.255,
+    eyeH: 0.2,
+    eyeDepth: 0.034,
+    eyeTopWiden: 1.1,
+    irisW: 0.168,
+    irisH: 0.152,
+    eyeSpacing: 0.172,
+    eyeZ: CHIBI.skullR * 0.96,
+    eyeLift: 0.05,
     browW: 0.24,
-    browH: 0.048,
-    browDepth: 0.028,
-    mouthWidth: 0.065,
+    browH: 0.036,
+    browDepth: 0.022,
+    mouthWidth: 0.05,
     mouthDrop: 0.36,
   },
 };
 
-/** @deprecated Prefer FACE_BY_SHAPE — kept for older imports. */
-export const FACE_READABILITY = FACE_BY_SHAPE.mochi;
+export const FACE_READABILITY = FACE_BY_SHAPE.anime;
 
 function addNeck(g: Group, mat: Material, r: number, cy: number) {
   g.add(
     mesh(
-      new CylinderGeometry(r * 0.3, r * 0.4, 0.14, 10),
+      new CylinderGeometry(r * 0.28, r * 0.38, 0.14, 10),
       mat,
       0,
       LAYOUT.shoulderY + 0.1,
       0.02,
     ),
   );
-  g.add(mesh(new SphereGeometry(r * 0.36, 10, 8), mat, 0, cy - r * 0.55, -r * 0.5));
+  g.add(mesh(new SphereGeometry(r * 0.34, 10, 8), mat, 0, cy - r * 0.5, -r * 0.48));
 }
 
-/**
- * Shared tall-skull recipe for iso: extreme Y scale, face pad tipped up,
- * chin pushed far below the eye line so foreshortening still leaves gaps.
- */
 function addIsoFacePad(
   g: Group,
   mat: Material,
   r: number,
   cy: number,
-  opts: { y?: number; z?: number; sx?: number; sy?: number },
+  opts: { y?: number; z?: number; sx?: number; sy?: number } = {},
 ) {
-  const face = new Mesh(new SphereGeometry(r * 0.82, 14, 12), mat);
-  face.position.set(0, cy + (opts.y ?? -0.08), r * (opts.z ?? 0.42));
-  face.scale.set(opts.sx ?? 0.98, opts.sy ?? 1.55, 0.38);
+  const face = new Mesh(new SphereGeometry(r * 0.8, 14, 12), mat);
+  face.position.set(0, cy + (opts.y ?? -0.06), r * (opts.z ?? 0.42));
+  face.scale.set(opts.sx ?? 0.98, opts.sy ?? 1.45, 0.36);
   face.rotation.x = ISO_FACE_TILT;
   g.add(face);
 }
 
 /**
- * A · dumpling — tall soft ball. Extreme Y for iso; cute cheeks.
+ * Classic anime chibi — tall soft egg, big eye window, tiny chin.
+ * Lead model for the red-hair gallery presets.
  */
-function headDumpling(g: Group, mat: Material, r: number, cy: number) {
+function headAnime(g: Group, mat: Material, r: number, cy: number) {
   const skull = new Mesh(new SphereGeometry(r, 16, 14), mat);
-  skull.position.set(0, cy + 0.06, 0);
-  skull.scale.set(0.92, 1.7, 0.88);
+  skull.position.set(0, cy + 0.06, -0.02);
+  skull.scale.set(0.9, 1.68, 0.88);
   g.add(skull);
 
-  addIsoFacePad(g, mat, r, cy, { y: -0.06, z: 0.44, sy: 1.5 });
+  // Soft crown
+  g.add(mesh(new SphereGeometry(r * 0.58, 12, 10), mat, 0, cy + r * 1.05, -0.04));
 
-  g.add(mesh(new SphereGeometry(r * 0.38, 12, 10), mat, -r * 0.68, cy - 0.12, r * 0.22));
-  g.add(mesh(new SphereGeometry(r * 0.38, 12, 10), mat, r * 0.68, cy - 0.12, r * 0.22));
+  addIsoFacePad(g, mat, r, cy, { y: -0.08, z: 0.42, sy: 1.5 });
 
-  // Chin well below eyes — must survive iso crush
-  g.add(mesh(new SphereGeometry(r * 0.32, 10, 8), mat, 0, cy - r * 1.45, r * 0.28));
+  // Soft temples (not hanging over eyes)
+  g.add(mesh(new SphereGeometry(r * 0.28, 10, 8), mat, -r * 0.78, cy + 0.06, 0.02));
+  g.add(mesh(new SphereGeometry(r * 0.28, 10, 8), mat, r * 0.78, cy + 0.06, 0.02));
 
-  g.add(mesh(new SphereGeometry(r * 0.5, 12, 8), mat, 0, cy + r * 1.15, -0.02));
+  // Light cheeks
+  g.add(mesh(new SphereGeometry(r * 0.32, 10, 8), mat, -r * 0.48, cy - 0.18, r * 0.3));
+  g.add(mesh(new SphereGeometry(r * 0.32, 10, 8), mat, r * 0.48, cy - 0.18, r * 0.3));
+
+  // Tiny chin below the mouth line
+  g.add(mesh(new SphereGeometry(r * 0.3, 10, 8), mat, 0, cy - r * 1.35, r * 0.26));
 
   addNeck(g, mat, r, cy);
 }
 
-/**
- * B · mochi — very tall soft SD egg (default). Built for high iso.
- */
-function headMochi(g: Group, mat: Material, r: number, cy: number) {
+function headRound(g: Group, mat: Material, r: number, cy: number) {
+  const skull = new Mesh(new SphereGeometry(r * 1.02, 16, 14), mat);
+  skull.position.set(0, cy + 0.05, 0);
+  skull.scale.set(0.98, 1.55, 0.94);
+  g.add(skull);
+  addIsoFacePad(g, mat, r, cy, { y: -0.04, z: 0.44, sy: 1.35 });
+  g.add(mesh(new SphereGeometry(r * 0.36, 12, 10), mat, -r * 0.68, cy - 0.1, r * 0.2));
+  g.add(mesh(new SphereGeometry(r * 0.36, 12, 10), mat, r * 0.68, cy - 0.1, r * 0.2));
+  g.add(mesh(new SphereGeometry(r * 0.28, 10, 8), mat, 0, cy - r * 1.25, r * 0.28));
+  g.add(mesh(new SphereGeometry(r * 0.48, 12, 8), mat, 0, cy + r * 1.0, -0.02));
+  addNeck(g, mat, r, cy);
+}
+
+function headTall(g: Group, mat: Material, r: number, cy: number) {
   const skull = new Mesh(new SphereGeometry(r, 16, 14), mat);
   skull.position.set(0, cy + 0.08, -0.02);
-  skull.scale.set(0.85, 1.85, 0.84);
+  skull.scale.set(0.84, 1.82, 0.84);
   g.add(skull);
-
-  const crown = new Mesh(new SphereGeometry(r * 0.62, 12, 10), mat);
-  crown.position.set(0, cy + r * 1.25, -0.04);
-  crown.scale.set(1.05, 0.45, 1.0);
-  g.add(crown);
-
-  addIsoFacePad(g, mat, r, cy, { y: -0.1, z: 0.4, sy: 1.65 });
-
-  g.add(mesh(new SphereGeometry(r * 0.28, 10, 8), mat, -r * 0.78, cy + 0.04, 0.02));
-  g.add(mesh(new SphereGeometry(r * 0.28, 10, 8), mat, r * 0.78, cy + 0.04, 0.02));
-
-  g.add(mesh(new SphereGeometry(r * 0.32, 10, 8), mat, -r * 0.45, cy - 0.28, r * 0.32));
-  g.add(mesh(new SphereGeometry(r * 0.32, 10, 8), mat, r * 0.45, cy - 0.28, r * 0.32));
-  g.add(mesh(new SphereGeometry(r * 0.36, 10, 8), mat, 0, cy - r * 1.55, r * 0.24));
-
+  g.add(mesh(new SphereGeometry(r * 0.6, 12, 10), mat, 0, cy + r * 1.2, -0.04));
+  addIsoFacePad(g, mat, r, cy, { y: -0.12, z: 0.4, sy: 1.6 });
+  g.add(mesh(new SphereGeometry(r * 0.3, 10, 8), mat, -r * 0.45, cy - 0.24, r * 0.3));
+  g.add(mesh(new SphereGeometry(r * 0.3, 10, 8), mat, r * 0.45, cy - 0.24, r * 0.3));
+  g.add(mesh(new SphereGeometry(r * 0.34, 10, 8), mat, 0, cy - r * 1.5, r * 0.22));
   addNeck(g, mat, r, cy);
 }
 
-/**
- * C · cheeky — tall skull + puff cheeks.
- */
-function headCheeky(g: Group, mat: Material, r: number, cy: number) {
+function headPuff(g: Group, mat: Material, r: number, cy: number) {
   const skull = new Mesh(new SphereGeometry(r * 0.9, 16, 14), mat);
   skull.position.set(0, cy + 0.1, -0.02);
-  skull.scale.set(0.88, 1.65, 0.86);
+  skull.scale.set(0.88, 1.55, 0.86);
   g.add(skull);
-
   const cheekL = new Mesh(new SphereGeometry(r * 0.5, 14, 12), mat);
-  cheekL.position.set(-r * 0.75, cy - 0.14, r * 0.18);
-  cheekL.scale.set(1.05, 1.15, 0.95);
+  cheekL.position.set(-r * 0.74, cy - 0.12, r * 0.16);
+  cheekL.scale.set(1.05, 1.12, 0.95);
   g.add(cheekL);
   const cheekR = new Mesh(new SphereGeometry(r * 0.5, 14, 12), mat);
-  cheekR.position.set(r * 0.75, cy - 0.14, r * 0.18);
-  cheekR.scale.set(1.05, 1.15, 0.95);
+  cheekR.position.set(r * 0.74, cy - 0.12, r * 0.16);
+  cheekR.scale.set(1.05, 1.12, 0.95);
   g.add(cheekR);
-
-  addIsoFacePad(g, mat, r, cy, { y: -0.02, z: 0.46, sx: 0.92, sy: 1.45 });
-
-  g.add(mesh(new SphereGeometry(r * 0.26, 8, 6), mat, 0, cy - r * 1.35, r * 0.3));
-
-  g.add(mesh(new SphereGeometry(r * 0.46, 12, 8), mat, 0, cy + r * 1.1, -0.02));
-
+  addIsoFacePad(g, mat, r, cy, { y: -0.02, z: 0.46, sx: 0.92, sy: 1.35 });
+  g.add(mesh(new SphereGeometry(r * 0.24, 8, 6), mat, 0, cy - r * 1.25, r * 0.28));
+  g.add(mesh(new SphereGeometry(r * 0.44, 12, 8), mat, 0, cy + r * 1.0, -0.02));
   addNeck(g, mat, r, cy);
 }
 
-/**
- * D · solemn — quieter medieval face; tall for iso but not a tower.
- */
-function headSolemn(g: Group, mat: Material, r: number, cy: number) {
+function headDoll(g: Group, mat: Material, r: number, cy: number) {
+  // Big forehead / moe — cranial mass high, tiny jaw
+  const skull = new Mesh(new SphereGeometry(r * 1.05, 16, 14), mat);
+  skull.position.set(0, cy + 0.12, -0.02);
+  skull.scale.set(0.95, 1.6, 0.9);
+  g.add(skull);
+  g.add(mesh(new SphereGeometry(r * 0.7, 12, 10), mat, 0, cy + r * 1.15, -0.02));
+  addIsoFacePad(g, mat, r, cy, { y: -0.14, z: 0.44, sx: 0.9, sy: 1.35 });
+  g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), mat, 0, cy - r * 1.2, r * 0.24));
+  addNeck(g, mat, r, cy);
+}
+
+function headBean(g: Group, mat: Material, r: number, cy: number) {
+  // Wider, slightly shorter — still tall enough for iso
+  const skull = new Mesh(new SphereGeometry(r * 1.05, 16, 14), mat);
+  skull.position.set(0, cy + 0.04, 0);
+  skull.scale.set(1.08, 1.42, 0.92);
+  g.add(skull);
+  addIsoFacePad(g, mat, r, cy, { y: -0.02, z: 0.44, sx: 1.05, sy: 1.25 });
+  g.add(mesh(new SphereGeometry(r * 0.4, 12, 10), mat, -r * 0.72, cy - 0.06, r * 0.18));
+  g.add(mesh(new SphereGeometry(r * 0.4, 12, 10), mat, r * 0.72, cy - 0.06, r * 0.18));
+  g.add(mesh(new SphereGeometry(r * 0.28, 10, 8), mat, 0, cy - r * 1.15, r * 0.28));
+  addNeck(g, mat, r, cy);
+}
+
+function headSharp(g: Group, mat: Material, r: number, cy: number) {
+  // Soft-angular — quieter brow, tapered jaw (still chibi, not adult)
   const skull = new Mesh(new SphereGeometry(r, 16, 14), mat);
   skull.position.set(0, cy + 0.04, -0.04);
-  // Was 2.0 — read as a stretched tower under iso; sit between mochi and old.
-  skull.scale.set(0.86, 1.65, 0.84);
+  skull.scale.set(0.86, 1.62, 0.84);
   g.add(skull);
-
-  g.add(mesh(new SphereGeometry(r * 0.62, 12, 10), mat, 0, cy + r * 0.32, r * 0.36));
-
-  addIsoFacePad(g, mat, r, cy, { y: -0.1, z: 0.38, sx: 0.92, sy: 1.45 });
-
-  g.add(mesh(new SphereGeometry(r * 0.26, 10, 8), mat, -r * 0.5, cy - 0.14, r * 0.26));
-  g.add(mesh(new SphereGeometry(r * 0.26, 10, 8), mat, r * 0.5, cy - 0.14, r * 0.26));
-
-  const jaw = new Mesh(new SphereGeometry(r * 0.38, 12, 10), mat);
-  jaw.position.set(0, cy - r * 1.35, r * 0.16);
-  jaw.scale.set(0.95, 0.8, 0.85);
+  g.add(mesh(new SphereGeometry(r * 0.6, 12, 10), mat, 0, cy + r * 0.35, r * 0.34));
+  addIsoFacePad(g, mat, r, cy, { y: -0.1, z: 0.38, sx: 0.92, sy: 1.4 });
+  const jaw = new Mesh(new SphereGeometry(r * 0.36, 12, 10), mat);
+  jaw.position.set(0, cy - r * 1.3, r * 0.14);
+  jaw.scale.set(0.9, 0.75, 0.85);
   g.add(jaw);
-
-  g.add(mesh(new SphereGeometry(r * 0.48, 12, 8), mat, 0, cy + r * 1.05, -0.05));
-  g.add(mesh(new SphereGeometry(r * 0.34, 10, 8), mat, 0, cy - r * 0.28, -r * 0.55));
-
+  g.add(mesh(new SphereGeometry(r * 0.46, 12, 8), mat, 0, cy + r * 1.05, -0.05));
   addNeck(g, mat, r, cy);
 }
 
-/**
- * Cute grimdark-chibi head — tall for isometric foreshortening.
- */
+function headBaby(g: Group, mat: Material, r: number, cy: number) {
+  // Oversized cranium, features clustered mid-face
+  const skull = new Mesh(new SphereGeometry(r * 1.08, 16, 14), mat);
+  skull.position.set(0, cy + 0.14, -0.02);
+  skull.scale.set(1.0, 1.5, 0.95);
+  g.add(skull);
+  g.add(mesh(new SphereGeometry(r * 0.72, 12, 10), mat, 0, cy + r * 1.1, 0));
+  addIsoFacePad(g, mat, r, cy, { y: -0.16, z: 0.44, sx: 0.88, sy: 1.2 });
+  g.add(mesh(new SphereGeometry(r * 0.2, 8, 6), mat, 0, cy - r * 1.05, r * 0.26));
+  addNeck(g, mat, r, cy);
+}
+
 export function generateHead(opts: {
   skin: string;
   scale?: number;
@@ -278,28 +350,36 @@ export function generateHead(opts: {
   const r = CHIBI.skullR * s;
 
   switch (shape) {
-    case "dumpling":
-      headDumpling(g, mat, r, cy);
+    case "round":
+      headRound(g, mat, r, cy);
       break;
-    case "cheeky":
-      headCheeky(g, mat, r, cy);
+    case "tall":
+      headTall(g, mat, r, cy);
       break;
-    case "solemn":
-      headSolemn(g, mat, r, cy);
+    case "puff":
+      headPuff(g, mat, r, cy);
       break;
-    case "mochi":
+    case "doll":
+      headDoll(g, mat, r, cy);
+      break;
+    case "bean":
+      headBean(g, mat, r, cy);
+      break;
+    case "sharp":
+      headSharp(g, mat, r, cy);
+      break;
+    case "baby":
+      headBaby(g, mat, r, cy);
+      break;
+    case "anime":
     default:
-      headMochi(g, mat, r, cy);
+      headAnime(g, mat, r, cy);
       break;
   }
 
   return g;
 }
 
-/**
- * Soft anime eyes + mouth. Layout overshoots vertical spacing for iso;
- * whole face group tips up toward the camera.
- */
 export function generateFace(opts: {
   eyeColor?: string;
   nose?: boolean;
@@ -334,19 +414,16 @@ export function generateFace(opts: {
     eye.name = s < 0 ? "eye-left" : "eye-right";
     eye.position.set(s * ex, y, z);
 
-    const botH = eyeH * 0.48;
-    eye.add(mesh(new BoxGeometry(eyeW, botH, d), white, 0, -eyeH * 0.18, 0));
-    const topH = eyeH * 0.55;
+    eye.add(mesh(new BoxGeometry(eyeW, eyeH * 0.48, d), white, 0, -eyeH * 0.18, 0));
     eye.add(
       mesh(
-        new BoxGeometry(eyeW * t.eyeTopWiden, topH, d),
+        new BoxGeometry(eyeW * t.eyeTopWiden, eyeH * 0.55, d),
         white,
         0,
         eyeH * 0.2,
         0,
       ),
     );
-
     eye.add(
       mesh(
         new BoxGeometry(irisW, irisH, d * 0.7),
@@ -356,7 +433,6 @@ export function generateFace(opts: {
         d * 0.15,
       ),
     );
-
     eye.add(
       mesh(
         new BoxGeometry(eyeW * t.eyeTopWiden * 1.02, 0.018 * hs, d * 0.8),
@@ -366,17 +442,15 @@ export function generateFace(opts: {
         d * 0.1,
       ),
     );
-
     eye.add(
       mesh(
-        new BoxGeometry(0.026 * hs, 0.026 * hs, d * 0.5),
+        new BoxGeometry(0.028 * hs, 0.028 * hs, d * 0.5),
         shine,
         -irisW * 0.22,
-        irisH * 0.2,
+        irisH * 0.22,
         d * 0.35,
       ),
     );
-
     eye.add(
       mesh(
         new BoxGeometry(browW, browH, browDepth),
@@ -386,14 +460,13 @@ export function generateFace(opts: {
         -0.002 * hs,
       ),
     );
-
     g.add(eye);
   }
 
   if (opts.nose) {
     g.add(
       mesh(
-        new SphereGeometry(0.024 * hs, 8, 6),
+        new SphereGeometry(0.022 * hs, 8, 6),
         toon(opts.skin),
         0,
         y - t.mouthDrop * hs * 0.45,

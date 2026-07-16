@@ -163,10 +163,10 @@ export default function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
-  const [presetId, setPresetId] = useState<PresetId | "random">("headMochi");
-  const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("headMochi"));
+  const [presetId, setPresetId] = useState<PresetId | "random">("headRedAnime");
+  const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("headRedAnime"));
   const [specText, setSpecText] = useState(() =>
-    JSON.stringify(getPreset("headMochi"), null, 2),
+    JSON.stringify(getPreset("headRedAnime"), null, 2),
   );
   const [specParseError, setSpecParseError] = useState<string | null>(null);
   const specFileRef = useRef<HTMLInputElement>(null);

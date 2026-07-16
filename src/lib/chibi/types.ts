@@ -25,7 +25,8 @@ export type HairStyle =
   | "mullet"
   | "pompadour"
   | "sidePart"
-  | "wavy";
+  | "wavy"
+  | "anime";
 
 export type HelmetStyle =
   | "none"
@@ -74,19 +75,35 @@ export type LegPose =
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 
 /**
- * Cute grimdark-chibi skull silhouettes — pick one in the head-* gallery presets.
- * - dumpling: soft ball, ultra-cute
- * - mochi: tall soft SD egg (Sea of Stars / Octopath)
- * - cheeky: huge cheeks, tiny chin
- * - solemn: quieter longer face for medieval grit (still soft, not adult)
+ * Cute anime-chibi skull silhouettes for the head gallery.
+ * - anime: classic tall soft egg (lead — red hair showcase)
+ * - round: soft ball
+ * - tall: elongated for max iso face read
+ * - puff: huge cheeks
+ * - doll: big forehead / moe
+ * - bean: wider shorter cute
+ * - sharp: quiet tapered jaw
+ * - baby: oversized cranium
  */
-export type HeadShape = "dumpling" | "mochi" | "cheeky" | "solemn";
+export type HeadShape =
+  | "anime"
+  | "round"
+  | "tall"
+  | "puff"
+  | "doll"
+  | "bean"
+  | "sharp"
+  | "baby";
 
 export const HEAD_SHAPES: HeadShape[] = [
-  "dumpling",
-  "mochi",
-  "cheeky",
-  "solemn",
+  "anime",
+  "round",
+  "tall",
+  "puff",
+  "doll",
+  "bean",
+  "sharp",
+  "baby",
 ];
 
 /** Soft lower garment — fills the silhouette under a short torso. */
@@ -113,8 +130,8 @@ export type CharacterSpec = {
   leadSide?: "left" | "right";
   head?: {
     /**
-     * Skull silhouette language. Default `"mochi"`.
-     * Compare the `headDumpling` / `headMochi` / `headCheeky` / `headSolemn` presets.
+     * Skull silhouette. Default `"anime"`.
+     * Browse the `headRed*` / `head*` gallery presets in the picker.
      */
     shape?: HeadShape;
     /** Overall head scale (hair stays world-sized). */
@@ -192,10 +209,20 @@ export type CharacterSpec = {
 };
 
 export type PresetId =
-  | "headDumpling"
-  | "headMochi"
-  | "headCheeky"
-  | "headSolemn"
+  | "headRedAnime"
+  | "headRedSpiky"
+  | "headRedTwintails"
+  | "headRedLong"
+  | "headRedBob"
+  | "headRedPonytail"
+  | "headRedMessy"
+  | "headRoundBlonde"
+  | "headTallBlue"
+  | "headPuffPink"
+  | "headDollWhite"
+  | "headBeanBlack"
+  | "headSharpGreen"
+  | "headBabyOrange"
   | "mage"
   | "knight"
   | "soldier"
@@ -210,10 +237,20 @@ export type PresetId =
 
 /** Human-readable labels for the preset picker. */
 export const PRESET_LABELS: Record<PresetId, string> = {
-  headDumpling: "Head A · dumpling (cute ball)",
-  headMochi: "Head B · mochi (soft SD)",
-  headCheeky: "Head C · cheeky (puff cheeks)",
-  headSolemn: "Head D · solemn (quiet medieval)",
+  headRedAnime: "Head · red anime (start here)",
+  headRedSpiky: "Head · red spiky",
+  headRedTwintails: "Head · red twin-tails",
+  headRedLong: "Head · red long",
+  headRedBob: "Head · red bob",
+  headRedPonytail: "Head · red ponytail",
+  headRedMessy: "Head · red messy",
+  headRoundBlonde: "Head · round + blonde",
+  headTallBlue: "Head · tall + blue",
+  headPuffPink: "Head · puff + pink",
+  headDollWhite: "Head · doll + white",
+  headBeanBlack: "Head · bean + black",
+  headSharpGreen: "Head · sharp + green",
+  headBabyOrange: "Head · baby + orange",
   mage: "mage",
   knight: "knight",
   soldier: "soldier",
@@ -228,10 +265,20 @@ export const PRESET_LABELS: Record<PresetId, string> = {
 };
 
 export const PRESET_IDS: PresetId[] = [
-  "headDumpling",
-  "headMochi",
-  "headCheeky",
-  "headSolemn",
+  "headRedAnime",
+  "headRedSpiky",
+  "headRedTwintails",
+  "headRedLong",
+  "headRedBob",
+  "headRedPonytail",
+  "headRedMessy",
+  "headRoundBlonde",
+  "headTallBlue",
+  "headPuffPink",
+  "headDollWhite",
+  "headBeanBlack",
+  "headSharpGreen",
+  "headBabyOrange",
   "mage",
   "knight",
   "soldier",

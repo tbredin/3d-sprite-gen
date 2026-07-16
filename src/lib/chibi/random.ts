@@ -31,6 +31,8 @@ export const EMPTY_LOCKS: PartLocks = {
 
 /** Weighted toward readable silhouette styles — bald only under helmets. */
 const HAIR: HairStyle[] = [
+  "anime",
+  "anime",
   "bowl",
   "bowl",
   "bob",

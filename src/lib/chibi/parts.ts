@@ -156,6 +156,45 @@ export function generateHair(opts: {
   const top = LAYOUT.headTopY - 0.02;
   const cy = LAYOUT.headCenterY;
 
+  if (opts.style === "anime") {
+    // Classic anime chibi hair: high brow fringe + side locks + crown spikes.
+    // Everything stays above the eye line for tall iso skulls.
+    addHairFrame(g, mat, hi, {
+      shellR: 0.42,
+      bangs: true,
+      coverForehead: true,
+      sides: true,
+      back: true,
+    });
+    // Layered brow fringe (short)
+    g.add(mesh(new SphereGeometry(0.12, 10, 8), mat, -0.12, cy + 0.3, 0.34));
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, 0.02, cy + 0.32, 0.36));
+    g.add(mesh(new SphereGeometry(0.12, 10, 8), mat, 0.14, cy + 0.3, 0.34));
+    g.add(mesh(new SphereGeometry(0.08, 8, 6), hi, 0, cy + 0.34, 0.35));
+    // Side cheek locks — beside face, not over it
+    for (const s of [-1, 1] as const) {
+      const lock = new Mesh(new CapsuleGeometry(0.1, 0.28, 4, 8), mat);
+      lock.position.set(s * 0.42, cy + 0.02, 0.08);
+      lock.rotation.z = s * 0.2;
+      g.add(lock);
+    }
+    // Crown spikes / volume
+    for (let i = 0; i < n + 1; i++) {
+      const t = (i / Math.max(n, 1)) * 2 - 1;
+      addSpikeTuft(
+        g,
+        mat,
+        hi,
+        t * 0.22,
+        top - 0.02,
+        -0.05 + (i % 3) * 0.06,
+        0.28 + (i % 2) * 0.06,
+        t * 0.2,
+        -0.1,
+      );
+    }
+  }
+
   if (opts.style === "bowl") {
     // Shallow bowl on the crown — open face window (not a helmet over the eyes)
     addHairFrame(g, mat, hi, { shellR: 0.4, coverForehead: true });
