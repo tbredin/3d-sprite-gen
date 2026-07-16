@@ -12,15 +12,15 @@ export type LegSideJoints = {
 };
 
 /**
- * Planted combat stances — both feet on the ground, ipsilateral with arm lead.
+ * Planted combat stances — both feet flat on the ground, ipsilateral with arm lead.
+ *
+ * No running / jumping silhouettes: locomotion aliases collapse to ready, and
+ * every named pose keeps soles countered so heels don't lift. Soft crouch /
+ * duel-step variants stay inside a ready A-frame (width > depth).
  *
  * Convention: side +1 = character right. Positive hip.x swings the thigh
  * forward (toward +Z); mirrored hip.z opens the A-frame. Lead foot matches
- * the forward hand; trail sits clearly back + wider so the 42px silhouette
- * isn't a glued pillar (esp. trail foot under body at bottom-right facing).
- *
- * Width (hip.z / hip sockets) stays ahead of forward depth for iso read, but
- * stayed under split territory after the widen pass — ready stance, not yoga.
+ * the forward hand; trail sits clearly back + wider.
  */
 export function legJointsForPose(
   pose: LegPose,
@@ -34,120 +34,119 @@ export function legJointsForPose(
 
   switch (pose) {
     case "stand":
-      // Tall plant — soft lead/trail + readable base.
+      // Tall plant — soft lead/trail, both soles flat.
       return {
         hip: {
-          x: isLead ? 0.18 : -0.14,
+          x: isLead ? 0.16 : -0.12,
           y: side * 0.04,
-          z: aFrame(0.24, 0.32),
+          z: aFrame(0.22, 0.3),
         },
-        knee: isLead ? 0.18 : 0.14,
-        foot: { x: isLead ? -0.12 : -0.06, y: side * 0.06 },
+        knee: isLead ? 0.14 : 0.12,
+        foot: { x: isLead ? -0.1 : -0.06, y: side * 0.05 },
       };
 
     case "wide":
-      // Broad guard base — still the widest pose, shy of a split.
+      // Broad guard base — still planted, shy of a split.
       return {
         hipY: -0.02,
         hip: {
-          x: isLead ? 0.28 : -0.12,
-          y: side * 0.06,
-          z: aFrame(0.42, 0.5),
+          x: isLead ? 0.24 : -0.1,
+          y: side * 0.05,
+          z: aFrame(0.38, 0.46),
         },
-        knee: isLead ? 0.42 : 0.36,
-        foot: { x: isLead ? -0.2 : -0.12, y: side * 0.12 },
+        knee: isLead ? 0.32 : 0.28,
+        foot: { x: isLead ? -0.18 : -0.12, y: side * 0.1 },
       };
 
     case "crouch":
-      // Low ready — deep knees, lead edged forward, trail planted out.
-      return {
-        hipY: -0.14,
-        hip: {
-          x: isLead ? 0.46 : 0.1,
-          y: side * 0.05,
-          z: aFrame(0.32, 0.4),
-        },
-        knee: isLead ? 1.05 : 0.95,
-        foot: { x: isLead ? -0.65 : -0.55, y: side * 0.08 },
-      };
-
-    case "guard":
-      // Compact braced crouch with clear lead foot + slightly wider trail.
+      // Low ready — knees bent but both feet stay planted (no hop / jump).
       return {
         hipY: -0.08,
         hip: {
-          x: isLead ? 0.34 : 0.02,
-          y: isLead ? side * 0.08 : side * 0.04,
-          z: aFrame(0.28, 0.36),
+          x: isLead ? 0.28 : -0.06,
+          y: side * 0.04,
+          z: aFrame(0.3, 0.38),
         },
-        knee: isLead ? 0.7 : 0.58,
-        foot: { x: isLead ? -0.42 : -0.32, y: side * 0.08 },
+        knee: isLead ? 0.7 : 0.62,
+        foot: { x: isLead ? -0.42 : -0.36, y: side * 0.06 },
+      };
+
+    case "guard":
+      // Compact braced plant with clear lead foot + slightly wider trail.
+      return {
+        hipY: -0.04,
+        hip: {
+          x: isLead ? 0.26 : -0.04,
+          y: isLead ? side * 0.06 : side * 0.04,
+          z: aFrame(0.26, 0.34),
+        },
+        knee: isLead ? 0.48 : 0.4,
+        foot: { x: isLead ? -0.28 : -0.22, y: side * 0.06 },
       };
 
     case "lunge":
-      // Long planted duel step — lead deep forward, trail out + back.
+      // Short duel step — lead edged forward, trail still planted (not airborne).
       return {
-        hipY: -0.05,
+        hipY: -0.03,
         hip: {
-          x: isLead ? 0.52 : -0.28,
-          y: isLead ? side * 0.14 : -side * 0.1,
-          z: aFrame(0.26, 0.36),
+          x: isLead ? 0.34 : -0.18,
+          y: isLead ? side * 0.1 : -side * 0.08,
+          z: aFrame(0.24, 0.34),
         },
-        knee: isLead ? 0.62 : 0.55,
+        knee: isLead ? 0.42 : 0.36,
         foot: {
-          x: isLead ? -0.42 : -0.3,
-          y: side * 0.06,
+          x: isLead ? -0.28 : -0.2,
+          y: side * 0.05,
         },
       };
 
     case "kneel":
       // Asymmetric kneel: trail deep, lead still planted (no float).
       return {
-        hipY: isLead ? -0.06 : -0.16,
+        hipY: isLead ? -0.04 : -0.12,
         hip: {
-          x: isLead ? 0.36 : 0.5,
-          y: isLead ? side * 0.1 : -side * 0.08,
-          z: aFrame(0.26, 0.34),
+          x: isLead ? 0.28 : 0.4,
+          y: isLead ? side * 0.08 : -side * 0.06,
+          z: aFrame(0.24, 0.32),
         },
-        knee: isLead ? 0.55 : 1.35,
+        knee: isLead ? 0.4 : 1.15,
         foot: {
-          x: isLead ? -0.35 : -0.85,
-          y: side * 0.06,
+          x: isLead ? -0.28 : -0.7,
+          y: side * 0.05,
         },
       };
 
     case "walk":
     case "stride":
-      // Locomotion aliases → combat ready (sprites stay planted).
+      // Locomotion aliases → combat ready (sprites stay planted, never mid-stride).
       return legJointsForPose("ready", side, lead);
 
     case "ready":
     default:
-      // Fighting ready: soft crouch, width > depth, not a lateral split.
+      // Fighting ready: soft crouch, width > depth, one foot forward, both planted.
       return {
-        hipY: -0.03,
+        hipY: -0.02,
         hip: {
-          x: isLead ? 0.32 : -0.2,
-          y: isLead ? side * 0.12 : -side * 0.1,
-          z: aFrame(0.3, 0.38),
+          x: isLead ? 0.26 : -0.16,
+          y: isLead ? side * 0.1 : -side * 0.08,
+          z: aFrame(0.28, 0.36),
         },
-        knee: isLead ? 0.52 : 0.42,
+        knee: isLead ? 0.38 : 0.32,
         foot: {
-          x: isLead ? -0.34 : -0.22,
-          y: side * 0.08,
+          x: isLead ? -0.24 : -0.16,
+          y: side * 0.06,
         },
       };
   }
 }
 
-/** Planted combat stances used by random / presets. */
+/** Planted combat stances used by random / presets — no hop / mid-stride looks. */
 export const COMBAT_LEG_POSES: LegPose[] = [
   "ready",
   "wide",
   "guard",
-  "crouch",
-  "lunge",
   "stand",
+  "lunge",
 ];
 
 export const LEG_POSES: LegPose[] = [
@@ -159,4 +158,5 @@ export const LEG_POSES: LegPose[] = [
   "crouch",
   "lunge",
   "kneel",
+  "guard",
 ];

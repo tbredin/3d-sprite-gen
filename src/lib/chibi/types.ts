@@ -25,7 +25,8 @@ export type HairStyle =
   | "mullet"
   | "pompadour"
   | "sidePart"
-  | "wavy";
+  | "wavy"
+  | "anime";
 
 export type HelmetStyle =
   | "none"
@@ -73,8 +74,53 @@ export type LegPose =
 
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 
+/**
+ * Locked soft-diamond (`lozenge`) plus character-inspired rebuilds
+ * (mage, knight, …) for A/B presets.
+ */
+export type HeadShape =
+  | "lozenge"
+  | "mage"
+  | "knight"
+  | "soldier"
+  | "rogue"
+  | "scientist"
+  | "cleric"
+  | "ranger"
+  | "barbarian"
+  | "acolyte"
+  | "pirate"
+  | "goatman";
+
+export const HEAD_SHAPES: HeadShape[] = [
+  "lozenge",
+  "mage",
+  "knight",
+  "soldier",
+  "rogue",
+  "scientist",
+  "cleric",
+  "ranger",
+  "barbarian",
+  "acolyte",
+  "pirate",
+  "goatman",
+];
+
 /** Soft lower garment — fills the silhouette under a short torso. */
 export type HemStyle = "none" | "skirt" | "loincloth";
+
+/**
+ * Gear strapped to the back — must read in the default away / back-¾ facing
+ * (packs, scabbards, bows, greatswords).
+ */
+export type BackLoadout =
+  | "none"
+  | "scabbard"
+  | "greatsword"
+  | "quiver"
+  | "pack"
+  | "axe";
 
 export type CharacterSpec = {
   skin: string;
@@ -84,7 +130,12 @@ export type CharacterSpec = {
    */
   leadSide?: "left" | "right";
   head?: {
-    /** Egg-shaped JRPG head scale (slightly under hair shell). */
+    /**
+     * Skull shape. Default `"lozenge"` (locked classic↔slim midpoint).
+     * Character names reuse archetype rebuilds (`mage`, `knight`, …).
+     */
+    shape?: HeadShape;
+    /** Overall head scale (hair stays world-sized). */
     scale?: number;
   };
   hair?: {
@@ -118,12 +169,18 @@ export type CharacterSpec = {
     color: string;
     trim?: string;
   };
-  /** Optional skirt / loincloth / cape — often present on JRPG chibis. */
+  /** Optional skirt / loincloth / cape / back gear — often present on JRPG chibis. */
   accessories?: {
     hem?: HemStyle;
     hemColor?: string;
     cape?: boolean;
     capeColor?: string;
+    /** Belt pouches / hip bags — silhouette break on the back and sides. */
+    pouches?: boolean;
+    pouchColor?: string;
+    /** Strapped back gear — always visible from away facings. */
+    backLoadout?: BackLoadout;
+    backLoadoutColor?: string;
   };
   arms: {
     pose: ArmPose;
@@ -142,6 +199,14 @@ export type CharacterSpec = {
     hand?: "left" | "right";
     color: string;
   };
+  /**
+   * Trail-hand prop while the lead hand holds `weapon` (usually a shield).
+   * Lets sword+shield read without replacing the lead blade.
+   */
+  offhand?: {
+    type: "none" | "shield";
+    color: string;
+  };
 };
 
 export type PresetId =
@@ -156,6 +221,21 @@ export type PresetId =
   | "acolyte"
   | "pirate"
   | "goatman";
+
+/** Human-readable labels for the preset picker. */
+export const PRESET_LABELS: Record<PresetId, string> = {
+  mage: "mage",
+  knight: "knight",
+  soldier: "soldier",
+  rogue: "rogue",
+  scientist: "scientist",
+  cleric: "cleric",
+  ranger: "ranger",
+  barbarian: "barbarian",
+  acolyte: "acolyte",
+  pirate: "pirate",
+  goatman: "goatman",
+};
 
 export const PRESET_IDS: PresetId[] = [
   "mage",

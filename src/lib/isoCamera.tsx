@@ -14,11 +14,17 @@ import { CHIBI, CHARACTER_PIVOT_Y } from "./chibi/units";
 export const ISO = {
   elevation: Math.atan(1 / Math.SQRT2),
   azimuth: Math.PI / 4,
-  /** World half-extent — full chibi with margin. */
-  frustum: CHIBI.totalHeight * 0.85,
   distance: 10,
-  lookY: CHIBI.totalHeight * 0.45,
 } as const;
+
+/** World half-extent — tracks active body profile. */
+export function isoFrustum() {
+  return CHIBI.totalHeight * 0.85;
+}
+
+export function isoLookY() {
+  return CHIBI.totalHeight * 0.45;
+}
 
 /** Default camera-height multiplier (1 = classic iso elevation). */
 export const DEFAULT_CAMERA_HEIGHT = 1;
@@ -156,16 +162,16 @@ export function placeIsoCamera(
   zoom = 1,
   cameraHeight = DEFAULT_CAMERA_HEIGHT,
 ) {
-  const { azimuth, frustum, distance, lookY } = ISO;
+  const { azimuth, distance } = ISO;
   const elevation = isoElevationForHeight(cameraHeight);
   const x = distance * Math.cos(elevation) * Math.sin(azimuth);
   const y = distance * Math.sin(elevation);
   const z = distance * Math.cos(elevation) * Math.cos(azimuth);
   camera.position.set(x, y, z);
-  camera.lookAt(0, lookY, 0);
+  camera.lookAt(0, isoLookY(), 0);
   camera.up.set(0, 1, 0);
 
-  const halfH = frustum / zoom;
+  const halfH = isoFrustum() / zoom;
   const halfW = halfH * Math.max(aspect, 0.0001);
   camera.left = -halfW;
   camera.right = halfW;

@@ -56,9 +56,16 @@ import {
   getPreset,
   PART_IDS,
   PRESET_IDS,
+  PRESET_LABELS,
   randomCharacter,
   rerollPart,
   rerollPartColors,
+  applyBodyProfile as setChibiBodyProfile,
+  BODY_PROFILE_IDS,
+  BODY_PROFILES,
+  loadBodyProfile,
+  saveBodyProfile,
+  type BodyProfileId,
   type CharacterSpec,
   type PartId,
   type PartLocks,
@@ -163,6 +170,9 @@ export default function App() {
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
   const [presetId, setPresetId] = useState<PresetId | "random">("mage");
+  const [bodyProfileId, setBodyProfileId] = useState<BodyProfileId>(() =>
+    loadBodyProfile(),
+  );
   const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
   const [specText, setSpecText] = useState(() =>
     JSON.stringify(getPreset("mage"), null, 2),
@@ -284,6 +294,13 @@ export default function App() {
     setSpec(next);
     setSpecText(JSON.stringify(next, null, 2));
     setSpecParseError(null);
+    setCharKey((k) => k + 1);
+  };
+
+  const onBodyProfileChange = (id: BodyProfileId) => {
+    setBodyProfileId(id);
+    setChibiBodyProfile(id);
+    saveBodyProfile(id);
     setCharKey((k) => k + 1);
   };
 
@@ -659,7 +676,7 @@ export default function App() {
                   title="Drag to rotate"
                 >
                   <BakeCanvas
-                    key={`${presetId}-${charKey}-${size}`}
+                    key={`${presetId}-${bodyProfileId}-${charKey}-${size}`}
                     size={size}
                     colors={palette.colors}
                     silhouetteOutlineHex={outlineColors.silhouette}
@@ -809,6 +826,22 @@ export default function App() {
 
           <div className="char-picker">
             <label className="field">
+              Body
+              <select
+                value={bodyProfileId}
+                onChange={(e) =>
+                  onBodyProfileChange(e.target.value as BodyProfileId)
+                }
+                title="Smaller torso/legs — hands & feet stay fixed for pixel legibility"
+              >
+                {BODY_PROFILE_IDS.map((id) => (
+                  <option key={id} value={id}>
+                    {BODY_PROFILES[id].label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field">
               Preset
               <select
                 value={presetId === "random" ? "" : presetId}
@@ -821,7 +854,7 @@ export default function App() {
                 ) : null}
                 {PRESET_IDS.map((id) => (
                   <option key={id} value={id}>
-                    {id}
+                    {PRESET_LABELS[id]}
                   </option>
                 ))}
               </select>

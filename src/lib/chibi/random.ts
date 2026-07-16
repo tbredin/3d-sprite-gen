@@ -5,6 +5,7 @@ import type { LeadSide } from "./stance";
 import { DEFAULT_LEAD } from "./stance";
 import type {
   ArmPose,
+  BackLoadout,
   CharacterSpec,
   HairStyle,
   HelmetStyle,
@@ -13,6 +14,7 @@ import type {
   TorsoStyle,
   WeaponType,
 } from "./types";
+import { HEAD_SHAPES } from "./types";
 
 export type PartId = "head" | "torso" | "arms" | "legs";
 
@@ -29,6 +31,8 @@ export const EMPTY_LOCKS: PartLocks = {
 
 /** Weighted toward readable silhouette styles — bald only under helmets. */
 const HAIR: HairStyle[] = [
+  "anime",
+  "anime",
   "bowl",
   "bowl",
   "bob",
@@ -105,9 +109,21 @@ const HEM: HemStyle[] = [
 const WEAPON: WeaponType[] = [
   "sword",
   "sword",
+  "sword",
+  "staff",
   "staff",
   "rifle",
   "shield",
+];
+
+const BACK_LOADOUT: BackLoadout[] = [
+  "scabbard",
+  "scabbard",
+  "greatsword",
+  "quiver",
+  "pack",
+  "pack",
+  "axe",
   "none",
 ];
 
@@ -178,6 +194,7 @@ function pickTrim(cloth: string): string | undefined {
 
 function poseForWeapon(weapon: WeaponType): { arm: ArmPose; leg: LegPose } {
   // Variants stay inside the silhouette stance language (lead fwd / trail back).
+  // Legs stay planted — no crouch hop / mid-stride.
   if (weapon === "staff") {
     return {
       arm: pick(["cast", "raise", "ready"] as ArmPose[]),
@@ -187,18 +204,18 @@ function poseForWeapon(weapon: WeaponType): { arm: ArmPose; leg: LegPose } {
   if (weapon === "rifle") {
     return {
       arm: pick(["extended", "reach", "ready"] as ArmPose[]),
-      leg: pick(["ready", "wide", "lunge"] as LegPose[]),
+      leg: pick(["ready", "wide", "stand"] as LegPose[]),
     };
   }
   if (weapon === "shield") {
     return {
       arm: pick(["guard", "ready"] as ArmPose[]),
-      leg: pick(["guard", "wide", "crouch"] as LegPose[]),
+      leg: pick(["guard", "wide", "ready"] as LegPose[]),
     };
   }
   if (weapon === "sword") {
     return {
-      arm: pick(["ready", "extended", "reach", "raise"] as ArmPose[]),
+      arm: pick(["ready", "extended", "reach"] as ArmPose[]),
       leg: pick(["ready", "lunge", "wide", "guard"] as LegPose[]),
     };
   }
@@ -226,7 +243,7 @@ function pickLeadSide(): LeadSide {
 
 type HeadBits = Pick<CharacterSpec, "skin" | "head" | "hair" | "face" | "helmet">;
 type TorsoBits = Pick<CharacterSpec, "torso" | "accessories">;
-type ArmsBits = Pick<CharacterSpec, "arms" | "weapon" | "leadSide"> & {
+type ArmsBits = Pick<CharacterSpec, "arms" | "weapon" | "offhand" | "leadSide"> & {
   /** Coupled leg pose so random doesn't break ipsilateral stance. */
   legPose: LegPose;
 };
@@ -246,11 +263,14 @@ function randomHead(skinHint?: string): HeadBits {
         };
   return {
     skin,
-    head: { scale: 0.9 + Math.random() * 0.08 },
+    head: {
+      shape: pick(HEAD_SHAPES),
+      scale: 0.94 + Math.random() * 0.08,
+    },
     hair,
     face: {
       eyeColor: pick(EYES),
-      nose: Math.random() < 0.6,
+      nose: Math.random() < 0.45,
     },
     helmet: {
       style: helmetStyle,
@@ -299,6 +319,8 @@ function randomTorso(helmetStyle?: HelmetStyle): TorsoBits {
   // Prefer loud trim contrast so clothing reads after Endesga lock.
   const hemColor = pickTrim(cloth) ?? pick(CLOTH);
   const capeColor = pickTrim(cloth) ?? pick(CLOTH);
+  const pouches = Math.random() < 0.72;
+  const backLoadout = pick(BACK_LOADOUT);
 
   return {
     torso: { style: torsoStyle, color: cloth, trim },
@@ -307,6 +329,10 @@ function randomTorso(helmetStyle?: HelmetStyle): TorsoBits {
       hemColor,
       cape,
       capeColor,
+      pouches,
+      pouchColor: pickTrim(cloth) ?? pick(CLOTH),
+      backLoadout,
+      backLoadoutColor: pick(CLOTH),
     },
   };
 }
@@ -324,6 +350,11 @@ function randomArms(
     Math.random() < 0.2
       ? 0.1 + Math.random() * 0.2
       : 0.5 + Math.random() * 0.4;
+  // Sword + shield is the classic combat silhouette — give it often.
+  const offhand =
+    weaponType === "sword" && Math.random() < 0.55
+      ? { type: "shield" as const, color: pick(CLOTH) }
+      : undefined;
   return {
     leadSide,
     arms: {
@@ -337,6 +368,7 @@ function randomArms(
       hand: handForWeapon(weaponType, leadSide),
       color: pick(CLOTH),
     },
+    offhand,
     legPose: poses.leg,
   };
 }
@@ -383,6 +415,7 @@ export function randomCharacter(locks?: PartLocks, base?: CharacterSpec): Charac
         leadSide: prev.leadSide ?? DEFAULT_LEAD,
         arms: prev.arms,
         weapon: prev.weapon,
+        offhand: prev.offhand,
         legPose: prev.legs.pose,
       }
     : randomArms(
@@ -406,6 +439,7 @@ export function randomCharacter(locks?: PartLocks, base?: CharacterSpec): Charac
     leadSide: arms.leadSide,
     arms: arms.arms,
     weapon: arms.weapon,
+    offhand: arms.offhand,
     ...legs,
   };
 }
@@ -435,6 +469,7 @@ export function rerollPart(spec: CharacterSpec, part: PartId): CharacterSpec {
       leadSide: next.leadSide,
       arms: next.arms,
       weapon: next.weapon,
+      offhand: next.offhand,
       legs: { ...spec.legs, pose: next.legPose },
     };
   }
@@ -477,6 +512,10 @@ export function rerollPartColors(spec: CharacterSpec, part: PartId): CharacterSp
           ? { hemColor: trim ?? pick(CLOTH) }
           : {}),
         ...(next.accessories.cape ? { capeColor: pick(CLOTH) } : {}),
+        ...(next.accessories.pouches ? { pouchColor: pick(CLOTH) } : {}),
+        ...(next.accessories.backLoadout && next.accessories.backLoadout !== "none"
+          ? { backLoadoutColor: pick(CLOTH) }
+          : {}),
       };
     }
     return next;
@@ -489,6 +528,9 @@ export function rerollPartColors(spec: CharacterSpec, part: PartId): CharacterSp
     };
     if (next.weapon && next.weapon.type !== "none") {
       next.weapon = { ...next.weapon, color: pick(CLOTH) };
+    }
+    if (next.offhand && next.offhand.type !== "none") {
+      next.offhand = { ...next.offhand, color: pick(CLOTH) };
     }
     return next;
   }
