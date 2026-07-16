@@ -40,7 +40,9 @@ import {
 import { normalizeEdgeOutlineSettings } from "./lib/edgeOutline";
 import { CollapseSection } from "./components/CollapseSection";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
+import { VariationTimeline } from "./components/VariationTimeline";
 import { fetchStatus, type StatusResponse } from "./api";
+import { buildVariationPrompt } from "./lib/variationPrompt";
 import {
   FACING_PRESETS,
   getFacing,
@@ -194,7 +196,10 @@ export default function App() {
     loadBayerDitherSettings(),
   );
   const [palette, setPalette] = useState<Palette | null>(null);
+  const [paletteSlug, setPaletteSlug] = useState("endesga-64");
+  const [paletteSlugDraft, setPaletteSlugDraft] = useState("endesga-64");
   const [preview, setPreview] = useState<string | null>(null);
+  const [sourcePreview, setSourcePreview] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [specOpen, setSpecOpen] = useState(true);
@@ -571,7 +576,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadPalette("endesga-64")
+    loadPalette(paletteSlug)
       .then((p) => {
         setPalette(p);
         setOutlineColors(loadOutlineColors(p.colors));
@@ -579,6 +584,9 @@ export default function App() {
         setOutlineProfiles(loadOutlineProfiles(p.colors));
       })
       .catch((e) => setError(String(e)));
+  }, [paletteSlug]);
+
+  useEffect(() => {
     fetchStatus()
       .then(setStatus)
       .catch(() =>
@@ -592,6 +600,12 @@ export default function App() {
       );
   }, []);
 
+  const applyPaletteSlug = () => {
+    const next = paletteSlugDraft.trim().toLowerCase() || "endesga-64";
+    setPaletteSlugDraft(next);
+    setPaletteSlug(next);
+  };
+
   return (
     <div className="app">
       <header className="header">
@@ -600,6 +614,24 @@ export default function App() {
           Procedural chibi → iso bake at {size}×{size}px · free / local
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
+        <label className="palette-slug-row">
+          <span className="field-label">Palette</span>
+          <input
+            type="text"
+            value={paletteSlugDraft}
+            onChange={(e) => setPaletteSlugDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") applyPaletteSlug();
+            }}
+            placeholder="endesga-64"
+            spellCheck={false}
+            title="Lospec palette slug (bake + AI)"
+          />
+          <button type="button" className="ghost-btn" onClick={applyPaletteSlug}>
+            Apply
+          </button>
+          <span className="meta">{palette?.name ?? "…"}</span>
+        </label>
         <p
           className={`tagline feature-boost-note${
             __GIT_BRANCH__ !== "main" ? " branch-not-main" : ""
@@ -609,7 +641,8 @@ export default function App() {
         </p>
       </header>
 
-      <main className="layout">
+      <main className="app-main">
+      <div className="layout">
         <section className="panel panel-character">
           <h2 className="panel-title">Character</h2>
 
@@ -647,6 +680,7 @@ export default function App() {
                     bayerDither={bayerDither}
                     displayPx={displayPx}
                     onCaptured={setPreview}
+                    onSourceCaptured={setSourcePreview}
                   />
                 </div>
               ) : (
@@ -1465,6 +1499,23 @@ export default function App() {
             )}
           </CollapseSection>
         </section>
+      </div>
+
+      <VariationTimeline
+        sourceDataUrl={sourcePreview}
+        size={size}
+        paletteSlug={paletteSlug}
+        outlineHex={outlineColors.silhouette}
+        buildPrompt={(steer) =>
+          buildVariationPrompt(spec, {
+            facing,
+            size,
+            paletteSlug,
+            paletteName: palette?.name,
+            steer,
+          })
+        }
+      />
       </main>
     </div>
   );

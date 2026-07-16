@@ -5,6 +5,7 @@ vendor
 models/*
 !models/.gitkeep
 generations
+refs/palette-cache
 .DS_Store
 *.pyc
 __pycache__
