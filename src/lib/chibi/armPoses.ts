@@ -30,15 +30,15 @@ export function armJointsForPose(
       return isLead
         ? {
             // Forward punch-line — clear depth past the chest edge.
-            shoulder: { x: -0.95, y: side * 0.5, z: side * 0.48 },
-            elbow: -0.45,
-            wrist: { x: -0.4, y: side * 0.22, z: side * -0.12 },
+            shoulder: { x: -1.05, y: side * 0.55, z: side * 0.42 },
+            elbow: -0.35,
+            wrist: { x: -0.55, y: side * 0.25, z: side * -0.15 },
           }
         : {
             // Trail: back and lower, elbow tucked.
-            shoulder: { x: 0.22, y: -side * 0.4, z: side * 0.85 },
-            elbow: -1.2,
-            wrist: { x: 0.08, y: side * 0.18, z: side * 0.28 },
+            shoulder: { x: 0.28, y: -side * 0.45, z: side * 0.88 },
+            elbow: -1.15,
+            wrist: { x: 0.1, y: side * 0.2, z: side * 0.3 },
           };
 
     case "hang":
@@ -68,27 +68,27 @@ export function armJointsForPose(
       // Lead locked out toward +Z; trail counterweight low.
       return isLead
         ? {
-            shoulder: { x: -1.15, y: side * 0.35, z: side * 0.4 },
-            elbow: -0.25,
-            wrist: { x: -0.35, z: side * -0.12 },
+            shoulder: { x: -1.25, y: side * 0.4, z: side * 0.35 },
+            elbow: -0.15,
+            wrist: { x: -0.5, z: side * -0.15 },
           }
         : {
-            shoulder: { x: 0.35, y: -side * 0.45, z: side * 0.9 },
-            elbow: -1.25,
-            wrist: { x: 0.1, y: side * 0.2 },
+            shoulder: { x: 0.4, y: -side * 0.5, z: side * 0.92 },
+            elbow: -1.2,
+            wrist: { x: 0.12, y: side * 0.22 },
           };
 
     case "reach":
       return isLead
         ? {
-            shoulder: { x: -1.25, y: side * 0.28, z: side * 0.35 },
-            elbow: -0.4,
-            wrist: { x: -0.4 },
+            shoulder: { x: -1.35, y: side * 0.32, z: side * 0.32 },
+            elbow: -0.3,
+            wrist: { x: -0.55 },
           }
         : {
-            shoulder: { x: 0.1, y: -side * 0.35, z: side * 0.8 },
-            elbow: -1.1,
-            wrist: { x: 0.05 },
+            shoulder: { x: 0.15, y: -side * 0.4, z: side * 0.82 },
+            elbow: -1.05,
+            wrist: { x: 0.08 },
           };
 
     case "akimbo":

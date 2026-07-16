@@ -76,6 +76,18 @@ export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 /** Soft lower garment — fills the silhouette under a short torso. */
 export type HemStyle = "none" | "skirt" | "loincloth";
 
+/**
+ * Gear strapped to the back — must read in the default away / back-¾ facing
+ * (packs, scabbards, bows, greatswords).
+ */
+export type BackLoadout =
+  | "none"
+  | "scabbard"
+  | "greatsword"
+  | "quiver"
+  | "pack"
+  | "axe";
+
 export type CharacterSpec = {
   skin: string;
   /**
@@ -118,12 +130,18 @@ export type CharacterSpec = {
     color: string;
     trim?: string;
   };
-  /** Optional skirt / loincloth / cape — often present on JRPG chibis. */
+  /** Optional skirt / loincloth / cape / back gear — often present on JRPG chibis. */
   accessories?: {
     hem?: HemStyle;
     hemColor?: string;
     cape?: boolean;
     capeColor?: string;
+    /** Belt pouches / hip bags — silhouette break on the back and sides. */
+    pouches?: boolean;
+    pouchColor?: string;
+    /** Strapped back gear — always visible from away facings. */
+    backLoadout?: BackLoadout;
+    backLoadoutColor?: string;
   };
   arms: {
     pose: ArmPose;
@@ -140,6 +158,14 @@ export type CharacterSpec = {
   weapon?: {
     type: WeaponType;
     hand?: "left" | "right";
+    color: string;
+  };
+  /**
+   * Trail-hand prop while the lead hand holds `weapon` (usually a shield).
+   * Lets sword+shield read without replacing the lead blade.
+   */
+  offhand?: {
+    type: "none" | "shield";
     color: string;
   };
 };

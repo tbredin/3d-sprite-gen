@@ -5,6 +5,7 @@ import { addHullOutlines } from "./outlines";
 import { PartGroupId, tagPartGroup } from "./partGroups";
 import {
   generateArms,
+  generateBackLoadout,
   generateCape,
   generateFace,
   generateHair,
@@ -12,6 +13,7 @@ import {
   generateHelmet,
   generateHem,
   generateLegs,
+  generatePouches,
   generateTorso,
   generateWeapon,
 } from "./parts";
@@ -24,7 +26,7 @@ import { legsYawForLead, resolveLeadSide, torsoYawForLead } from "./stance";
  * Hierarchy for silhouette stance (see stance.ts):
  *   root  — facing +Z; BakeCanvas rotationY turns the whole sprite
  *     head / face / hair / helmet  — stay on root so faceCheat uses body yaw
- *     upperBody (yaw ≈ ±45°) — torso, hem, cape, arms (+ weapons)
+ *     upperBody (yaw ≈ ±45°) — torso, hem, cape, back gear, arms (+ weapons)
  *     legs (yaw ≈ 40% of torso) — planted ipsilateral lead; tracks ¾ body
  *
  * Full-head helmets (`helmetMode.mount === "replace"`) skip the skin skull
@@ -128,6 +130,33 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     tagPartGroup(cape, PartGroupId.ACCESSORY);
   }
 
+  if (spec.accessories?.pouches) {
+    const pouches = generatePouches({
+      color:
+        spec.accessories.pouchColor ??
+        spec.torso.trim ??
+        spec.torso.color,
+    });
+    upper.add(pouches);
+    addHullOutlines(pouches, 0.022);
+    tagPartGroup(pouches, PartGroupId.ACCESSORY);
+  }
+
+  const backStyle = spec.accessories?.backLoadout ?? "none";
+  if (backStyle !== "none") {
+    const back = generateBackLoadout({
+      style: backStyle,
+      color:
+        spec.accessories?.backLoadoutColor ??
+        spec.weapon?.color ??
+        spec.torso.trim ??
+        spec.torso.color,
+    });
+    upper.add(back);
+    addHullOutlines(back, 0.024);
+    tagPartGroup(back, PartGroupId.WEAPON);
+  }
+
   const arms = generateArms({
     pose: spec.arms.pose,
     skin: spec.skin,
@@ -172,6 +201,26 @@ export function assembleCharacter(spec: CharacterSpec): Group {
     tagPartGroup(weapon, PartGroupId.WEAPON);
   }
 
+  // Trail-hand shield while lead holds a blade/staff/gun — common JRPG read.
+  if (spec.offhand && spec.offhand.type === "shield") {
+    const trailHand = leadSide === "right" ? arms.leftHand : arms.rightHand;
+    const alreadyShield =
+      spec.weapon?.type === "shield" &&
+      (spec.weapon.hand ??
+        (leadSide === "right" ? "left" : "right")) ===
+        (leadSide === "right" ? "left" : "right");
+    if (!alreadyShield) {
+      const shield = generateWeapon({
+        type: "shield",
+        color: spec.offhand.color,
+        hand: leadSide === "right" ? "left" : "right",
+      });
+      trailHand.add(shield);
+      addHullOutlines(shield, 0.022);
+      tagPartGroup(shield, PartGroupId.WEAPON);
+    }
+  }
+
   return root;
 }
 
@@ -184,7 +233,16 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#2a1c4a", nose: true },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "hoodedRobe", color: "#3d6e70", trim: "#c7cfcc" },
-    accessories: { hem: "skirt", hemColor: "#2a4550", cape: true, capeColor: "#3d6e70" },
+    accessories: {
+      hem: "skirt",
+      hemColor: "#2a4550",
+      cape: true,
+      capeColor: "#3d6e70",
+      pouches: true,
+      pouchColor: "#2a4550",
+      backLoadout: "pack",
+      backLoadoutColor: "#5b3d8a",
+    },
     arms: { pose: "cast", sleeveColor: "#3d6e70", sleeveLength: 0.9 },
     legs: { pose: "ready", pantColor: "#2a4550", bootColor: "#322947" },
     weapon: { type: "staff", hand: "right", color: "#8b5a2b" },
@@ -197,15 +255,24 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "knight", color: "#9aa4b0", visor: "#2a2e3a" },
     torso: { style: "fullPlate", color: "#b0b8c4", trim: "#6a7484" },
-    accessories: { hem: "none", cape: true, capeColor: "#6a7484" },
+    accessories: {
+      hem: "none",
+      cape: true,
+      capeColor: "#6a7484",
+      pouches: true,
+      pouchColor: "#6a7484",
+      backLoadout: "scabbard",
+      backLoadoutColor: "#dfe4ea",
+    },
     arms: {
       pose: "extended",
       sleeveColor: "#9aa4b0",
       sleeveLength: 0.95,
       handColor: "#e4a672",
     },
-    legs: { pose: "lunge", pantColor: "#6a7484", bootColor: "#3a415c" },
+    legs: { pose: "ready", pantColor: "#6a7484", bootColor: "#3a415c" },
     weapon: { type: "sword", hand: "right", color: "#dfe4ea" },
+    offhand: { type: "shield", color: "#9aa4b0" },
   },
   soldier: {
     skin: "#c98a6a",
@@ -215,14 +282,21 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "sciFi", color: "#3a3555", visor: "#5ad4a0" },
     torso: { style: "chestplate", color: "#5ad4a0", trim: "#2a2540" },
-    accessories: { hem: "loincloth", hemColor: "#2a2540" },
+    accessories: {
+      hem: "loincloth",
+      hemColor: "#2a2540",
+      pouches: true,
+      pouchColor: "#2a2540",
+      backLoadout: "pack",
+      backLoadoutColor: "#3a3555",
+    },
     arms: {
       pose: "extended",
       sleeveColor: "#2a2540",
       sleeveLength: 0.75,
       handColor: "#c98a6a",
     },
-    legs: { pose: "wide", pantColor: "#2a2540", bootColor: "#1a1c2c" },
+    legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#1a1c2c" },
     weapon: { type: "rifle", hand: "right", color: "#1a1c2c" },
   },
   rogue: {
@@ -233,10 +307,19 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#2a6ebd" },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "jacket", color: "#322947", trim: "#e83b3b" },
-    accessories: { hem: "loincloth", hemColor: "#e83b3b", cape: true, capeColor: "#322947" },
+    accessories: {
+      hem: "loincloth",
+      hemColor: "#e83b3b",
+      cape: true,
+      capeColor: "#322947",
+      pouches: true,
+      pouchColor: "#433455",
+      backLoadout: "scabbard",
+      backLoadoutColor: "#c7cfcc",
+    },
     arms: { pose: "ready", sleeveColor: "#322947", sleeveLength: 0.55 },
-    legs: { pose: "crouch", pantColor: "#1a1c2c", bootColor: "#433455" },
-    weapon: { type: "none", color: "#000000" },
+    legs: { pose: "ready", pantColor: "#1a1c2c", bootColor: "#433455" },
+    weapon: { type: "sword", hand: "right", color: "#c7cfcc" },
   },
   scientist: {
     skin: "#f0c8a0",
@@ -247,15 +330,21 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#3d6e70", nose: true, scale: 1.1 },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "jacket", color: "#c7cfcc", trim: "#3d6e70" },
-    accessories: { hem: "none" },
+    accessories: {
+      hem: "none",
+      pouches: true,
+      pouchColor: "#3d6e70",
+      backLoadout: "pack",
+      backLoadoutColor: "#5a6a7a",
+    },
     arms: {
-      pose: "raise",
+      pose: "ready",
       sleeveColor: "#c7cfcc",
       sleeveLength: 0.7,
       handColor: "#f0c8a0",
     },
     legs: { pose: "ready", pantColor: "#5a6a7a", bootColor: "#1a1c2c" },
-    weapon: { type: "none", color: "#000000" },
+    weapon: { type: "staff", hand: "right", color: "#3d6e70" },
   },
   cleric: {
     skin: "#f0c8a0",
@@ -265,7 +354,16 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#3d6e70", nose: true },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "hoodedRobe", color: "#c7cfcc", trim: "#f5e07a" },
-    accessories: { hem: "skirt", hemColor: "#c7cfcc", cape: true, capeColor: "#9aa4b0" },
+    accessories: {
+      hem: "skirt",
+      hemColor: "#c7cfcc",
+      cape: true,
+      capeColor: "#9aa4b0",
+      pouches: true,
+      pouchColor: "#9aa4b0",
+      backLoadout: "pack",
+      backLoadoutColor: "#9aa4b0",
+    },
     arms: { pose: "cast", sleeveColor: "#c7cfcc", sleeveLength: 0.92 },
     legs: { pose: "ready", pantColor: "#9aa4b0", bootColor: "#5a6a7a" },
     weapon: { type: "staff", hand: "right", color: "#f5e07a" },
@@ -278,14 +376,21 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#2a4550", nose: true },
     helmet: { style: "cap", color: "#3d5c40" },
     torso: { style: "jacket", color: "#3d5c40", trim: "#8b5a2b" },
-    accessories: { hem: "loincloth", hemColor: "#8b5a2b" },
+    accessories: {
+      hem: "loincloth",
+      hemColor: "#8b5a2b",
+      pouches: true,
+      pouchColor: "#8b5a2b",
+      backLoadout: "quiver",
+      backLoadoutColor: "#6b3a1f",
+    },
     arms: {
       pose: "reach",
       sleeveColor: "#3d5c40",
       sleeveLength: 0.65,
       handColor: "#d4a574",
     },
-    legs: { pose: "guard", pantColor: "#2a4030", bootColor: "#322947" },
+    legs: { pose: "ready", pantColor: "#2a4030", bootColor: "#322947" },
     weapon: { type: "sword", hand: "right", color: "#8b5a2b" },
   },
   barbarian: {
@@ -296,9 +401,18 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#e83b3b", nose: true },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "tank", color: "#5a4030", trim: "#8b5a2b" },
-    accessories: { hem: "loincloth", hemColor: "#5a4030", cape: true, capeColor: "#433455" },
+    accessories: {
+      hem: "loincloth",
+      hemColor: "#5a4030",
+      cape: true,
+      capeColor: "#433455",
+      pouches: true,
+      pouchColor: "#433455",
+      backLoadout: "greatsword",
+      backLoadoutColor: "#7a8090",
+    },
     arms: {
-      pose: "raise",
+      pose: "ready",
       sleeveColor: "#c98a6a",
       sleeveLength: 0.15,
       handColor: "#c98a6a",
@@ -314,10 +428,17 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#5a2a7a" },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "robe", color: "#5a4a7a", trim: "#c7cfcc" },
-    accessories: { hem: "skirt", hemColor: "#5a4a7a" },
+    accessories: {
+      hem: "skirt",
+      hemColor: "#5a4a7a",
+      pouches: true,
+      pouchColor: "#433455",
+      backLoadout: "scabbard",
+      backLoadoutColor: "#c7cfcc",
+    },
     arms: { pose: "ready", sleeveColor: "#5a4a7a", sleeveLength: 0.88 },
     legs: { pose: "ready", pantColor: "#433455", bootColor: "#2a2540" },
-    weapon: { type: "none", color: "#000000" },
+    weapon: { type: "staff", hand: "right", color: "#c7cfcc" },
   },
   pirate: {
     skin: "#e4a672",
@@ -328,7 +449,16 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#1a1c2c", nose: true },
     helmet: { style: "cap", color: "#e83b3b" },
     torso: { style: "jacket", color: "#3d6e70", trim: "#e83b3b" },
-    accessories: { hem: "loincloth", hemColor: "#e83b3b", cape: true, capeColor: "#3d6e70" },
+    accessories: {
+      hem: "loincloth",
+      hemColor: "#e83b3b",
+      cape: true,
+      capeColor: "#3d6e70",
+      pouches: true,
+      pouchColor: "#2a2540",
+      backLoadout: "axe",
+      backLoadoutColor: "#8b5a2b",
+    },
     arms: {
       pose: "ready",
       sleeveColor: "#3d6e70",
@@ -337,6 +467,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     },
     legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#8b5a2b" },
     weapon: { type: "sword", hand: "left", color: "#c7cfcc" },
+    offhand: { type: "shield", color: "#e83b3b" },
   },
   goatman: {
     // Replace-mount goat head; tank torso = shirtless at chibi scale.
@@ -347,9 +478,16 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "goat", color: "#5a4030", visor: "#e8e4d8" },
     torso: { style: "tank", color: "#c98a6a", trim: "#433455" },
-    accessories: { hem: "loincloth", hemColor: "#433455" },
+    accessories: {
+      hem: "loincloth",
+      hemColor: "#433455",
+      pouches: true,
+      pouchColor: "#433455",
+      backLoadout: "axe",
+      backLoadoutColor: "#9aa4b0",
+    },
     arms: {
-      pose: "raise",
+      pose: "ready",
       sleeveColor: "#c98a6a",
       sleeveLength: 0.12,
       handColor: "#c98a6a",

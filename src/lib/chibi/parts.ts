@@ -15,6 +15,7 @@ import { armJointsForPose } from "./armPoses";
 import { legJointsForPose } from "./legPoses";
 import type {
   ArmPose,
+  BackLoadout,
   HairStyle,
   HelmetStyle,
   HemStyle,
@@ -113,6 +114,21 @@ export function generateHead(opts: {
 
   g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), mat, -r * 1.05, cy - 0.02, 0));
   g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), mat, r * 1.05, cy - 0.02, 0));
+
+  // Occipital / nape mass — backs read often under away-¾ iso; bald heads
+  // need silhouette depth behind the ears, not just a front egg.
+  g.add(
+    mesh(new SphereGeometry(r * 0.55, 10, 8), mat, 0, cy + r * 0.05 * tall, -r * 0.72),
+  );
+  g.add(
+    mesh(new SphereGeometry(r * 0.42, 10, 8), mat, 0, cy - r * 0.35 * tall, -r * 0.55),
+  );
+  g.add(
+    mesh(new SphereGeometry(r * 0.28, 8, 6), mat, -r * 0.45, cy - r * 0.15 * tall, -r * 0.5),
+  );
+  g.add(
+    mesh(new SphereGeometry(r * 0.28, 8, 6), mat, r * 0.45, cy - r * 0.15 * tall, -r * 0.5),
+  );
 
   g.add(
     mesh(
@@ -328,7 +344,11 @@ function addHairFrame(
   }
 
   if (back) {
-    g.add(mesh(new SphereGeometry(0.22, 10, 8), mat, 0, cy - 0.04, -0.34));
+    // Layered rear hair mass — reads under away-¾ as a distinct head back.
+    g.add(mesh(new SphereGeometry(0.24, 10, 8), mat, 0, cy + 0.02, -0.36));
+    g.add(mesh(new SphereGeometry(0.2, 10, 8), mat, 0, cy - 0.12, -0.4));
+    g.add(mesh(new SphereGeometry(0.14, 8, 6), mat, -0.18, cy - 0.06, -0.34));
+    g.add(mesh(new SphereGeometry(0.14, 8, 6), mat, 0.18, cy - 0.06, -0.34));
   }
 }
 
@@ -1138,26 +1158,42 @@ export function generateTorso(opts: {
     mesh(new SphereGeometry(w * 1.05, 10, 8), body, 0, LAYOUT.hipY + 0.06, 0),
   );
 
-  // Shoulder pads on every body — sell width vs giant head
+  /**
+   * Angular spaulders — box/cylinder plates beat soft spheres from behind.
+   * Extra rear lip so pads read when the camera sits on the character's back.
+   */
   const addShoulders = (mat = body, radius = 0.18) => {
-    g.add(
-      mesh(
-        new SphereGeometry(radius, 10, 8),
-        mat,
-        -sw,
-        LAYOUT.shoulderY - 0.02,
-        0.02,
-      ),
-    );
-    g.add(
-      mesh(
-        new SphereGeometry(radius, 10, 8),
-        mat,
-        sw,
-        LAYOUT.shoulderY - 0.02,
-        0.02,
-      ),
-    );
+    for (const s of [-1, 1] as const) {
+      g.add(
+        mesh(
+          new SphereGeometry(radius, 10, 8),
+          mat,
+          s * sw,
+          LAYOUT.shoulderY - 0.02,
+          0.02,
+        ),
+      );
+      // Flat top plate
+      g.add(
+        mesh(
+          new BoxGeometry(radius * 1.35, radius * 0.45, radius * 1.5),
+          mat,
+          s * sw,
+          LAYOUT.shoulderY + radius * 0.15,
+          -0.02,
+        ),
+      );
+      // Rear lip / pauldron wing — silhouette poke from away facings
+      g.add(
+        mesh(
+          new BoxGeometry(radius * 0.9, radius * 0.7, radius * 0.55),
+          mat,
+          s * (sw + 0.02),
+          LAYOUT.shoulderY - 0.06,
+          -radius * 0.85,
+        ),
+      );
+    }
   };
 
   // Chest plate / pec volume for non-robe bodies
@@ -1173,9 +1209,60 @@ export function generateTorso(opts: {
     );
   };
 
-  // Waist belt detail
+  /** Back plate + spine ridge — torsos were front-heavy; backs must carry detail. */
+  const addBackDetail = (mat = body, accent = metal) => {
+    g.add(
+      mesh(
+        new BoxGeometry(CHIBI.hipWidth * 0.95, H * 0.85, 0.1),
+        mat,
+        0,
+        midY,
+        -d * 0.95,
+      ),
+    );
+    g.add(
+      mesh(
+        new BoxGeometry(0.08, H * 0.7, 0.06),
+        accent,
+        0,
+        midY + 0.02,
+        -d * 1.15,
+      ),
+    );
+    // Cross straps
+    for (const s of [-1, 1] as const) {
+      const strap = new Mesh(
+        new BoxGeometry(0.07, H * 0.75, 0.04),
+        accent,
+      );
+      strap.position.set(s * 0.12, midY + 0.04, -d * 1.05);
+      strap.rotation.z = s * 0.35;
+      g.add(strap);
+    }
+  };
+
+  // Waist belt + buckle
   const addBelt = (mat = trim ?? metal) => {
     g.add(mesh(limbCylinder(w * 1.05, 0.07, 12), mat, 0, LAYOUT.hipY + 0.12, 0));
+    g.add(
+      mesh(
+        new BoxGeometry(0.12, 0.1, 0.08),
+        toonDetail("#eef2f5"),
+        0,
+        LAYOUT.hipY + 0.12,
+        d * 0.95,
+      ),
+    );
+    // Rear belt knot / loop
+    g.add(
+      mesh(
+        new BoxGeometry(0.14, 0.08, 0.06),
+        mat,
+        0,
+        LAYOUT.hipY + 0.12,
+        -d * 0.95,
+      ),
+    );
   };
 
   if (opts.style === "tank") {
@@ -1188,6 +1275,7 @@ export function generateTorso(opts: {
     g.add(core);
     addChest(skin);
     addShoulders(skin, 0.13);
+    addBackDetail(skin, metal);
     addBelt(metal);
   } else if (opts.style === "robe") {
     const r = w * 1.1;
@@ -1198,6 +1286,13 @@ export function generateTorso(opts: {
     robe.position.set(0, midY - 0.02, 0);
     g.add(robe);
     addShoulders(body, 0.15);
+    // Soft rear fold so robes aren't a smooth capsule from behind
+    g.add(
+      mesh(new SphereGeometry(r * 0.55, 10, 8), body, 0, midY - 0.05, -r * 0.75),
+    );
+    g.add(
+      mesh(new CapsuleGeometry(0.16, 0.35, 4, 8), body, 0, midY - 0.12, -r * 0.9),
+    );
     if (trim) {
       g.add(mesh(limbCylinder(r, 0.07, 12), trim, 0, LAYOUT.hipY + 0.08, 0));
       g.add(
@@ -1226,10 +1321,12 @@ export function generateTorso(opts: {
     g.add(
       mesh(new SphereGeometry(skullR * 0.28, 10, 8), body, skullR * 0.85, cy - 0.02, 0.08),
     );
-    const cape = new Mesh(new CapsuleGeometry(0.24, 0.5, 4, 8), body);
-    cape.position.set(0, midY - 0.1, -0.38);
-    cape.rotation.x = 0.35;
+    // Wide rear cowl drape — primary back silhouette for mage/cleric
+    const cape = new Mesh(new CapsuleGeometry(0.3, 0.62, 4, 8), body);
+    cape.position.set(0, midY - 0.08, -0.42);
+    cape.rotation.x = 0.4;
     g.add(cape);
+    g.add(mesh(new SphereGeometry(0.22, 8, 6), body, 0, LAYOUT.hipY + 0.05, -0.48));
     for (const s of [-1, 1] as const) {
       const sleeve = new Mesh(new CapsuleGeometry(0.14, 0.32, 4, 8), body);
       sleeve.position.set(s * 0.44, midY + 0.05, 0.05);
@@ -1242,7 +1339,7 @@ export function generateTorso(opts: {
       );
     }
   } else if (opts.style === "chestplate") {
-    addShoulders(metal, 0.16);
+    addShoulders(metal, 0.18);
     g.add(
       mesh(
         new BoxGeometry(CHIBI.hipWidth * 1.15, H * 0.95, CHIBI.torsoDepth),
@@ -1270,6 +1367,7 @@ export function generateTorso(opts: {
         0.02,
       ),
     );
+    addBackDetail(metal, body);
     addBelt(body);
   } else if (opts.style === "fullPlate") {
     g.add(
@@ -1313,7 +1411,7 @@ export function generateTorso(opts: {
     for (const s of [-1, 1] as const) {
       g.add(
         mesh(
-          new SphereGeometry(0.18, 10, 8),
+          new SphereGeometry(0.2, 10, 8),
           body,
           s * (CHIBI.hipWidth * 0.7),
           LAYOUT.shoulderY - 0.02,
@@ -1322,23 +1420,44 @@ export function generateTorso(opts: {
       );
       g.add(
         mesh(
-          new BoxGeometry(0.2, 0.1, 0.26),
+          new BoxGeometry(0.22, 0.12, 0.3),
           metal,
           s * (CHIBI.hipWidth * 0.68),
           LAYOUT.shoulderY - 0.08,
           0.06,
         ),
       );
+      // Rear pauldron wing
+      g.add(
+        mesh(
+          new BoxGeometry(0.18, 0.14, 0.22),
+          metal,
+          s * (CHIBI.hipWidth * 0.65),
+          LAYOUT.shoulderY - 0.06,
+          -0.16,
+        ),
+      );
     }
+    // Layered back cuirass — taller + prouder than the old thin slab
     g.add(
       mesh(
-        new BoxGeometry(CHIBI.hipWidth * 1.05, H * 0.7, 0.12),
+        new BoxGeometry(CHIBI.hipWidth * 1.1, H * 0.85, 0.14),
         metal,
         0,
         midY,
-        -0.2,
+        -0.22,
       ),
     );
+    g.add(
+      mesh(
+        new BoxGeometry(CHIBI.hipWidth * 0.7, H * 0.45, 0.1),
+        body,
+        0,
+        midY + 0.05,
+        -0.3,
+      ),
+    );
+    addBelt(body);
   } else if (opts.style === "jacket") {
     const r = w * 1.08;
     const jacket = new Mesh(
@@ -1347,8 +1466,9 @@ export function generateTorso(opts: {
     );
     jacket.position.set(0, midY, 0);
     g.add(jacket);
-    addShoulders(body, 0.15);
+    addShoulders(body, 0.16);
     addChest(body);
+    addBackDetail(body, trim ?? metal);
     g.add(
       mesh(
         new SphereGeometry(0.14, 8, 6),
@@ -1365,6 +1485,16 @@ export function generateTorso(opts: {
         0.12,
         LAYOUT.shoulderY - 0.02,
         0.12,
+      ),
+    );
+    // Collar stand — small rear neck break
+    g.add(
+      mesh(
+        new BoxGeometry(0.28, 0.12, 0.1),
+        body,
+        0,
+        LAYOUT.shoulderY + 0.04,
+        -0.12,
       ),
     );
     if (trim) {
@@ -1389,8 +1519,9 @@ export function generateTorso(opts: {
     );
     plain.position.set(0, midY, 0);
     g.add(plain);
-    addShoulders(body, 0.13);
+    addShoulders(body, 0.14);
     addChest(body);
+    addBackDetail(body, metal);
     addBelt();
   }
 
@@ -1512,31 +1643,155 @@ export function generateHem(opts: {
   return g;
 }
 
-/** Soft cape / cloak drape behind the short torso. */
+/** Soft cape / cloak drape behind the short torso — wide enough for away-¾. */
 export function generateCape(opts: {
   color: string;
 }): Group {
   const g = new Group();
   g.name = "cape";
   const mat = toon(opts.color);
+  const hi = toon(lightenHex(opts.color, 0.25));
   const midY = LAYOUT.hipY + CHIBI.torso * 0.35;
 
   // Shoulder clasp / collar
   g.add(
-    mesh(new SphereGeometry(0.14, 8, 6), mat, -0.16, LAYOUT.shoulderY - 0.02, -0.08),
+    mesh(new SphereGeometry(0.14, 8, 6), mat, -0.18, LAYOUT.shoulderY - 0.02, -0.1),
   );
   g.add(
-    mesh(new SphereGeometry(0.14, 8, 6), mat, 0.16, LAYOUT.shoulderY - 0.02, -0.08),
+    mesh(new SphereGeometry(0.14, 8, 6), mat, 0.18, LAYOUT.shoulderY - 0.02, -0.1),
+  );
+  g.add(
+    mesh(new BoxGeometry(0.36, 0.08, 0.1), hi, 0, LAYOUT.shoulderY + 0.02, -0.12),
   );
 
-  const drape = new Mesh(new CapsuleGeometry(0.26, 0.55, 4, 8), mat);
-  drape.position.set(0, midY - 0.05, -0.38);
-  drape.rotation.x = 0.45;
+  // Primary drape — wider + longer so the back silhouette isn't a thin sausage
+  const drape = new Mesh(new CapsuleGeometry(0.34, 0.7, 4, 10), mat);
+  drape.position.set(0, midY - 0.08, -0.44);
+  drape.rotation.x = 0.42;
   g.add(drape);
 
-  const tip = new Mesh(new SphereGeometry(0.18, 8, 6), mat);
-  tip.position.set(0, LAYOUT.hipY - 0.08, -0.42);
+  // Side flaps — break the capsule into a real cloak from ¾
+  for (const s of [-1, 1] as const) {
+    const flap = new Mesh(new CapsuleGeometry(0.14, 0.48, 4, 8), mat);
+    flap.position.set(s * 0.28, midY - 0.05, -0.32);
+    flap.rotation.x = 0.35;
+    flap.rotation.z = s * 0.25;
+    g.add(flap);
+  }
+
+  const tip = new Mesh(new SphereGeometry(0.22, 8, 6), mat);
+  tip.position.set(0, LAYOUT.hipY - 0.12, -0.5);
   g.add(tip);
+  g.add(mesh(new SphereGeometry(0.12, 6, 5), hi, 0, midY + 0.1, -0.38));
+
+  return g;
+}
+
+/** Hip / rear belt pouches — small bags that sell adventurer kit from behind. */
+export function generatePouches(opts: {
+  color: string;
+}): Group {
+  const g = new Group();
+  g.name = "pouches";
+  const mat = toon(opts.color);
+  const dark = toonDetail("#2a2035");
+  const y = LAYOUT.hipY + 0.1;
+
+  for (const s of [-1, 1] as const) {
+    // Side hip pouch
+    g.add(mesh(new BoxGeometry(0.14, 0.16, 0.12), mat, s * 0.38, y, 0.08));
+    g.add(mesh(new SphereGeometry(0.06, 6, 5), dark, s * 0.38, y + 0.06, 0.1));
+    // Rear kidney pouch
+    g.add(mesh(new BoxGeometry(0.12, 0.14, 0.1), mat, s * 0.22, y - 0.02, -0.28));
+  }
+  // Center rear bedroll / satchel lump
+  g.add(mesh(new CapsuleGeometry(0.1, 0.2, 3, 6), mat, 0, y + 0.02, -0.32));
+  g.add(mesh(new BoxGeometry(0.08, 0.06, 0.04), dark, 0, y + 0.08, -0.34));
+
+  return g;
+}
+
+/**
+ * Strapped back gear — always visible in the default away facing.
+ * Lives on the upper body so it yaws with the ¾ torso.
+ */
+export function generateBackLoadout(opts: {
+  style: BackLoadout;
+  color: string;
+}): Group {
+  const g = new Group();
+  g.name = "backLoadout";
+  if (opts.style === "none") return g;
+  const mat = toonDetail(opts.color);
+  const accent = toonDetail(lightenHex(opts.color, 0.35));
+  const metal = toonDetail("#c7cfcc");
+  const leather = toonDetail("#4a3626");
+  const midY = LAYOUT.hipY + CHIBI.torso * 0.45;
+  const backZ = -0.38;
+
+  if (opts.style === "scabbard") {
+    // Sheathed blade angled across the back
+    const sheath = new Mesh(limbCylinder(0.07, 0.55), leather);
+    sheath.position.set(0.08, midY + 0.05, backZ);
+    sheath.rotation.z = 0.45;
+    sheath.rotation.x = 0.15;
+    g.add(sheath);
+    g.add(mesh(new SphereGeometry(0.06, 6, 5), metal, 0.22, midY + 0.28, backZ + 0.02));
+    const hilt = new Mesh(limbCylinder(0.045, 0.16), metal);
+    hilt.position.set(-0.1, midY - 0.2, backZ);
+    hilt.rotation.z = 0.45;
+    g.add(hilt);
+    g.add(mesh(new BoxGeometry(0.16, 0.05, 0.06), accent, -0.06, midY - 0.12, backZ));
+  } else if (opts.style === "greatsword") {
+    // Huge blade rising past the shoulder — dominant back silhouette
+    const blade = new Mesh(
+      new CylinderGeometry(0.09, 0.07, 0.85, 6),
+      mat,
+    );
+    blade.position.set(-0.06, midY + 0.35, backZ - 0.04);
+    blade.rotation.z = 0.2;
+    g.add(blade);
+    g.add(
+      mesh(new ConeGeometry(0.07, 0.16, 6), mat, -0.02, midY + 0.82, backZ - 0.04),
+    );
+    g.add(mesh(new BoxGeometry(0.28, 0.07, 0.1), metal, -0.12, midY - 0.05, backZ));
+    g.add(mesh(limbCylinder(0.05, 0.2), leather, -0.16, midY - 0.22, backZ));
+  } else if (opts.style === "quiver") {
+    const tube = new Mesh(new CylinderGeometry(0.11, 0.13, 0.45, 10), leather);
+    tube.position.set(0.18, midY + 0.08, backZ);
+    tube.rotation.z = -0.25;
+    g.add(tube);
+    // Arrow fletching tips poking out the top
+    for (let i = 0; i < 3; i++) {
+      g.add(
+        mesh(
+          new ConeGeometry(0.035, 0.14, 5),
+          accent,
+          0.12 + i * 0.04,
+          midY + 0.34,
+          backZ - 0.02 + i * 0.02,
+        ),
+      );
+    }
+    g.add(mesh(new BoxGeometry(0.06, 0.35, 0.04), leather, 0.02, midY, backZ + 0.08));
+  } else if (opts.style === "pack") {
+    // Bedroll + pack frame
+    g.add(mesh(new BoxGeometry(0.42, 0.36, 0.22), mat, 0, midY + 0.05, backZ - 0.02));
+    g.add(mesh(new CapsuleGeometry(0.12, 0.32, 3, 8), accent, 0, midY + 0.28, backZ));
+    for (const s of [-1, 1] as const) {
+      g.add(mesh(new BoxGeometry(0.05, 0.4, 0.04), leather, s * 0.12, midY, -0.2));
+    }
+    g.add(mesh(new SphereGeometry(0.08, 6, 5), leather, 0.14, midY - 0.08, backZ));
+  } else if (opts.style === "axe") {
+    const haft = new Mesh(limbCylinder(0.05, 0.65), leather);
+    haft.position.set(0.12, midY + 0.15, backZ);
+    haft.rotation.z = -0.35;
+    g.add(haft);
+    const head = new Mesh(new BoxGeometry(0.28, 0.18, 0.1), mat);
+    head.position.set(0.28, midY + 0.42, backZ);
+    g.add(head);
+    g.add(mesh(new SphereGeometry(0.06, 6, 5), metal, 0.28, midY + 0.42, backZ + 0.04));
+  }
 
   return g;
 }
@@ -1729,23 +1984,22 @@ export function generateLegs(opts: {
  */
 export const WEAPON_READABILITY = {
   /**
-   * Sword blade radius — was 0.035. Kept as a radially-symmetric cylinder
-   * (not a flat box): a thin flat blade can rotate edge-on to the camera
-   * under some arm poses and shrink to a sub-pixel sliver. A fat hex-profile
-   * cylinder guarantees a chunky silhouette from every rotation.
+   * Sword blade radius — fat hex cylinder so it never rotates edge-on to a
+   * sub-pixel sliver. Bumped again so held blades clear the mitt past the
+   * torso in away-¾ (shields were winning the silhouette contest).
    */
-  swordBladeR: 0.075,
-  swordBladeLength: 0.42,
-  /** Crossguard — was a 0.1-radius cylinder disc; now a wide flat box. */
-  swordGuardWidth: 0.3,
-  /** Staff orb — was 0.12. */
-  staffOrbR: 0.17,
-  /** Rifle barrel — was 0.05. */
-  rifleBarrelR: 0.075,
-  /** Shield face disc — was 0.3. */
-  shieldDiscR: 0.36,
-  /** Shield boss (center stud) — was 0.07. */
-  shieldBossR: 0.1,
+  swordBladeR: 0.1,
+  swordBladeLength: 0.58,
+  /** Crossguard — wide flat box. */
+  swordGuardWidth: 0.36,
+  /** Staff orb. */
+  staffOrbR: 0.2,
+  /** Rifle barrel. */
+  rifleBarrelR: 0.09,
+  /** Shield face disc. */
+  shieldDiscR: 0.4,
+  /** Shield boss (center stud). */
+  shieldBossR: 0.11,
 } as const;
 
 /**
@@ -1756,6 +2010,9 @@ export const WEAPON_READABILITY = {
  * instead of being lifted for large-surface readability — weapons are small
  * enough that crushing contrast toward the hand/sleeve matters more than
  * avoiding a "black blob" on a big torso panel.
+ *
+ * Blade / barrel lean slightly forward (+Z) so they poke past the mitt into
+ * the iso silhouette instead of collapsing into the forearm.
  */
 export function generateWeapon(opts: {
   type: WeaponType;
@@ -1773,83 +2030,75 @@ export function generateWeapon(opts: {
   const hx = opts.hand === "left" ? -1 : 1;
 
   if (opts.type === "sword") {
-    // Grip + pommel — dark leather/metal, independent of blade color.
-    // Blade along +Y extends the lead-hand silhouette past the mitt.
-    g.add(mesh(limbCylinder(0.05, 0.16), toonDetail("#4a3626"), 0, -0.03, 0.05));
-    g.add(mesh(new SphereGeometry(0.045, 8, 6), toonDetail("#2a1c14"), 0, -0.13, 0.05));
-    // Flat crossguard — a hard box silhouette break, brighter than the grip
-    // so the hand→weapon transition reads even before the blade starts.
+    // Tip the whole sword forward so the blade clears the mitt silhouette.
+    g.rotation.x = -0.55;
+    g.position.set(0, -0.02, 0.08);
+    g.add(mesh(limbCylinder(0.055, 0.18), toonDetail("#4a3626"), 0, -0.03, 0.05));
+    g.add(mesh(new SphereGeometry(0.05, 8, 6), toonDetail("#2a1c14"), 0, -0.14, 0.05));
     g.add(
       mesh(
-        new BoxGeometry(t.swordGuardWidth, 0.06, 0.1),
+        new BoxGeometry(t.swordGuardWidth, 0.07, 0.12),
         toonDetail("#eef2f5"),
         0,
-        0.1,
+        0.12,
         0.05,
       ),
     );
-    // Fat hex-profile blade — radially symmetric so it reads as a chunky
-    // silhouette from any hand/wrist rotation instead of only face-on.
     const blade = new Mesh(
-      new CylinderGeometry(t.swordBladeR, t.swordBladeR * 0.85, t.swordBladeLength, 6),
+      new CylinderGeometry(t.swordBladeR, t.swordBladeR * 0.8, t.swordBladeLength, 6),
       mat,
     );
-    blade.position.set(0, 0.1 + 0.03 + t.swordBladeLength * 0.5, 0.05);
+    blade.position.set(0, 0.12 + 0.04 + t.swordBladeLength * 0.5, 0.05);
     g.add(blade);
-    const tipY = 0.1 + 0.03 + t.swordBladeLength;
-    const tip = new Mesh(new ConeGeometry(t.swordBladeR * 0.85, 0.12, 6), mat);
-    tip.position.set(0, tipY + 0.06, 0.05);
+    const tipY = 0.12 + 0.04 + t.swordBladeLength;
+    const tip = new Mesh(new ConeGeometry(t.swordBladeR * 0.8, 0.14, 6), mat);
+    tip.position.set(0, tipY + 0.07, 0.05);
     g.add(tip);
   } else if (opts.type === "staff") {
-    g.add(mesh(limbCylinder(0.05, 0.8), mat, 0, 0.1, 0.05));
-    // Claw prongs cradling the orb — extra silhouette beyond the mitt so
-    // the staff head doesn't collapse into a plain stick + ball.
+    g.rotation.x = -0.35;
+    g.position.set(0, 0, 0.06);
+    g.add(mesh(limbCylinder(0.06, 0.95), mat, 0, 0.15, 0.05));
     for (const s of [-1, 1] as const) {
-      const prong = new Mesh(new ConeGeometry(0.035, 0.16, 5), toonDetail(accent));
-      prong.position.set(s * 0.08, 0.56, 0.05);
+      const prong = new Mesh(new ConeGeometry(0.04, 0.18, 5), toonDetail(accent));
+      prong.position.set(s * 0.1, 0.68, 0.05);
       prong.rotation.z = s * 0.5;
       g.add(prong);
     }
-    // Pale crystal orb — near-white so it pops against any staff/shaft color.
-    g.add(mesh(new SphereGeometry(t.staffOrbR, 10, 8), toonDetail("#f5f8ff"), 0, 0.68, 0.05));
+    g.add(mesh(new SphereGeometry(t.staffOrbR, 10, 8), toonDetail("#f5f8ff"), 0, 0.82, 0.05));
   } else if (opts.type === "rifle") {
-    const barrel = new Mesh(limbCylinder(t.rifleBarrelR, 0.6), mat);
+    g.rotation.x = -0.2;
+    g.position.set(0, 0.02, 0.1);
+    const barrel = new Mesh(limbCylinder(t.rifleBarrelR, 0.72), mat);
     barrel.rotation.x = Math.PI / 2;
-    barrel.position.set(0, 0.04, 0.32);
+    barrel.position.set(0, 0.04, 0.38);
     g.add(barrel);
-    // Chunky receiver body behind the barrel.
-    g.add(mesh(new BoxGeometry(0.15, 0.19, 0.24), mat, 0, -0.02, 0.04));
-    // Stock — extends back past the mitt so the rifle silhouette reads long.
-    g.add(mesh(new BoxGeometry(0.09, 0.12, 0.24), mat, 0, -0.05, -0.18));
-    // Near-black sight + magazine accents break up the value against a
-    // light-colored gun body.
-    g.add(mesh(new BoxGeometry(0.032, 0.06, 0.032), toonDetail("#14151f"), 0, 0.12, 0.61));
-    g.add(mesh(new BoxGeometry(0.065, 0.17, 0.055), toonDetail("#14151f"), 0, -0.17, 0.15));
+    g.add(mesh(new BoxGeometry(0.17, 0.2, 0.28), mat, 0, -0.02, 0.04));
+    g.add(mesh(new BoxGeometry(0.1, 0.13, 0.28), mat, 0, -0.05, -0.2));
+    g.add(mesh(new BoxGeometry(0.036, 0.07, 0.036), toonDetail("#14151f"), 0, 0.14, 0.72));
+    g.add(mesh(new BoxGeometry(0.07, 0.18, 0.06), toonDetail("#14151f"), 0, -0.18, 0.16));
   } else if (opts.type === "shield") {
     // Nest shield slightly outboard of the trail mitt (mirrored per hand).
     const disc = new Mesh(
-      new CylinderGeometry(t.shieldDiscR, t.shieldDiscR, 0.08, 14),
+      new CylinderGeometry(t.shieldDiscR, t.shieldDiscR, 0.09, 14),
       mat,
     );
     disc.rotation.z = Math.PI / 2;
-    disc.position.set(hx * 0.1, 0.02, 0.06);
+    disc.position.set(hx * 0.14, 0.02, 0.08);
     g.add(disc);
-    // Dark rim band behind the face — two-tone silhouette read at a glance.
     const rim = new Mesh(
-      new CylinderGeometry(t.shieldDiscR * 1.1, t.shieldDiscR * 1.1, 0.03, 14),
+      new CylinderGeometry(t.shieldDiscR * 1.12, t.shieldDiscR * 1.12, 0.035, 14),
       toonDetail("#2a2035"),
     );
     rim.rotation.z = Math.PI / 2;
-    rim.position.set(hx * 0.085, 0.02, 0.06);
+    rim.position.set(hx * 0.12, 0.02, 0.08);
     g.add(rim);
-    // Big bright boss so the shield reads distinctly from a plain disc.
     g.add(
       mesh(
         new SphereGeometry(t.shieldBossR, 8, 6),
         toonDetail("#eef2f5"),
-        hx * 0.14,
+        hx * 0.18,
         0.02,
-        0.06,
+        0.08,
       ),
     );
   }

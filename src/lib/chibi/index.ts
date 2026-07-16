@@ -12,6 +12,7 @@
 
 import type {
   ArmPose,
+  BackLoadout,
   CharacterSpec,
   HairStyle,
   HelmetStyle,
@@ -49,12 +50,16 @@ export function generateTorso(
   return { torso: { style, color, trim } };
 }
 
-/** Soft skirt / loincloth / cape extras. */
+/** Soft skirt / loincloth / cape / back gear extras. */
 export function generateAccessories(opts: {
   hem?: HemStyle;
   hemColor?: string;
   cape?: boolean;
   capeColor?: string;
+  pouches?: boolean;
+  pouchColor?: string;
+  backLoadout?: BackLoadout;
+  backLoadoutColor?: string;
 }): Pick<CharacterSpec, "accessories"> {
   return { accessories: opts };
 }
@@ -125,5 +130,6 @@ export type {
   ArmPose,
   LegPose,
   HemStyle,
+  BackLoadout,
 } from "./types";
 export { PRESET_IDS } from "./types";
