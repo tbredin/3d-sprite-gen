@@ -731,7 +731,7 @@ button.ghost {
 .bake-preview-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
+  align-items: start;
   gap: 0.45rem;
   margin-bottom: 0.55rem;
 }
