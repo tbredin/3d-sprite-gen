@@ -19,8 +19,13 @@ npm install
 python3 -m venv .venv
 .venv/bin/pip install -r server/requirements.txt   # palette API optional
 
-npm run dev:server   # :8788 (palette)
-npm run dev          # :5174
+mise run up        # Vite :5184 + FastAPI :8788 (background)
+mise run status
+mise run restart
+mise run down
+
+# Or foreground (Ctrl+C stops both):
+mise run dev
 ```
 
 1. Pick a **preset** (mage / knight / soldier / rogue / scientist)

@@ -5,7 +5,7 @@ export type Palette = {
   colors: string[];
 };
 
-export type SpriteSize = 32 | 42 | 48 | 64;
+export type SpriteSize = 32 | 40 | 48 | 64;
 
 export function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");

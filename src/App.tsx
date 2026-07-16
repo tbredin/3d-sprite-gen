@@ -163,7 +163,7 @@ export default function App() {
   const [facing, setFacing] = useState<FacingId>(facingPersist.facing);
   const [rotationX, setRotationX] = useState(facingPersist.rotationX);
   const [rotationY, setRotationY] = useState(facingPersist.rotationY);
-  const [size, setSize] = useState<SpriteSize>(42);
+  const [size, setSize] = useState<SpriteSize>(40);
   const [zoom, setZoom] = useState(1);
   const [cameraHeight, setCameraHeight] = useState(() => loadCameraHeight());
   const [autoRotate, setAutoRotate] = useState(false);
@@ -611,7 +611,7 @@ export default function App() {
           mesh_backend: "chibi-primitives",
           mesh_ready: true,
           message: "Local chibi primitive builder (no upload required).",
-          sizes: [32, 42, 48, 64],
+          sizes: [32, 40, 48, 64],
           default_palette: "endesga-64",
         }),
       );
@@ -768,7 +768,7 @@ export default function App() {
                   onChange={(e) => setSize(Number(e.target.value) as SpriteSize)}
                 >
                   <option value={32}>32</option>
-                  <option value={42}>42</option>
+                  <option value={40}>40</option>
                   <option value={48}>48</option>
                   <option value={64}>64</option>
                 </select>

@@ -1,0 +1,180 @@
+[tasks.up]
+description = "Start Vite (:5184) + FastAPI (:8788) in the background"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+cd "${MISE_PROJECT_ROOT}"
+mkdir -p .run
+
+free_port() {
+  local port="$1"
+  local pids
+  pids="$(lsof -nP -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -z "$pids" ]]; then
+    return 0
+  fi
+  echo "freeing port ${port} (pids ${pids})"
+  # shellcheck disable=SC2086
+  kill $pids 2>/dev/null || true
+  sleep 0.3
+  pids="$(lsof -nP -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -n "$pids" ]]; then
+    # shellcheck disable=SC2086
+    kill -9 $pids 2>/dev/null || true
+  fi
+}
+
+start_one() {
+  local name="$1"
+  local pidfile=".run/${name}.pid"
+  local logfile=".run/${name}.log"
+  shift
+  if [[ -f "$pidfile" ]]; then
+    local pid
+    pid="$(cat "$pidfile")"
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "${name} already running (pid ${pid})"
+      return 0
+    fi
+    rm -f "$pidfile"
+  fi
+  "$@" >"$logfile" 2>&1 &
+  local pid=$!
+  echo "$pid" >"$pidfile"
+  sleep 0.4
+  if ! kill -0 "$pid" 2>/dev/null; then
+    echo "${name} failed to stay up — see .run/${name}.log" >&2
+    rm -f "$pidfile"
+    return 1
+  fi
+  echo "started ${name} (pid ${pid})"
+}
+
+if [[ ! -x .venv/bin/uvicorn ]]; then
+  echo "missing .venv — create it first:" >&2
+  echo "  python3 -m venv .venv && .venv/bin/pip install -r server/requirements.txt" >&2
+  exit 1
+fi
+
+# Clear orphaned listeners from earlier shells / crashed pidfiles
+free_port 5184
+free_port 8788
+
+start_one api env -C server ../.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8788
+start_one web npm run dev
+
+echo
+echo "frontend  http://127.0.0.1:5184"
+echo "api       http://127.0.0.1:8788"
+echo "logs      .run/web.log  .run/api.log"
+"""
+
+[tasks.down]
+description = "Stop background Vite + FastAPI"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+cd "${MISE_PROJECT_ROOT}"
+mkdir -p .run
+
+stop_one() {
+  local name="$1"
+  local pidfile=".run/${name}.pid"
+  if [[ ! -f "$pidfile" ]]; then
+    echo "${name}: no pidfile"
+    return 0
+  fi
+  local pid
+  pid="$(cat "$pidfile")"
+  if kill -0 "$pid" 2>/dev/null; then
+    # uvicorn --reload / vite spawn children — kill the tree
+    pkill -P "$pid" 2>/dev/null || true
+    kill "$pid" 2>/dev/null || true
+    for _ in 1 2 3 4 5; do
+      kill -0 "$pid" 2>/dev/null || break
+      sleep 0.2
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+      pkill -9 -P "$pid" 2>/dev/null || true
+      kill -9 "$pid" 2>/dev/null || true
+    fi
+    echo "stopped ${name} (was pid ${pid})"
+  else
+    echo "${name}: not running (stale pid ${pid})"
+  fi
+  rm -f "$pidfile"
+}
+
+free_port() {
+  local port="$1"
+  local pids
+  pids="$(lsof -nP -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -z "$pids" ]]; then
+    return 0
+  fi
+  echo "freeing port ${port} (pids ${pids})"
+  # shellcheck disable=SC2086
+  kill $pids 2>/dev/null || true
+  sleep 0.2
+  pids="$(lsof -nP -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -n "$pids" ]]; then
+    # shellcheck disable=SC2086
+    kill -9 $pids 2>/dev/null || true
+  fi
+}
+
+stop_one web
+stop_one api
+free_port 5184
+free_port 8788
+"""
+
+[tasks.restart]
+description = "Restart background Vite + FastAPI"
+depends = ["down"]
+run = "mise run up"
+
+[tasks.status]
+description = "Show whether background Vite + FastAPI are running"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+cd "${MISE_PROJECT_ROOT}"
+mkdir -p .run
+
+status_one() {
+  local name="$1"
+  local port="$2"
+  local pidfile=".run/${name}.pid"
+  local listen
+  listen="$(lsof -nP -tiTCP:"${port}" -sTCP:LISTEN 2>/dev/null || true)"
+  if [[ -f "$pidfile" ]]; then
+    local pid
+    pid="$(cat "$pidfile")"
+    if kill -0 "$pid" 2>/dev/null; then
+      echo "${name}: running (pid ${pid}, :${port})"
+      return 0
+    fi
+  fi
+  if [[ -n "$listen" ]]; then
+    echo "${name}: listening on :${port} (untracked pids ${listen})"
+    return 0
+  fi
+  echo "${name}: stopped"
+}
+
+status_one web 5184
+status_one api 8788
+"""
+
+[tasks."dev:web"]
+description = "Vite frontend in the foreground"
+run = "npm run dev"
+
+[tasks."dev:api"]
+description = "FastAPI palette server in the foreground"
+run = "cd server && ../.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8788"
+
+[tasks.dev]
+description = "Run frontend + API in the foreground (Ctrl+C stops both)"
+depends = ["dev:web", "dev:api"]
