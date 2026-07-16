@@ -210,79 +210,43 @@ export type CharacterSpec = {
 };
 
 export type PresetId =
-  | "lozenge"
   | "mage"
-  | "mageNew"
   | "knight"
-  | "knightNew"
   | "soldier"
-  | "soldierNew"
   | "rogue"
-  | "rogueNew"
   | "scientist"
-  | "scientistNew"
   | "cleric"
-  | "clericNew"
   | "ranger"
-  | "rangerNew"
   | "barbarian"
-  | "barbarianNew"
   | "acolyte"
-  | "acolyteNew"
   | "pirate"
-  | "pirateNew"
-  | "goatman"
-  | "goatmanNew";
+  | "goatman";
 
 /** Human-readable labels for the preset picker. */
 export const PRESET_LABELS: Record<PresetId, string> = {
-  lozenge: "lozenge (locked skeleton)",
   mage: "mage",
-  mageNew: "mage ★ new head",
   knight: "knight",
-  knightNew: "knight ★ new head",
   soldier: "soldier",
-  soldierNew: "soldier ★ new head",
   rogue: "rogue",
-  rogueNew: "rogue ★ new head",
   scientist: "scientist",
-  scientistNew: "scientist ★ new head",
   cleric: "cleric",
-  clericNew: "cleric ★ new head",
   ranger: "ranger",
-  rangerNew: "ranger ★ new head",
   barbarian: "barbarian",
-  barbarianNew: "barbarian ★ new head",
   acolyte: "acolyte",
-  acolyteNew: "acolyte ★ new head",
   pirate: "pirate",
-  pirateNew: "pirate ★ new head",
   goatman: "goatman",
-  goatmanNew: "goatman ★ new head",
 };
 
 export const PRESET_IDS: PresetId[] = [
-  "lozenge",
   "mage",
-  "mageNew",
   "knight",
-  "knightNew",
   "soldier",
-  "soldierNew",
   "rogue",
-  "rogueNew",
   "scientist",
-  "scientistNew",
   "cleric",
-  "clericNew",
   "ranger",
-  "rangerNew",
   "barbarian",
-  "barbarianNew",
   "acolyte",
-  "acolyteNew",
   "pirate",
-  "pirateNew",
   "goatman",
-  "goatmanNew",
 ];

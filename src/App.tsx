@@ -169,13 +169,13 @@ export default function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
-  const [presetId, setPresetId] = useState<PresetId | "random">("lozenge");
+  const [presetId, setPresetId] = useState<PresetId | "random">("mage");
   const [bodyProfileId, setBodyProfileId] = useState<BodyProfileId>(() =>
     loadBodyProfile(),
   );
-  const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("lozenge"));
+  const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
   const [specText, setSpecText] = useState(() =>
-    JSON.stringify(getPreset("lozenge"), null, 2),
+    JSON.stringify(getPreset("mage"), null, 2),
   );
   const [specParseError, setSpecParseError] = useState<string | null>(null);
   const specFileRef = useRef<HTMLInputElement>(null);
