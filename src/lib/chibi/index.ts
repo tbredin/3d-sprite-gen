@@ -134,3 +134,11 @@ export type {
   HeadShape,
 } from "./types";
 export { PRESET_IDS, PRESET_LABELS, HEAD_SHAPES } from "./types";
+export {
+  applyBodyProfile,
+  BODY_PROFILE_IDS,
+  BODY_PROFILES,
+  loadBodyProfile,
+  saveBodyProfile,
+  type BodyProfileId,
+} from "./units";
