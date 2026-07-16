@@ -49,68 +49,68 @@ export type FaceLayout = {
  */
 export const FACE_BY_SHAPE: Record<HeadShape, FaceLayout> = {
   dumpling: {
-    eyeW: 0.2,
-    eyeH: 0.155,
-    eyeDepth: 0.028,
+    eyeW: 0.22,
+    eyeH: 0.17,
+    eyeDepth: 0.03,
     eyeTopWiden: 1.08,
-    irisW: 0.13,
-    irisH: 0.115,
-    eyeSpacing: 0.155,
-    eyeZ: CHIBI.skullR * 1.02,
-    eyeLift: 0.02,
-    browW: 0.2,
-    browH: 0.04,
-    browDepth: 0.022,
-    mouthWidth: 0.06,
-    mouthDrop: 0.2,
+    irisW: 0.14,
+    irisH: 0.125,
+    eyeSpacing: 0.165,
+    eyeZ: CHIBI.skullR * 1.0,
+    eyeLift: 0.04,
+    browW: 0.22,
+    browH: 0.042,
+    browDepth: 0.024,
+    mouthWidth: 0.07,
+    mouthDrop: 0.24,
   },
   mochi: {
-    eyeW: 0.185,
+    eyeW: 0.205,
+    eyeH: 0.155,
+    eyeDepth: 0.028,
+    eyeTopWiden: 1.1,
+    irisW: 0.13,
+    irisH: 0.112,
+    eyeSpacing: 0.155,
+    eyeZ: CHIBI.skullR * 0.96,
+    eyeLift: 0.03,
+    browW: 0.21,
+    browH: 0.04,
+    browDepth: 0.024,
+    mouthWidth: 0.072,
+    mouthDrop: 0.25,
+  },
+  cheeky: {
+    eyeW: 0.215,
+    eyeH: 0.165,
+    eyeDepth: 0.03,
+    eyeTopWiden: 1.06,
+    irisW: 0.135,
+    irisH: 0.12,
+    eyeSpacing: 0.175,
+    eyeZ: CHIBI.skullR * 1.02,
+    eyeLift: 0.05,
+    browW: 0.2,
+    browH: 0.038,
+    browDepth: 0.022,
+    mouthWidth: 0.06,
+    mouthDrop: 0.26,
+  },
+  solemn: {
+    eyeW: 0.19,
     eyeH: 0.14,
     eyeDepth: 0.026,
-    eyeTopWiden: 1.1,
+    eyeTopWiden: 1.05,
     irisW: 0.118,
     irisH: 0.1,
     eyeSpacing: 0.148,
-    eyeZ: CHIBI.skullR * 0.98,
-    eyeLift: 0.01,
-    browW: 0.19,
-    browH: 0.038,
-    browDepth: 0.022,
-    mouthWidth: 0.065,
-    mouthDrop: 0.2,
-  },
-  cheeky: {
-    eyeW: 0.195,
-    eyeH: 0.15,
-    eyeDepth: 0.028,
-    eyeTopWiden: 1.06,
-    irisW: 0.125,
-    irisH: 0.11,
-    eyeSpacing: 0.165,
-    eyeZ: CHIBI.skullR * 1.05,
-    eyeLift: 0.025,
-    browW: 0.185,
-    browH: 0.036,
-    browDepth: 0.02,
-    mouthWidth: 0.055,
-    mouthDrop: 0.22,
-  },
-  solemn: {
-    eyeW: 0.17,
-    eyeH: 0.125,
-    eyeDepth: 0.024,
-    eyeTopWiden: 1.05,
-    irisW: 0.105,
-    irisH: 0.09,
-    eyeSpacing: 0.14,
-    eyeZ: CHIBI.skullR * 0.95,
-    eyeLift: -0.01,
-    browW: 0.2,
-    browH: 0.042,
-    browDepth: 0.024,
-    mouthWidth: 0.055,
-    mouthDrop: 0.22,
+    eyeZ: CHIBI.skullR * 0.94,
+    eyeLift: 0.02,
+    browW: 0.22,
+    browH: 0.044,
+    browDepth: 0.026,
+    mouthWidth: 0.06,
+    mouthDrop: 0.27,
   },
 };
 
@@ -136,26 +136,24 @@ function addNeck(g: Group, mat: Material, r: number, cy: number) {
  * Few volumes so the silhouette reads as one dumpling, not a sphere salad.
  */
 function headDumpling(g: Group, mat: Material, r: number, cy: number) {
-  const skull = new Mesh(new SphereGeometry(r * 1.05, 16, 14), mat);
-  skull.position.set(0, cy + 0.02, 0);
-  skull.scale.set(1.02, 0.98, 0.96);
+  const skull = new Mesh(new SphereGeometry(r * 1.02, 16, 14), mat);
+  skull.position.set(0, cy + 0.04, 0);
+  // Tall soft ball — vertical room for eyes → mouth → chin at 32–64px
+  skull.scale.set(0.98, 1.18, 0.94);
   g.add(skull);
 
-  // Face plane — shallow front pad
-  const face = new Mesh(new SphereGeometry(r * 0.9, 14, 12), mat);
-  face.position.set(0, cy - 0.02, r * 0.48);
-  face.scale.set(1.0, 1.05, 0.42);
+  const face = new Mesh(new SphereGeometry(r * 0.88, 14, 12), mat);
+  face.position.set(0, cy - 0.04, r * 0.46);
+  face.scale.set(1.0, 1.2, 0.4);
   g.add(face);
 
-  // Cheeks
-  g.add(mesh(new SphereGeometry(r * 0.42, 12, 10), mat, -r * 0.72, cy - 0.06, r * 0.28));
-  g.add(mesh(new SphereGeometry(r * 0.42, 12, 10), mat, r * 0.72, cy - 0.06, r * 0.28));
+  g.add(mesh(new SphereGeometry(r * 0.4, 12, 10), mat, -r * 0.7, cy - 0.08, r * 0.26));
+  g.add(mesh(new SphereGeometry(r * 0.4, 12, 10), mat, r * 0.7, cy - 0.08, r * 0.26));
 
-  // Tiny chin nub (no long stack)
-  g.add(mesh(new SphereGeometry(r * 0.28, 10, 8), mat, 0, cy - r * 0.85, r * 0.32));
+  // Chin sits clearly below the mouth line
+  g.add(mesh(new SphereGeometry(r * 0.3, 10, 8), mat, 0, cy - r * 1.05, r * 0.3));
 
-  // Soft crown
-  g.add(mesh(new SphereGeometry(r * 0.55, 12, 8), mat, 0, cy + r * 0.72, -0.02));
+  g.add(mesh(new SphereGeometry(r * 0.52, 12, 8), mat, 0, cy + r * 0.85, -0.02));
 
   addNeck(g, mat, r, cy);
 }
@@ -165,28 +163,26 @@ function headDumpling(g: Group, mat: Material, r: number, cy: number) {
  */
 function headMochi(g: Group, mat: Material, r: number, cy: number) {
   const skull = new Mesh(new SphereGeometry(r, 16, 14), mat);
-  skull.position.set(0, cy + 0.04, -0.02);
-  skull.scale.set(0.94, 1.18, 0.9);
+  skull.position.set(0, cy + 0.05, -0.02);
+  skull.scale.set(0.9, 1.32, 0.88);
   g.add(skull);
 
-  const crown = new Mesh(new SphereGeometry(r * 0.7, 12, 10), mat);
-  crown.position.set(0, cy + r * 0.85, -0.04);
-  crown.scale.set(1.05, 0.55, 1.0);
+  const crown = new Mesh(new SphereGeometry(r * 0.68, 12, 10), mat);
+  crown.position.set(0, cy + r * 0.95, -0.04);
+  crown.scale.set(1.05, 0.5, 1.0);
   g.add(crown);
 
-  const face = new Mesh(new SphereGeometry(r * 0.82, 14, 12), mat);
-  face.position.set(0, cy - 0.04, r * 0.46);
-  face.scale.set(1.0, 1.15, 0.45);
+  const face = new Mesh(new SphereGeometry(r * 0.8, 14, 12), mat);
+  face.position.set(0, cy - 0.06, r * 0.44);
+  face.scale.set(1.0, 1.3, 0.42);
   g.add(face);
 
-  // Soft temples
-  g.add(mesh(new SphereGeometry(r * 0.32, 10, 8), mat, -r * 0.82, cy + 0.02, 0.04));
-  g.add(mesh(new SphereGeometry(r * 0.32, 10, 8), mat, r * 0.82, cy + 0.02, 0.04));
+  g.add(mesh(new SphereGeometry(r * 0.3, 10, 8), mat, -r * 0.8, cy + 0.02, 0.04));
+  g.add(mesh(new SphereGeometry(r * 0.3, 10, 8), mat, r * 0.8, cy + 0.02, 0.04));
 
-  // Soft cheeks + single chin (no triple stack)
-  g.add(mesh(new SphereGeometry(r * 0.36, 10, 8), mat, -r * 0.5, cy - 0.16, r * 0.38));
-  g.add(mesh(new SphereGeometry(r * 0.36, 10, 8), mat, r * 0.5, cy - 0.16, r * 0.38));
-  g.add(mesh(new SphereGeometry(r * 0.32, 10, 8), mat, 0, cy - r * 1.05, r * 0.28));
+  g.add(mesh(new SphereGeometry(r * 0.34, 10, 8), mat, -r * 0.48, cy - 0.2, r * 0.36));
+  g.add(mesh(new SphereGeometry(r * 0.34, 10, 8), mat, r * 0.48, cy - 0.2, r * 0.36));
+  g.add(mesh(new SphereGeometry(r * 0.34, 10, 8), mat, 0, cy - r * 1.2, r * 0.26));
 
   addNeck(g, mat, r, cy);
 }
@@ -196,30 +192,28 @@ function headMochi(g: Group, mat: Material, r: number, cy: number) {
  * in a grimdark wardrobe.
  */
 function headCheeky(g: Group, mat: Material, r: number, cy: number) {
-  const skull = new Mesh(new SphereGeometry(r * 0.95, 16, 14), mat);
-  skull.position.set(0, cy + 0.06, -0.02);
-  skull.scale.set(0.95, 1.0, 0.92);
+  const skull = new Mesh(new SphereGeometry(r * 0.92, 16, 14), mat);
+  skull.position.set(0, cy + 0.08, -0.02);
+  skull.scale.set(0.92, 1.2, 0.9);
   g.add(skull);
 
-  // Oversized cheek balloons — the silhouette signature
-  const cheekL = new Mesh(new SphereGeometry(r * 0.55, 14, 12), mat);
-  cheekL.position.set(-r * 0.78, cy - 0.08, r * 0.22);
-  cheekL.scale.set(1.05, 1.0, 0.95);
+  const cheekL = new Mesh(new SphereGeometry(r * 0.52, 14, 12), mat);
+  cheekL.position.set(-r * 0.78, cy - 0.1, r * 0.2);
+  cheekL.scale.set(1.05, 1.05, 0.95);
   g.add(cheekL);
-  const cheekR = new Mesh(new SphereGeometry(r * 0.55, 14, 12), mat);
-  cheekR.position.set(r * 0.78, cy - 0.08, r * 0.22);
-  cheekR.scale.set(1.05, 1.0, 0.95);
+  const cheekR = new Mesh(new SphereGeometry(r * 0.52, 14, 12), mat);
+  cheekR.position.set(r * 0.78, cy - 0.1, r * 0.2);
+  cheekR.scale.set(1.05, 1.05, 0.95);
   g.add(cheekR);
 
-  const face = new Mesh(new SphereGeometry(r * 0.78, 12, 10), mat);
-  face.position.set(0, cy + 0.02, r * 0.5);
-  face.scale.set(0.95, 0.95, 0.4);
+  const face = new Mesh(new SphereGeometry(r * 0.76, 12, 10), mat);
+  face.position.set(0, cy + 0.0, r * 0.48);
+  face.scale.set(0.95, 1.15, 0.38);
   g.add(face);
 
-  // Almost no chin — just a soft tuck
-  g.add(mesh(new SphereGeometry(r * 0.22, 8, 6), mat, 0, cy - r * 0.7, r * 0.35));
+  g.add(mesh(new SphereGeometry(r * 0.24, 8, 6), mat, 0, cy - r * 0.85, r * 0.32));
 
-  g.add(mesh(new SphereGeometry(r * 0.5, 12, 8), mat, 0, cy + r * 0.7, -0.02));
+  g.add(mesh(new SphereGeometry(r * 0.48, 12, 8), mat, 0, cy + r * 0.82, -0.02));
 
   addNeck(g, mat, r, cy);
 }
@@ -231,29 +225,26 @@ function headCheeky(g: Group, mat: Material, r: number, cy: number) {
 function headSolemn(g: Group, mat: Material, r: number, cy: number) {
   const skull = new Mesh(new SphereGeometry(r, 16, 14), mat);
   skull.position.set(0, cy + 0.02, -0.04);
-  skull.scale.set(0.9, 1.22, 0.88);
+  skull.scale.set(0.88, 1.38, 0.86);
   g.add(skull);
 
-  // Soft brow shelf
-  g.add(mesh(new SphereGeometry(r * 0.7, 12, 10), mat, 0, cy + r * 0.28, r * 0.42));
+  g.add(mesh(new SphereGeometry(r * 0.68, 12, 10), mat, 0, cy + r * 0.32, r * 0.4));
 
-  const face = new Mesh(new SphereGeometry(r * 0.78, 14, 12), mat);
-  face.position.set(0, cy - 0.1, r * 0.44);
-  face.scale.set(0.95, 1.25, 0.42);
+  const face = new Mesh(new SphereGeometry(r * 0.76, 14, 12), mat);
+  face.position.set(0, cy - 0.12, r * 0.42);
+  face.scale.set(0.95, 1.4, 0.4);
   g.add(face);
 
-  // Quieter cheeks
-  g.add(mesh(new SphereGeometry(r * 0.3, 10, 8), mat, -r * 0.55, cy - 0.12, r * 0.3));
-  g.add(mesh(new SphereGeometry(r * 0.3, 10, 8), mat, r * 0.55, cy - 0.12, r * 0.3));
+  g.add(mesh(new SphereGeometry(r * 0.28, 10, 8), mat, -r * 0.52, cy - 0.14, r * 0.28));
+  g.add(mesh(new SphereGeometry(r * 0.28, 10, 8), mat, r * 0.52, cy - 0.14, r * 0.28));
 
-  // Soft tapered jaw — one volume, not a stack
-  const jaw = new Mesh(new SphereGeometry(r * 0.4, 12, 10), mat);
-  jaw.position.set(0, cy - r * 1.05, r * 0.2);
-  jaw.scale.set(0.95, 0.75, 0.85);
+  const jaw = new Mesh(new SphereGeometry(r * 0.42, 12, 10), mat);
+  jaw.position.set(0, cy - r * 1.2, r * 0.18);
+  jaw.scale.set(0.95, 0.8, 0.85);
   g.add(jaw);
 
-  g.add(mesh(new SphereGeometry(r * 0.55, 12, 8), mat, 0, cy + r * 0.88, -0.05));
-  g.add(mesh(new SphereGeometry(r * 0.4, 10, 8), mat, 0, cy - r * 0.2, -r * 0.6));
+  g.add(mesh(new SphereGeometry(r * 0.52, 12, 8), mat, 0, cy + r * 0.98, -0.05));
+  g.add(mesh(new SphereGeometry(r * 0.38, 10, 8), mat, 0, cy - r * 0.25, -r * 0.58));
 
   addNeck(g, mat, r, cy);
 }
