@@ -2,46 +2,45 @@
 export const HEAD = 1;
 
 /**
- * Super-deformed chibi (~1.75 heads): oversized head, tiny body.
+ * Super-deformed chibi for a *high isometric* camera.
  *
- * At 32–64px the head must own most of the sprite so eyes / mouth / chin
- * stay legible. Arms, torso, and legs stay short; mittens and boots keep
- * their absolute size so extremities still read as chunky chibi props.
+ * Iso foreshortening crushes vertical face detail, so the head unit is tall
+ * (~1.2) while torso/arms/legs stay tiny. Mittens and boots keep absolute
+ * size so extremities still read at 32–64px.
  */
-const TORSO = 0.34 * HEAD;
-const LEGS = 0.4 * HEAD;
+const TORSO = 0.32 * HEAD;
+const LEGS = 0.38 * HEAD;
+/** Extra head height — skulls stretch into this for iso face readability. */
+const HEAD_TALL = 1.2 * HEAD;
 
 export const CHIBI = {
   head: HEAD,
+  /** Vertical head budget (taller than `head` for iso foreshortening). */
+  headTall: HEAD_TALL,
   torso: TORSO,
   legs: LEGS,
-  totalHeight: HEAD + TORSO + LEGS, // ~1.74
-  /** Narrower with the short torso so shoulders don't swallow the skull. */
-  hipWidth: 0.56 * HEAD,
-  shoulderWidth: 0.7 * HEAD,
-  torsoDepth: 0.4 * HEAD,
-  /** Stubby arms — mittens do the reading, not forearm length. */
-  armLength: 0.38 * HEAD,
-  armThick: 0.2 * HEAD,
-  legThick: 0.22 * HEAD,
+  totalHeight: HEAD_TALL + TORSO + LEGS, // ~1.9
+  hipWidth: 0.54 * HEAD,
+  shoulderWidth: 0.68 * HEAD,
+  torsoDepth: 0.38 * HEAD,
+  armLength: 0.36 * HEAD,
+  armThick: 0.19 * HEAD,
+  legThick: 0.21 * HEAD,
   /** Kept absolute — chibi mitt / boot mass at small bake sizes. */
   handSize: 0.2 * HEAD,
   footLength: 0.32 * HEAD,
   footWidth: 0.24 * HEAD,
-  /**
-   * Base skull radius before head.scale. Slightly larger than the old 0.36
-   * so the face pad has more vertical room for eyes → mouth → chin.
-   */
-  skullR: 0.4 * HEAD,
+  /** Base skull radius before head.scale. */
+  skullR: 0.38 * HEAD,
 } as const;
 
-/** Feet on y=0; head top at totalHeight. */
+/** Feet on y=0; crown near headTopY. */
 export const LAYOUT = {
   footY: 0,
   hipY: CHIBI.legs,
   shoulderY: CHIBI.legs + CHIBI.torso,
-  /** Sit the face a touch lower in the head unit so chin clears the collar. */
-  headCenterY: CHIBI.legs + CHIBI.torso + CHIBI.head * 0.5,
+  /** Face center — lower in the tall head so chin has room under iso crush. */
+  headCenterY: CHIBI.legs + CHIBI.torso + CHIBI.headTall * 0.42,
   headTopY: CHIBI.totalHeight,
 } as const;
 

@@ -86,33 +86,33 @@ function addHairFrame(
   const coverForehead = opts.coverForehead !== false;
 
   const cap = new Mesh(
-    new SphereGeometry(shellR, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.62),
+    new SphereGeometry(shellR, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.58),
     mat,
   );
-  cap.position.set(0, cy + 0.06, -0.02);
-  cap.scale.set(1.06, 1.0, 1.02);
+  // Sit high on the tall iso skull so bangs don't bury the eyes
+  cap.position.set(0, cy + 0.14, -0.02);
+  cap.scale.set(1.02, 1.15, 1.0);
   g.add(cap);
 
-  g.add(mesh(new SphereGeometry(shellR * 0.35, 10, 8), hi, 0, cy + 0.2, 0));
+  g.add(mesh(new SphereGeometry(shellR * 0.32, 10, 8), hi, 0, cy + 0.32, 0));
 
   if (coverForehead || bangs) {
-    g.add(mesh(new SphereGeometry(0.15, 10, 8), mat, -0.12, cy + 0.02, 0.36));
-    g.add(mesh(new SphereGeometry(0.17, 10, 8), mat, 0.02, cy + 0.06, 0.38));
-    g.add(mesh(new SphereGeometry(0.15, 10, 8), mat, 0.14, cy + 0.02, 0.36));
-    g.add(mesh(new SphereGeometry(0.09, 8, 6), hi, 0, cy + 0.08, 0.37));
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, -0.12, cy + 0.08, 0.34));
+    g.add(mesh(new SphereGeometry(0.16, 10, 8), mat, 0.02, cy + 0.12, 0.36));
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, 0.14, cy + 0.08, 0.34));
+    g.add(mesh(new SphereGeometry(0.08, 8, 6), hi, 0, cy + 0.14, 0.35));
   }
 
   if (sides) {
-    g.add(mesh(new SphereGeometry(0.15, 10, 8), mat, -0.42, cy - 0.02, 0.08));
-    g.add(mesh(new SphereGeometry(0.15, 10, 8), mat, 0.42, cy - 0.02, 0.08));
-    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.38, cy - 0.14, 0.02));
-    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, 0.38, cy - 0.14, 0.02));
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, -0.4, cy + 0.02, 0.06));
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, 0.4, cy + 0.02, 0.06));
+    g.add(mesh(new SphereGeometry(0.11, 8, 6), mat, -0.36, cy - 0.12, 0.02));
+    g.add(mesh(new SphereGeometry(0.11, 8, 6), mat, 0.36, cy - 0.12, 0.02));
   }
 
   if (back) {
-    // Soft rear hair mass for away-¾ — one welded lump, not four blobs
-    g.add(mesh(new SphereGeometry(0.26, 12, 10), mat, 0, cy - 0.02, -0.38));
-    g.add(mesh(new SphereGeometry(0.16, 10, 8), mat, 0, cy - 0.16, -0.42));
+    g.add(mesh(new SphereGeometry(0.24, 12, 10), mat, 0, cy + 0.02, -0.36));
+    g.add(mesh(new SphereGeometry(0.16, 10, 8), mat, 0, cy - 0.14, -0.4));
   }
 }
 
@@ -485,7 +485,7 @@ export function generateHair(opts: {
  * Style boosts (`REPLACE_HEAD_BOOST`, `KNIGHT_HEAD_BOOST`) undo that compound
  * shrink for mass-light closed heads — never raise HELMET_SHELL globally.
  */
-const HEAD_TALL = 1.1;
+const HEAD_TALL = 1.35;
 /** Match `generateHead` skull squash before shell scale. */
 const SKULL_EGG = { x: 0.92, y: 1.05, z: 0.86 } as const;
 /**
