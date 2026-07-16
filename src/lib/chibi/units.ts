@@ -147,7 +147,7 @@ export function loadBodyProfile(): BodyProfileId {
   } catch {
     /* ignore */
   }
-  return "compact";
+  return "tiny";
 }
 
 export function saveBodyProfile(id: BodyProfileId) {
