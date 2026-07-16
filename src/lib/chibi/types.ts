@@ -75,17 +75,36 @@ export type LegPose =
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 
 /**
- * Lozenge-family skull variants — each rebuilt from its name.
- * Gallery presets `headClassic`…`headSlim`; silhouette sits between classic & slim.
+ * Locked soft-diamond (`lozenge`) plus character-inspired rebuilds
+ * (mage, knight, …) for A/B presets.
  */
-export type HeadShape = "classic" | "soft" | "cheek" | "brow" | "slim";
+export type HeadShape =
+  | "lozenge"
+  | "mage"
+  | "knight"
+  | "soldier"
+  | "rogue"
+  | "scientist"
+  | "cleric"
+  | "ranger"
+  | "barbarian"
+  | "acolyte"
+  | "pirate"
+  | "goatman";
 
 export const HEAD_SHAPES: HeadShape[] = [
-  "classic",
-  "soft",
-  "cheek",
-  "brow",
-  "slim",
+  "lozenge",
+  "mage",
+  "knight",
+  "soldier",
+  "rogue",
+  "scientist",
+  "cleric",
+  "ranger",
+  "barbarian",
+  "acolyte",
+  "pirate",
+  "goatman",
 ];
 
 /** Soft lower garment — fills the silhouette under a short torso. */
@@ -112,8 +131,8 @@ export type CharacterSpec = {
   leadSide?: "left" | "right";
   head?: {
     /**
-     * Lozenge-family skull. Default `"classic"`.
-     * Compare the five `head*` gallery presets, then pick one to hone.
+     * Skull shape. Default `"lozenge"` (locked classic↔slim midpoint).
+     * Character names reuse archetype rebuilds (`mage`, `knight`, …).
      */
     shape?: HeadShape;
     /** Overall head scale (hair stays world-sized). */
@@ -191,58 +210,79 @@ export type CharacterSpec = {
 };
 
 export type PresetId =
-  | "headClassic"
-  | "headSoft"
-  | "headCheek"
-  | "headBrow"
-  | "headSlim"
+  | "lozenge"
   | "mage"
+  | "mageNew"
   | "knight"
+  | "knightNew"
   | "soldier"
+  | "soldierNew"
   | "rogue"
+  | "rogueNew"
   | "scientist"
+  | "scientistNew"
   | "cleric"
+  | "clericNew"
   | "ranger"
+  | "rangerNew"
   | "barbarian"
+  | "barbarianNew"
   | "acolyte"
+  | "acolyteNew"
   | "pirate"
-  | "goatman";
+  | "pirateNew"
+  | "goatman"
+  | "goatmanNew";
 
 /** Human-readable labels for the preset picker. */
 export const PRESET_LABELS: Record<PresetId, string> = {
-  headClassic: "1 · classic (mid diamond)",
-  headSoft: "2 · soft (marshmallow)",
-  headCheek: "3 · cheek (side bulbs)",
-  headBrow: "4 · brow (forehead shelf)",
-  headSlim: "5 · slim (narrow capsule)",
+  lozenge: "lozenge (locked skeleton)",
   mage: "mage",
+  mageNew: "mage ★ new head",
   knight: "knight",
+  knightNew: "knight ★ new head",
   soldier: "soldier",
+  soldierNew: "soldier ★ new head",
   rogue: "rogue",
+  rogueNew: "rogue ★ new head",
   scientist: "scientist",
+  scientistNew: "scientist ★ new head",
   cleric: "cleric",
+  clericNew: "cleric ★ new head",
   ranger: "ranger",
+  rangerNew: "ranger ★ new head",
   barbarian: "barbarian",
+  barbarianNew: "barbarian ★ new head",
   acolyte: "acolyte",
+  acolyteNew: "acolyte ★ new head",
   pirate: "pirate",
+  pirateNew: "pirate ★ new head",
   goatman: "goatman",
+  goatmanNew: "goatman ★ new head",
 };
 
 export const PRESET_IDS: PresetId[] = [
-  "headClassic",
-  "headSoft",
-  "headCheek",
-  "headBrow",
-  "headSlim",
+  "lozenge",
   "mage",
+  "mageNew",
   "knight",
+  "knightNew",
   "soldier",
+  "soldierNew",
   "rogue",
+  "rogueNew",
   "scientist",
+  "scientistNew",
   "cleric",
+  "clericNew",
   "ranger",
+  "rangerNew",
   "barbarian",
+  "barbarianNew",
   "acolyte",
+  "acolyteNew",
   "pirate",
+  "pirateNew",
   "goatman",
+  "goatmanNew",
 ];
