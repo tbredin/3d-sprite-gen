@@ -682,3 +682,6 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
   },
 };
 
+export function getPreset(id: PresetId): CharacterSpec {
+  return structuredClone(PRESETS[id]);
+}
