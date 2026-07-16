@@ -526,7 +526,8 @@ export function generateHair(opts: {
  * Style boosts (`REPLACE_HEAD_BOOST`, `KNIGHT_HEAD_BOOST`) undo that compound
  * shrink for mass-light closed heads — never raise HELMET_SHELL globally.
  */
-const HEAD_TALL = 1.35;
+/** Match moderated `CHIBI.headTall` — avoid reintroducing long closed helms. */
+const HEAD_TALL = CHIBI.headTall / CHIBI.head;
 /** Match `generateHead` skull squash before shell scale. */
 const SKULL_EGG = { x: 0.92, y: 1.05, z: 0.86 } as const;
 /**

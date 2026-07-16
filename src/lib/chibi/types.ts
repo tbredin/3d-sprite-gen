@@ -75,35 +75,36 @@ export type LegPose =
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 
 /**
- * Cute anime-chibi skull silhouettes for the head gallery.
- * - anime: classic tall soft egg (lead — red hair showcase)
- * - round: soft ball
- * - tall: elongated for max iso face read
- * - puff: huge cheeks
- * - doll: big forehead / moe
- * - bean: wider shorter cute
- * - sharp: quiet tapered jaw
- * - baby: oversized cranium
+ * Twelve distinct head *construction skeletons* (gallery presets).
+ * Not Y-scale variants — each builds the skull differently.
  */
 export type HeadShape =
-  | "anime"
-  | "round"
-  | "tall"
-  | "puff"
-  | "doll"
-  | "bean"
-  | "sharp"
-  | "baby";
+  | "sphere"
+  | "capsule"
+  | "onion"
+  | "apple"
+  | "teardrop"
+  | "boxy"
+  | "gourd"
+  | "wedge"
+  | "pancake"
+  | "lozenge"
+  | "peanut"
+  | "disc";
 
 export const HEAD_SHAPES: HeadShape[] = [
-  "anime",
-  "round",
-  "tall",
-  "puff",
-  "doll",
-  "bean",
-  "sharp",
-  "baby",
+  "sphere",
+  "capsule",
+  "onion",
+  "apple",
+  "teardrop",
+  "boxy",
+  "gourd",
+  "wedge",
+  "pancake",
+  "lozenge",
+  "peanut",
+  "disc",
 ];
 
 /** Soft lower garment — fills the silhouette under a short torso. */
@@ -130,8 +131,8 @@ export type CharacterSpec = {
   leadSide?: "left" | "right";
   head?: {
     /**
-     * Skull silhouette. Default `"anime"`.
-     * Browse the `headRed*` / `head*` gallery presets in the picker.
+     * Skull construction skeleton. Default `"sphere"`.
+     * Compare the twelve `head*` gallery presets, then pick favourites to hone.
      */
     shape?: HeadShape;
     /** Overall head scale (hair stays world-sized). */
@@ -209,20 +210,18 @@ export type CharacterSpec = {
 };
 
 export type PresetId =
-  | "headRedAnime"
-  | "headRedSpiky"
-  | "headRedTwintails"
-  | "headRedLong"
-  | "headRedBob"
-  | "headRedPonytail"
-  | "headRedMessy"
-  | "headRoundBlonde"
-  | "headTallBlue"
-  | "headPuffPink"
-  | "headDollWhite"
-  | "headBeanBlack"
-  | "headSharpGreen"
-  | "headBabyOrange"
+  | "headSphere"
+  | "headCapsule"
+  | "headOnion"
+  | "headApple"
+  | "headTeardrop"
+  | "headBoxy"
+  | "headGourd"
+  | "headWedge"
+  | "headPancake"
+  | "headLozenge"
+  | "headPeanut"
+  | "headDisc"
   | "mage"
   | "knight"
   | "soldier"
@@ -237,20 +236,18 @@ export type PresetId =
 
 /** Human-readable labels for the preset picker. */
 export const PRESET_LABELS: Record<PresetId, string> = {
-  headRedAnime: "Head · red anime (start here)",
-  headRedSpiky: "Head · red spiky",
-  headRedTwintails: "Head · red twin-tails",
-  headRedLong: "Head · red long",
-  headRedBob: "Head · red bob",
-  headRedPonytail: "Head · red ponytail",
-  headRedMessy: "Head · red messy",
-  headRoundBlonde: "Head · round + blonde",
-  headTallBlue: "Head · tall + blue",
-  headPuffPink: "Head · puff + pink",
-  headDollWhite: "Head · doll + white",
-  headBeanBlack: "Head · bean + black",
-  headSharpGreen: "Head · sharp + green",
-  headBabyOrange: "Head · baby + orange",
+  headSphere: "1 · sphere (single ball)",
+  headCapsule: "2 · capsule (vertical pill)",
+  headOnion: "3 · onion (stacked spheres)",
+  headApple: "4 · apple (wide + flat chin)",
+  headTeardrop: "5 · teardrop (wide crown)",
+  headBoxy: "6 · boxy (soft block)",
+  headGourd: "7 · gourd (two balls)",
+  headWedge: "8 · wedge (angled face slab)",
+  headPancake: "9 · pancake (flat / wide)",
+  headLozenge: "10 · lozenge (soft diamond)",
+  headPeanut: "11 · peanut (wide cheeks)",
+  headDisc: "12 · disc (tipped face plate)",
   mage: "mage",
   knight: "knight",
   soldier: "soldier",
@@ -265,20 +262,18 @@ export const PRESET_LABELS: Record<PresetId, string> = {
 };
 
 export const PRESET_IDS: PresetId[] = [
-  "headRedAnime",
-  "headRedSpiky",
-  "headRedTwintails",
-  "headRedLong",
-  "headRedBob",
-  "headRedPonytail",
-  "headRedMessy",
-  "headRoundBlonde",
-  "headTallBlue",
-  "headPuffPink",
-  "headDollWhite",
-  "headBeanBlack",
-  "headSharpGreen",
-  "headBabyOrange",
+  "headSphere",
+  "headCapsule",
+  "headOnion",
+  "headApple",
+  "headTeardrop",
+  "headBoxy",
+  "headGourd",
+  "headWedge",
+  "headPancake",
+  "headLozenge",
+  "headPeanut",
+  "headDisc",
   "mage",
   "knight",
   "soldier",
