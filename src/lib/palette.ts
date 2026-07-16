@@ -60,7 +60,7 @@ export type BayerDitherSettings = {
 export const BAYER_BIAS_SCALE = 40;
 
 export const DEFAULT_BAYER_DITHER: BayerDitherSettings = {
-  enabled: false,
+  enabled: true,
   strength: 0.35,
 };
 
@@ -393,6 +393,15 @@ export function applyPartOutline(
 }
 
 export async function loadPalette(slug = "endesga-64"): Promise<Palette> {
+  try {
+    const res = await fetch(`/api/palette/${encodeURIComponent(slug)}`);
+    if (res.ok) {
+      const data = (await res.json()) as Palette;
+      if (data?.colors?.length) return data;
+    }
+  } catch {
+    // fall through to static bundle
+  }
   const res = await fetch(`/${slug}.json`);
   if (!res.ok) throw new Error(`palette ${slug} not found`);
   return res.json() as Promise<Palette>;

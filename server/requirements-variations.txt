@@ -1,0 +1,14 @@
+# Optional ML stack for AI sprite variations (docs/SPIKE-ai-sprite-variations.md).
+# Install into the same venv used by `npm run dev:server`:
+#   /Users/tom/Sites/3d-sprite-gen/.venv/bin/pip install -r server/requirements-variations.txt
+#
+# Keep numpy<2 for the mesh/trimesh stack. Canny falls back to PIL if OpenCV
+# is awkward; OpenCV is optional.
+torch
+torchvision
+diffusers>=0.30
+transformers
+accelerate
+safetensors
+peft
+numpy<2

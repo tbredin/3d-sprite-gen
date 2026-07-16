@@ -124,6 +124,11 @@ type BakeProps = {
   /** Sel-out tinted / lit-thinned silhouette — see docs/SPIKE-selective-outline.md. */
   selectiveOutline?: SelectiveOutlineSettings;
   onCaptured: (dataUrl: string) => void;
+  /**
+   * Pre-quantize / pre-outline bake (RGBA data URL) for AI conditioning.
+   * See docs/SPIKE-ai-sprite-variations.md.
+   */
+  onSourceCaptured?: (dataUrl: string) => void;
   /** CSS display size (NN upscale of the native size×size buffer). */
   displayPx?: number;
 };
@@ -148,6 +153,7 @@ function BakeCapture({
   bayerDither,
   selectiveOutline,
   onCaptured,
+  onSourceCaptured,
 }: {
   size: SpriteSize;
   colors: string[];
@@ -165,6 +171,7 @@ function BakeCapture({
   bayerDither: BayerDitherSettings;
   selectiveOutline: SelectiveOutlineSettings;
   onCaptured: (dataUrl: string) => void;
+  onSourceCaptured?: (dataUrl: string) => void;
 }) {
   const { gl, scene } = useThree();
   const target = useMemo(
@@ -187,6 +194,8 @@ function BakeCapture({
   const normalMaterial = useMemo(() => new MeshNormalMaterial({ side: DoubleSide }), []);
   const onCapturedRef = useRef(onCaptured);
   onCapturedRef.current = onCaptured;
+  const onSourceCapturedRef = useRef(onSourceCaptured);
+  onSourceCapturedRef.current = onSourceCaptured;
   const outlinePassRef = useRef(outlinePass);
   outlinePassRef.current = outlinePass;
   const edgeOutlineRef = useRef(edgeOutline);
@@ -236,6 +245,19 @@ function BakeCapture({
         const opaqueMask = new Uint8Array(size * size);
         for (let i = 0; i < size * size; i++) {
           opaqueMask[i] = flipped[i * 4 + 3] >= 8 ? 1 : 0;
+        }
+
+        if (onSourceCapturedRef.current) {
+          const source = document.createElement("canvas");
+          source.width = size;
+          source.height = size;
+          const sctx = source.getContext("2d")!;
+          sctx.putImageData(
+            new ImageData(new Uint8ClampedArray(flipped), size, size),
+            0,
+            0,
+          );
+          onSourceCapturedRef.current(source.toDataURL("image/png"));
         }
 
         const imageData = new ImageData(new Uint8ClampedArray(flipped), size, size);
@@ -407,6 +429,7 @@ export function BakeCanvas({
   bayerDither = DEFAULT_BAYER_DITHER,
   selectiveOutline = DEFAULT_SELECTIVE_OUTLINE,
   onCaptured,
+  onSourceCaptured,
   displayPx,
 }: BakeProps) {
   const view = displayPx ?? size * 4;
@@ -507,6 +530,7 @@ export function BakeCanvas({
         bayerDither={bayerDither}
         selectiveOutline={selectiveOutline}
         onCaptured={onCaptured}
+        onSourceCaptured={onSourceCaptured}
       />
     </Canvas>
   );
