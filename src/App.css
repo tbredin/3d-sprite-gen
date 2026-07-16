@@ -272,6 +272,37 @@ button.ghost {
   margin: 0.25rem 0 0.55rem;
 }
 
+.spin-controls {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  box-sizing: border-box;
+}
+
+.spin-controls .spin-btn {
+  flex: 0 0 auto;
+  min-width: 2.4rem;
+  height: var(--control-h);
+  padding: 0 0.55rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+}
+
+.spin-controls .spin-btn-main {
+  flex: 1 1 auto;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.spin-controls .spin-btn-main.is-active {
+  background: #2a3148;
+  border-color: #7a849e;
+  color: #f4f0e6;
+}
+
 .collapse {
   margin-top: var(--gap);
   padding: 0.2rem 0.4rem;

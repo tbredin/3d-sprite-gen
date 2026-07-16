@@ -84,6 +84,12 @@ export const FACING_PRESETS: FacingPreset[] = [
   },
 ];
 
+/** Radians per second for continuous / hold-to-rotate turntable. */
+export const ROTATE_FACING_SPEED = (Math.PI * 2) / 6;
+
+/** How often the quantized PNG rebakes while the turntable is moving. */
+export const ANIMATED_BAKE_INTERVAL_MS = 100;
+
 export const CUSTOM_FACING: FacingPreset = {
   id: "custom",
   label: "Custom",
@@ -129,7 +135,10 @@ export function loadFacingPersist(): FacingPersist {
     const raw = localStorage.getItem(FACING_STORAGE_KEY);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<FacingPersist>;
-    const facing = isFacingId(parsed.facing) ? parsed.facing : DEFAULT_FACING;
+    // Legacy "rotate" facing → custom at last known yaw.
+    const rawFacing =
+      (parsed.facing as string | undefined) === "rotate" ? "custom" : parsed.facing;
+    const facing = isFacingId(rawFacing) ? rawFacing : DEFAULT_FACING;
     const rotX = Number(parsed.rotationX);
     const rotY = Number(parsed.rotationY);
     if (facing === "custom") {

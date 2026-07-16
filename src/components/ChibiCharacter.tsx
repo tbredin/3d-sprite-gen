@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, type MutableRefObject } from "react";
+import { useFrame } from "@react-three/fiber";
 import {
   assembleCharacter,
   applySpriteFaceCheat,
@@ -45,11 +46,17 @@ function mirroredSpec(spec: CharacterSpec): CharacterSpec {
 export function ChibiCharacter({
   spec,
   rotationY = 0,
+  yawRef,
   mirror = false,
 }: {
   spec: CharacterSpec;
   /** Body yaw from the iso facing control — drives FF-style face cheating. */
   rotationY?: number;
+  /**
+   * Live yaw (e.g. turntable). When set, face cheat follows this ref each frame
+   * instead of the static `rotationY` prop.
+   */
+  yawRef?: MutableRefObject<number>;
   /**
    * Flip left/right by assembling the opposite lead (weapon + torso yaw + stance).
    * Keeps body facing / BakeCanvas rotationY unchanged.
@@ -62,10 +69,19 @@ export function ChibiCharacter({
   );
 
   const group = useMemo(() => assembleCharacter(effectiveSpec), [effectiveSpec]);
+  const liveYaw = useRef(yawRef);
+  liveYaw.current = yawRef;
 
   useLayoutEffect(() => {
+    if (yawRef) return;
     applySpriteFaceCheat(group, rotationY);
-  }, [group, rotationY]);
+  }, [group, rotationY, yawRef]);
+
+  useFrame(() => {
+    const ref = liveYaw.current;
+    if (!ref) return;
+    applySpriteFaceCheat(group, ref.current);
+  });
 
   useEffect(() => () => disposeObject(group), [group]);
 
