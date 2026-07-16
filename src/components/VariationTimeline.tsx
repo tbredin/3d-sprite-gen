@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { createPortal } from "react-dom";
 import {
   clearUnlockedVariations,
   deleteVariation,
@@ -13,6 +14,14 @@ import {
 import { downloadDataUrl } from "../lib/capture";
 
 const CONCURRENCY = 3;
+const PREVIEW_GAP = 8;
+
+type HoverPreview = {
+  src: string;
+  alt: string;
+  left: number;
+  top: number;
+};
 
 type Props = {
   sourceDataUrl: string | null;
@@ -38,6 +47,7 @@ export function VariationTimeline({
   const [inflight, setInflight] = useState(0);
   const [warming, setWarming] = useState(false);
   const [phase, setPhase] = useState<string | null>(null);
+  const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
 
   const playingRef = useRef(false);
   const sourceRef = useRef(sourceDataUrl);
@@ -199,7 +209,30 @@ export function VariationTimeline({
   };
 
   const thumbPx = Math.min(96, size * 2);
+  const previewPx = thumbPx * 2;
   const pendingSlots = Math.max(0, inflight);
+
+  const showThumbPreview = (
+    e: MouseEvent<HTMLImageElement>,
+    item: VariationMeta,
+  ) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    let left = rect.left + rect.width / 2 - previewPx / 2;
+    let top = rect.top - previewPx - PREVIEW_GAP;
+    if (top < PREVIEW_GAP) {
+      top = rect.bottom + PREVIEW_GAP;
+    }
+    left = Math.max(
+      PREVIEW_GAP,
+      Math.min(left, window.innerWidth - previewPx - PREVIEW_GAP),
+    );
+    setHoverPreview({
+      src: item.image,
+      alt: item.freedom,
+      left,
+      top,
+    });
+  };
 
   return (
     <section className="panel panel-timeline">
@@ -267,7 +300,10 @@ export function VariationTimeline({
       {phase ? <p className="timeline-phase">{phase}</p> : null}
       {error ? <p className="error">{error}</p> : null}
 
-      <div className="timeline-scroll">
+      <div
+        className="timeline-scroll"
+        onScroll={() => setHoverPreview(null)}
+      >
         {items.length === 0 && pendingSlots === 0 ? (
           <p className="meta">No generations yet — hit Play.</p>
         ) : (
@@ -291,6 +327,8 @@ export function VariationTimeline({
                   alt={item.freedom}
                   width={thumbPx}
                   height={thumbPx}
+                  onMouseEnter={(e) => showThumbPreview(e, item)}
+                  onMouseLeave={() => setHoverPreview(null)}
                 />
                 <div className="timeline-tile-meta">
                   <span className="timeline-tag">{item.freedom}</span>
@@ -332,6 +370,24 @@ export function VariationTimeline({
           </ul>
         )}
       </div>
+      {hoverPreview
+        ? createPortal(
+            <div
+              className="timeline-thumb-tooltip"
+              style={{ left: hoverPreview.left, top: hoverPreview.top }}
+              role="tooltip"
+            >
+              <img
+                className="pixel-preview"
+                src={hoverPreview.src}
+                alt={hoverPreview.alt}
+                width={previewPx}
+                height={previewPx}
+              />
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }
