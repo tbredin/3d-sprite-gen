@@ -55,42 +55,44 @@ type BodyProfileDef = {
 };
 
 /**
- * Three smaller-body options — torso/legs/limbs shrink; hands & feet stay put.
- * Baseline (pre-profile) was torso 0.34 · legs 0.40.
+ * Three smaller-body options — torso + leg shafts shrink together.
+ * Hands & feet stay put for tiny-bake legibility (mitts/boots still read).
+ * Baseline (pre-profile) was torso 0.34 · legs 0.40 · legThick 0.22.
  */
 export const BODY_PROFILES: Record<BodyProfileId, BodyProfileDef> = {
   trim: {
     label: "A · trim (−12% body)",
     torso: 0.3 * HEAD,
-    legs: 0.35 * HEAD,
+    legs: 0.32 * HEAD,
     hipWidth: 0.5 * HEAD,
     shoulderWidth: 0.62 * HEAD,
     torsoDepth: 0.36 * HEAD,
     armLength: 0.34 * HEAD,
     armThick: 0.18 * HEAD,
-    legThick: 0.2 * HEAD,
+    /** ~hipWidth * 0.34 — was staying too chubby vs narrow hips. */
+    legThick: 0.17 * HEAD,
   },
   compact: {
     label: "B · compact (−24% body)",
     torso: 0.26 * HEAD,
-    legs: 0.3 * HEAD,
+    legs: 0.26 * HEAD,
     hipWidth: 0.46 * HEAD,
     shoulderWidth: 0.58 * HEAD,
     torsoDepth: 0.34 * HEAD,
     armLength: 0.3 * HEAD,
     armThick: 0.17 * HEAD,
-    legThick: 0.19 * HEAD,
+    legThick: 0.15 * HEAD,
   },
   tiny: {
     label: "C · tiny (−35% body)",
     torso: 0.22 * HEAD,
-    legs: 0.26 * HEAD,
+    legs: 0.22 * HEAD,
     hipWidth: 0.42 * HEAD,
     shoulderWidth: 0.54 * HEAD,
     torsoDepth: 0.32 * HEAD,
     armLength: 0.26 * HEAD,
     armThick: 0.16 * HEAD,
-    legThick: 0.18 * HEAD,
+    legThick: 0.13 * HEAD,
   },
 };
 
