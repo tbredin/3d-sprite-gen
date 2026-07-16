@@ -63,8 +63,8 @@ function lightenHex(hex: string, amount = 0.35): string {
 }
 
 /**
- * Shared scalp shell + bangs + side locks so hair always owns the silhouette.
- * Tuned for the new soft skulls (dumpling / mochi / cheeky / solemn).
+ * Shared scalp shell + light fringe. Tall iso skulls put the face lower in
+ * world space — hair must sit on the *crown*, not drape over eyes/mouth.
  */
 function addHairFrame(
   g: Group,
@@ -79,40 +79,42 @@ function addHairFrame(
   } = {},
 ) {
   const cy = LAYOUT.headCenterY;
-  const shellR = opts.shellR ?? 0.46;
+  const shellR = opts.shellR ?? 0.44;
   const bangs = opts.bangs !== false;
   const sides = opts.sides !== false;
   const back = opts.back !== false;
   const coverForehead = opts.coverForehead !== false;
 
+  // Shallow crown shell only — stop well above the eye line
   const cap = new Mesh(
-    new SphereGeometry(shellR, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.58),
+    new SphereGeometry(shellR, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.48),
     mat,
   );
-  // Sit high on the tall iso skull so bangs don't bury the eyes
-  cap.position.set(0, cy + 0.14, -0.02);
-  cap.scale.set(1.02, 1.15, 1.0);
+  cap.position.set(0, cy + 0.28, -0.04);
+  cap.scale.set(1.0, 0.95, 1.0);
   g.add(cap);
 
-  g.add(mesh(new SphereGeometry(shellR * 0.32, 10, 8), hi, 0, cy + 0.32, 0));
+  g.add(mesh(new SphereGeometry(shellR * 0.28, 10, 8), hi, 0, cy + 0.42, -0.02));
 
+  // Fringe sits on the brow ridge (above eyes), never mid-face
   if (coverForehead || bangs) {
-    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, -0.12, cy + 0.08, 0.34));
-    g.add(mesh(new SphereGeometry(0.16, 10, 8), mat, 0.02, cy + 0.12, 0.36));
-    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, 0.14, cy + 0.08, 0.34));
-    g.add(mesh(new SphereGeometry(0.08, 8, 6), hi, 0, cy + 0.14, 0.35));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, -0.1, cy + 0.26, 0.32));
+    g.add(mesh(new SphereGeometry(0.11, 8, 6), mat, 0.02, cy + 0.28, 0.34));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, 0.12, cy + 0.26, 0.32));
+    g.add(mesh(new SphereGeometry(0.06, 6, 5), hi, 0, cy + 0.3, 0.33));
   }
 
   if (sides) {
-    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, -0.4, cy + 0.02, 0.06));
-    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, 0.4, cy + 0.02, 0.06));
-    g.add(mesh(new SphereGeometry(0.11, 8, 6), mat, -0.36, cy - 0.12, 0.02));
-    g.add(mesh(new SphereGeometry(0.11, 8, 6), mat, 0.36, cy - 0.12, 0.02));
+    // Temples only — keep clear of the face pad
+    g.add(mesh(new SphereGeometry(0.12, 10, 8), mat, -0.4, cy + 0.12, 0.02));
+    g.add(mesh(new SphereGeometry(0.12, 10, 8), mat, 0.4, cy + 0.12, 0.02));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, -0.38, cy + 0.0, -0.02));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, 0.38, cy + 0.0, -0.02));
   }
 
   if (back) {
-    g.add(mesh(new SphereGeometry(0.24, 12, 10), mat, 0, cy + 0.02, -0.36));
-    g.add(mesh(new SphereGeometry(0.16, 10, 8), mat, 0, cy - 0.14, -0.4));
+    g.add(mesh(new SphereGeometry(0.22, 12, 10), mat, 0, cy + 0.12, -0.36));
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, 0, cy - 0.02, -0.4));
   }
 }
 
@@ -155,29 +157,29 @@ export function generateHair(opts: {
   const cy = LAYOUT.headCenterY;
 
   if (opts.style === "bowl") {
-    // Classic SNES bowl: deep helmet of hair, tiny face window
-    addHairFrame(g, mat, hi, { shellR: 0.42, coverForehead: true });
+    // Shallow bowl on the crown — open face window (not a helmet over the eyes)
+    addHairFrame(g, mat, hi, { shellR: 0.4, coverForehead: true });
     const deep = new Mesh(
-      new SphereGeometry(0.48, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.72),
+      new SphereGeometry(0.42, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.5),
       mat,
     );
-    deep.position.set(0, cy + 0.02, -0.02);
+    deep.position.set(0, cy + 0.22, -0.04);
     g.add(deep);
-    g.add(mesh(new SphereGeometry(0.16, 8, 6), mat, -0.36, cy - 0.18, 0.12));
-    g.add(mesh(new SphereGeometry(0.16, 8, 6), mat, 0.36, cy - 0.18, 0.12));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.34, cy + 0.02, 0.06));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, 0.34, cy + 0.02, 0.06));
   }
 
   if (opts.style === "bob") {
-    addHairFrame(g, mat, hi, { shellR: 0.48 });
-    g.add(mesh(new SphereGeometry(0.24, 10, 8), mat, -0.34, cy - 0.1, 0.06));
-    g.add(mesh(new SphereGeometry(0.24, 10, 8), mat, 0.34, cy - 0.1, 0.06));
-    g.add(mesh(new SphereGeometry(0.28, 10, 8), mat, 0, cy - 0.14, -0.32));
-    g.add(mesh(new SphereGeometry(0.2, 8, 6), hi, -0.35, cy + 0.05, 0.2));
+    addHairFrame(g, mat, hi, { shellR: 0.44 });
+    g.add(mesh(new SphereGeometry(0.2, 10, 8), mat, -0.34, cy + 0.02, 0.02));
+    g.add(mesh(new SphereGeometry(0.2, 10, 8), mat, 0.34, cy + 0.02, 0.02));
+    g.add(mesh(new SphereGeometry(0.24, 10, 8), mat, 0, cy + 0.0, -0.32));
+    g.add(mesh(new SphereGeometry(0.16, 8, 6), hi, -0.32, cy + 0.16, 0.16));
   }
 
   if (opts.style === "spiky") {
     // Zale / BoF warrior: jagged clumps break the sphere
-    addHairFrame(g, mat, hi, { shellR: 0.44, bangs: true });
+    addHairFrame(g, mat, hi, { shellR: 0.42, bangs: true });
     for (let i = 0; i < n + 2; i++) {
       const t = (i / Math.max(n + 1, 1)) * 2 - 1;
       addSpikeTuft(
@@ -192,9 +194,9 @@ export function generateHair(opts: {
         -0.2 + (i % 2) * 0.15,
       );
     }
-    // Forward fringe spikes over brow
-    addSpikeTuft(g, mat, hi, -0.12, cy + 0.22, 0.32, 0.26, -0.2, 0.85);
-    addSpikeTuft(g, mat, hi, 0.1, cy + 0.24, 0.34, 0.28, 0.15, 0.9);
+    // Forward fringe — brow height only
+    addSpikeTuft(g, mat, hi, -0.12, cy + 0.34, 0.28, 0.2, -0.2, 0.75);
+    addSpikeTuft(g, mat, hi, 0.1, cy + 0.36, 0.3, 0.22, 0.15, 0.8);
   }
 
   if (opts.style === "mohawk") {
@@ -247,12 +249,12 @@ export function generateHair(opts: {
   }
 
   if (opts.style === "afro") {
-    const R = 0.5 + n * 0.02;
-    g.add(mesh(new SphereGeometry(R, 12, 10), mat, 0, cy + 0.12, -0.02));
-    g.add(mesh(new SphereGeometry(R * 0.35, 8, 6), hi, -0.15, cy + 0.35, 0.15));
-    // Still need bangs so forehead isn't bare skin
-    g.add(mesh(new SphereGeometry(0.2, 8, 6), mat, -0.12, cy + 0.02, 0.45));
-    g.add(mesh(new SphereGeometry(0.22, 8, 6), mat, 0.12, cy + 0.04, 0.46));
+    const R = 0.48 + n * 0.02;
+    g.add(mesh(new SphereGeometry(R, 12, 10), mat, 0, cy + 0.28, -0.02));
+    g.add(mesh(new SphereGeometry(R * 0.32, 8, 6), hi, -0.12, cy + 0.48, 0.1));
+    // Light brow fringe only
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.1, cy + 0.26, 0.36));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, 0.1, cy + 0.28, 0.36));
   }
 
   if (opts.style === "bun") {
@@ -313,34 +315,34 @@ export function generateHair(opts: {
   }
 
   if (opts.style === "fringe") {
-    addHairFrame(g, mat, hi, { shellR: 0.48, coverForehead: true });
-    // Heavy Valere-style fringe slab
-    g.add(mesh(new SphereGeometry(0.3, 12, 10), mat, 0, cy + 0.02, 0.34));
-    g.add(mesh(new SphereGeometry(0.2, 8, 6), hi, -0.1, cy + 0.08, 0.48));
+    addHairFrame(g, mat, hi, { shellR: 0.44, coverForehead: true });
+    // Short brow fringe — not a slab over the eyes
+    g.add(mesh(new SphereGeometry(0.16, 10, 8), mat, 0, cy + 0.28, 0.32));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), hi, -0.08, cy + 0.32, 0.36));
     g.add(
-      mesh(new CapsuleGeometry(0.13, 0.3, 4, 8), mat, -0.4, cy - 0.12, 0.12),
+      mesh(new CapsuleGeometry(0.11, 0.28, 4, 8), mat, -0.4, cy + 0.02, 0.06),
     );
     g.add(
-      mesh(new CapsuleGeometry(0.13, 0.3, 4, 8), mat, 0.4, cy - 0.12, 0.12),
+      mesh(new CapsuleGeometry(0.11, 0.28, 4, 8), mat, 0.4, cy + 0.02, 0.06),
     );
   }
 
   if (opts.style === "twinTails") {
     addHairFrame(g, mat, hi);
     for (const s of [-1, 1] as const) {
-      g.add(mesh(new SphereGeometry(0.14, 8, 6), mat, s * 0.48, cy + 0.08, -0.08));
+      g.add(mesh(new SphereGeometry(0.14, 8, 6), mat, s * 0.48, cy + 0.16, -0.08));
       const t = new Mesh(new CapsuleGeometry(0.1, 0.48, 4, 8), mat);
-      t.position.set(s * 0.48, cy - 0.2, -0.12);
+      t.position.set(s * 0.48, cy - 0.12, -0.12);
       t.rotation.z = s * 0.4;
       g.add(t);
-      g.add(mesh(new SphereGeometry(0.08, 6, 5), hi, s * 0.5, cy - 0.35, -0.1));
+      g.add(mesh(new SphereGeometry(0.08, 6, 5), hi, s * 0.5, cy - 0.28, -0.1));
     }
   }
 
   if (opts.style === "pixie") {
     // Short choppy crop — tight shell, irregular fringe tips
     addHairFrame(g, mat, hi, {
-      shellR: 0.4,
+      shellR: 0.38,
       bangs: true,
       coverForehead: true,
       sides: true,
@@ -360,8 +362,8 @@ export function generateHair(opts: {
         0.4,
       );
     }
-    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.28, cy - 0.12, 0.22));
-    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, 0.28, cy - 0.12, 0.22));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, -0.28, cy + 0.06, 0.14));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, 0.28, cy + 0.06, 0.14));
   }
 
   if (opts.style === "messy") {
@@ -422,32 +424,32 @@ export function generateHair(opts: {
 
   if (opts.style === "pompadour") {
     addHairFrame(g, mat, hi, { shellR: 0.42, bangs: false, coverForehead: false });
-    // Forward-rolling volume — silhouette poke without a full afro balloon
-    const pomp = new Mesh(new SphereGeometry(0.28, 12, 10), mat);
-    pomp.position.set(0, cy + 0.28, 0.22);
+    // Forward-rolling volume on the crown — clear of the eye line
+    const pomp = new Mesh(new SphereGeometry(0.26, 12, 10), mat);
+    pomp.position.set(0, cy + 0.4, 0.18);
     pomp.scale.set(1.05, 0.85, 0.9);
     g.add(pomp);
-    g.add(mesh(new SphereGeometry(0.16, 8, 6), hi, -0.08, cy + 0.38, 0.3));
-    g.add(mesh(new SphereGeometry(0.18, 8, 6), mat, 0, cy + 0.08, 0.4));
+    g.add(mesh(new SphereGeometry(0.14, 8, 6), hi, -0.08, cy + 0.48, 0.24));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, 0, cy + 0.3, 0.34));
   }
 
   if (opts.style === "sidePart") {
-    addHairFrame(g, mat, hi, { shellR: 0.45, bangs: false });
-    // Swept mass to one side + thin parting gap on the left
-    g.add(mesh(new SphereGeometry(0.22, 10, 8), mat, 0.22, cy + 0.18, 0.15));
-    g.add(mesh(new SphereGeometry(0.18, 8, 6), hi, 0.28, cy + 0.22, 0.28));
+    addHairFrame(g, mat, hi, { shellR: 0.44, bangs: false });
+    // Swept mass to one side — stays above the brow
+    g.add(mesh(new SphereGeometry(0.2, 10, 8), mat, 0.22, cy + 0.28, 0.12));
+    g.add(mesh(new SphereGeometry(0.16, 8, 6), hi, 0.28, cy + 0.32, 0.22));
     for (let i = 0; i < 3; i++) {
       g.add(
         mesh(
-          new SphereGeometry(0.14, 8, 6),
+          new SphereGeometry(0.11, 8, 6),
           mat,
           0.1 + i * 0.08,
-          cy + 0.02 - i * 0.04,
-          0.38 - i * 0.04,
+          cy + 0.24 - i * 0.02,
+          0.32 - i * 0.03,
         ),
       );
     }
-    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.32, cy + 0.05, 0.1));
+    g.add(mesh(new SphereGeometry(0.11, 8, 6), mat, -0.32, cy + 0.16, 0.06));
   }
 
   if (opts.style === "wavy") {
@@ -609,16 +611,16 @@ export function generateHelmet(opts: {
   }
 
   if (opts.style === "cap") {
-    // Overlay: small brim + shallow crown dome (does not replace skull)
-    const brim = new Mesh(new CylinderGeometry(r * 1.12, r * 1.12, 0.042, 12), mat);
-    brim.position.set(0, top - 0.1, 0.06);
+    // Overlay: brim + shallow crown on the top of the tall skull (clear of eyes)
+    const brim = new Mesh(new CylinderGeometry(r * 1.05, r * 1.05, 0.04, 12), mat);
+    brim.position.set(0, top - 0.06, 0.04);
     g.add(brim);
     const crown = new Mesh(
-      new SphereGeometry(r * 0.85, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.48),
+      new SphereGeometry(r * 0.78, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.42),
       mat,
     );
-    crown.position.set(0, cy + r * 0.55 * tall, -0.02);
-    crown.scale.set(1.0, 0.85, 0.95);
+    crown.position.set(0, cy + r * 0.95 * tall, -0.04);
+    crown.scale.set(1.0, 0.75, 0.95);
     g.add(crown);
   }
 
@@ -707,30 +709,27 @@ export function generateHelmet(opts: {
   }
 
   if (opts.style === "hood") {
-    // Soft replacement cowl — open face window, rounded medieval cloak hood.
-    // Sized to the new cute skulls (not a balloon over dumpling/mochi).
+    // Soft replacement cowl — open face window high; cheeks don't cover eyes.
     const cowl = new Mesh(new SphereGeometry(shellR * 1.02, 14, 12), mat);
-    cowl.position.set(0, skullPos.y, -0.06);
-    cowl.scale.set(shellEgg.x * 1.05, shellEgg.y * 0.95, shellEgg.z * 1.08);
+    cowl.position.set(0, skullPos.y + r * 0.08, -0.08);
+    cowl.scale.set(shellEgg.x * 1.05, shellEgg.y * 1.05, shellEgg.z * 1.08);
     g.add(cowl);
 
-    // Soft crown fold
-    const crown = new Mesh(new SphereGeometry(r * 0.65, 12, 8), mat);
-    crown.position.set(0, cy + r * 0.68 * tall, -0.08);
+    const crown = new Mesh(new SphereGeometry(r * 0.62, 12, 8), mat);
+    crown.position.set(0, cy + r * 0.85 * tall, -0.1);
     crown.scale.set(1.08, 0.4 * tall, 1.0);
     g.add(crown);
 
-    // Cheek wings frame the face window
+    // Cheek wings sit beside the face, not over it
     for (const sSign of [-1, 1] as const) {
-      const flap = new Mesh(new SphereGeometry(r * 0.28, 10, 8), mat);
-      flap.position.set(sSign * r * 0.85, cy + 0.02, r * 0.12);
-      flap.scale.set(0.65, 1.1 * tall, 0.8);
+      const flap = new Mesh(new SphereGeometry(r * 0.24, 10, 8), mat);
+      flap.position.set(sSign * r * 0.9, cy + r * 0.15 * tall, r * 0.05);
+      flap.scale.set(0.6, 1.0 * tall, 0.75);
       g.add(flap);
     }
 
-    // Short rear drape into shoulders — flat panel, not a capsule sausage
     g.add(
-      mesh(new BoxGeometry(r * 1.0, r * 0.55, r * 0.22), mat, 0, cy - r * 0.45 * tall, -r * 0.7),
+      mesh(new BoxGeometry(r * 1.0, r * 0.5, r * 0.22), mat, 0, cy - r * 0.35 * tall, -r * 0.7),
     );
   }
 
@@ -750,37 +749,36 @@ export function generateHelmet(opts: {
   }
 
   if (opts.style === "wizard") {
-    // Overlay pointed hat — moderate cone so AABB stays readable, not a tower
-    const brim = new Mesh(new CylinderGeometry(r * 1.2, r * 1.2, 0.04, 12), mat);
-    brim.position.set(0, top - 0.12, 0);
+    // Overlay pointed hat — brim high on the crown
+    const brim = new Mesh(new CylinderGeometry(r * 1.15, r * 1.15, 0.04, 12), mat);
+    brim.position.set(0, top - 0.04, 0);
     g.add(brim);
-    const cone = new Mesh(new ConeGeometry(r * 0.72, r * 1.15, 10), mat);
-    cone.position.set(0, top + r * 0.35, -0.02);
+    const cone = new Mesh(new ConeGeometry(r * 0.68, r * 1.1, 10), mat);
+    cone.position.set(0, top + r * 0.4, -0.02);
     cone.rotation.z = 0.12;
     cone.rotation.x = -0.08;
     g.add(cone);
     const trim = toon(opts.visor ?? "#f5e07a");
-    g.add(mesh(new SphereGeometry(0.055, 8, 6), trim, 0.04, top + r * 0.88, -0.02));
+    g.add(mesh(new SphereGeometry(0.055, 8, 6), trim, 0.04, top + r * 0.9, -0.02));
   }
 
   if (opts.style === "bandana") {
-    // Overlay kerchief wrap + rear knot
+    // Overlay kerchief on the crown — brow band sits above the eyes
     const wrap = new Mesh(
-      new SphereGeometry(r * 0.88, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.42),
+      new SphereGeometry(r * 0.82, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.38),
       mat,
     );
-    wrap.position.set(0, cy + r * 0.5 * tall, -0.02);
-    wrap.scale.set(1.05, 0.7, 1.0);
+    wrap.position.set(0, cy + r * 0.85 * tall, -0.04);
+    wrap.scale.set(1.05, 0.65, 1.0);
     g.add(wrap);
     g.add(
-      mesh(new BoxGeometry(r * 1.5, r * 0.14, r * 0.2), mat, 0, cy + r * 0.35 * tall, r * 0.55),
+      mesh(new BoxGeometry(r * 1.4, r * 0.12, r * 0.18), mat, 0, cy + r * 0.7 * tall, r * 0.45),
     );
-    // Knot / tails aft
-    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, 0, cy + r * 0.25 * tall, -r * 0.75));
+    g.add(mesh(new SphereGeometry(0.09, 8, 6), mat, 0, cy + r * 0.55 * tall, -r * 0.7));
     for (const side of [-1, 1] as const) {
-      const tail = new Mesh(new CapsuleGeometry(0.04, 0.18, 3, 6), mat);
-      tail.position.set(side * 0.08, cy + r * 0.05 * tall, -r * 0.85);
-      tail.rotation.x = 0.6;
+      const tail = new Mesh(new CapsuleGeometry(0.04, 0.16, 3, 6), mat);
+      tail.position.set(side * 0.08, cy + r * 0.35 * tall, -r * 0.8);
+      tail.rotation.x = 0.55;
       tail.rotation.z = side * 0.4;
       g.add(tail);
     }
