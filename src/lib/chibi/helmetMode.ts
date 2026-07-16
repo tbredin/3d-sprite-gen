@@ -45,6 +45,18 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     showFace: true,
     notes: "Circlet + short spikes on crown; overlay only.",
   },
+  king: {
+    style: "king",
+    mount: "overlay",
+    showFace: true,
+    notes: "Arched royal crown with fleur spikes + front gem; overlay only.",
+  },
+  princess: {
+    style: "princess",
+    mount: "overlay",
+    showFace: true,
+    notes: "Delicate tiara circlet + center jewel + side pearls; overlay only.",
+  },
   wizard: {
     style: "wizard",
     mount: "overlay",
@@ -64,6 +76,27 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     notes:
       "DS Elite Knight kettle (×1.2 knight-only boost) — closed replace; dual slits + T-nasal.",
   },
+  knightGreat: {
+    style: "knightGreat",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Cylindrical great helm (×1.2) — flat lid, cross slits, riveted bands; closed replace.",
+  },
+  knightWinged: {
+    style: "knightWinged",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Winged kettle (×1.2) — Elite kettle body + lateral wing plates + plume stub.",
+  },
+  knightSallet: {
+    style: "knightSallet",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Sallet + bevor (×1.2) — swept rear tail, single eye slit, pointed chin cup.",
+  },
   sciFi: {
     style: "sciFi",
     mount: "replace",
@@ -71,11 +104,46 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     notes:
       "Sealed infantry helm (×1.3 radius boost) — brow plate + cheek cups + thin visor.",
   },
+  pilot: {
+    style: "pilot",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Flight/pilot helmet (×1.3) — rounded shell, goggle visor band, cheek cups, antenna.",
+  },
+  samurai: {
+    style: "samurai",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Kabuto (×1.3) — bowl dome, mabizashi brim, side fukigaeshi, tall maedate crest.",
+  },
+  viking: {
+    style: "viking",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Nasal helm (×1.3) — rounded dome, nose guard, cheek flaps, outward horns.",
+  },
   hood: {
     style: "hood",
     mount: "replace",
     showFace: true,
     notes: "Head-sized cowl replaces skull; face stays in the window.",
+  },
+  pharaoh: {
+    style: "pharaoh",
+    mount: "replace",
+    showFace: true,
+    notes:
+      "Nemes headdress (×1.2) — striped lappets beside face, uraeus cobra; face open.",
+  },
+  ninja: {
+    style: "ninja",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Masked cowl (×1.2) — wrapped head + menpo lower mask; eye slit only.",
   },
   goat: {
     style: "goat",

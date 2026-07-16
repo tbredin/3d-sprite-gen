@@ -31,13 +31,23 @@ export type HairStyle =
 export type HelmetStyle =
   | "none"
   | "knight"
+  | "knightGreat"
+  | "knightWinged"
+  | "knightSallet"
   | "cap"
   | "sciFi"
   | "hood"
   | "crown"
+  | "king"
+  | "princess"
   | "wizard"
   | "bandana"
-  | "goat";
+  | "goat"
+  | "pilot"
+  | "samurai"
+  | "viking"
+  | "pharaoh"
+  | "ninja";
 
 export type TorsoStyle =
   | "plain"
@@ -220,7 +230,17 @@ export type PresetId =
   | "barbarian"
   | "acolyte"
   | "pirate"
-  | "goatman";
+  | "goatman"
+  | "greatKnight"
+  | "wingedKnight"
+  | "salletKnight"
+  | "princess"
+  | "king"
+  | "pilot"
+  | "samurai"
+  | "viking"
+  | "pharaoh"
+  | "ninja";
 
 /** Human-readable labels for the preset picker. */
 export const PRESET_LABELS: Record<PresetId, string> = {
@@ -235,6 +255,16 @@ export const PRESET_LABELS: Record<PresetId, string> = {
   acolyte: "acolyte",
   pirate: "pirate",
   goatman: "goatman",
+  greatKnight: "great knight",
+  wingedKnight: "winged knight",
+  salletKnight: "sallet knight",
+  princess: "princess",
+  king: "king",
+  pilot: "pilot",
+  samurai: "samurai",
+  viking: "viking",
+  pharaoh: "pharaoh",
+  ninja: "ninja",
 };
 
 export const PRESET_IDS: PresetId[] = [
@@ -249,4 +279,14 @@ export const PRESET_IDS: PresetId[] = [
   "acolyte",
   "pirate",
   "goatman",
+  "greatKnight",
+  "wingedKnight",
+  "salletKnight",
+  "princess",
+  "king",
+  "pilot",
+  "samurai",
+  "viking",
+  "pharaoh",
+  "ninja",
 ];
