@@ -115,12 +115,12 @@ export const FACE_BY_SHAPE: Record<HeadShape, FaceLayout> = {
     irisH: 0.115,
     eyeSpacing: 0.152,
     eyeZ: CHIBI.skullR * 0.9,
-    eyeLift: 0.14,
+    eyeLift: 0.08,
     browW: 0.24,
     browH: 0.048,
     browDepth: 0.028,
     mouthWidth: 0.065,
-    mouthDrop: 0.46,
+    mouthDrop: 0.36,
   },
 };
 
@@ -234,28 +234,29 @@ function headCheeky(g: Group, mat: Material, r: number, cy: number) {
 }
 
 /**
- * D · solemn — the tallest egg; quiet medieval face under iso.
+ * D · solemn — quieter medieval face; tall for iso but not a tower.
  */
 function headSolemn(g: Group, mat: Material, r: number, cy: number) {
   const skull = new Mesh(new SphereGeometry(r, 16, 14), mat);
   skull.position.set(0, cy + 0.04, -0.04);
-  skull.scale.set(0.82, 2.0, 0.82);
+  // Was 2.0 — read as a stretched tower under iso; sit between mochi and old.
+  skull.scale.set(0.86, 1.65, 0.84);
   g.add(skull);
 
-  g.add(mesh(new SphereGeometry(r * 0.64, 12, 10), mat, 0, cy + r * 0.4, r * 0.36));
+  g.add(mesh(new SphereGeometry(r * 0.62, 12, 10), mat, 0, cy + r * 0.32, r * 0.36));
 
-  addIsoFacePad(g, mat, r, cy, { y: -0.16, z: 0.38, sx: 0.92, sy: 1.75 });
+  addIsoFacePad(g, mat, r, cy, { y: -0.1, z: 0.38, sx: 0.92, sy: 1.45 });
 
-  g.add(mesh(new SphereGeometry(r * 0.26, 10, 8), mat, -r * 0.5, cy - 0.18, r * 0.26));
-  g.add(mesh(new SphereGeometry(r * 0.26, 10, 8), mat, r * 0.5, cy - 0.18, r * 0.26));
+  g.add(mesh(new SphereGeometry(r * 0.26, 10, 8), mat, -r * 0.5, cy - 0.14, r * 0.26));
+  g.add(mesh(new SphereGeometry(r * 0.26, 10, 8), mat, r * 0.5, cy - 0.14, r * 0.26));
 
-  const jaw = new Mesh(new SphereGeometry(r * 0.4, 12, 10), mat);
-  jaw.position.set(0, cy - r * 1.65, r * 0.16);
-  jaw.scale.set(0.95, 0.85, 0.85);
+  const jaw = new Mesh(new SphereGeometry(r * 0.38, 12, 10), mat);
+  jaw.position.set(0, cy - r * 1.35, r * 0.16);
+  jaw.scale.set(0.95, 0.8, 0.85);
   g.add(jaw);
 
-  g.add(mesh(new SphereGeometry(r * 0.5, 12, 8), mat, 0, cy + r * 1.3, -0.05));
-  g.add(mesh(new SphereGeometry(r * 0.36, 10, 8), mat, 0, cy - r * 0.35, -r * 0.55));
+  g.add(mesh(new SphereGeometry(r * 0.48, 12, 8), mat, 0, cy + r * 1.05, -0.05));
+  g.add(mesh(new SphereGeometry(r * 0.34, 10, 8), mat, 0, cy - r * 0.28, -r * 0.55));
 
   addNeck(g, mat, r, cy);
 }
