@@ -75,8 +75,8 @@ export type LegPose =
 export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
 
 /**
- * Lozenge-family skull variants (same soft-diamond construction).
- * Gallery presets `headClassic`…`headSlim` — pick one to hone further.
+ * Lozenge-family skull variants — each rebuilt from its name.
+ * Gallery presets `headClassic`…`headSlim`; silhouette sits between classic & slim.
  */
 export type HeadShape = "classic" | "soft" | "cheek" | "brow" | "slim";
 
@@ -210,11 +210,11 @@ export type PresetId =
 
 /** Human-readable labels for the preset picker. */
 export const PRESET_LABELS: Record<PresetId, string> = {
-  headClassic: "1 · lozenge classic",
-  headSoft: "2 · lozenge soft",
-  headCheek: "3 · lozenge cheek",
-  headBrow: "4 · lozenge brow",
-  headSlim: "5 · lozenge slim",
+  headClassic: "1 · classic (mid diamond)",
+  headSoft: "2 · soft (marshmallow)",
+  headCheek: "3 · cheek (side bulbs)",
+  headBrow: "4 · brow (forehead shelf)",
+  headSlim: "5 · slim (narrow capsule)",
   mage: "mage",
   knight: "knight",
   soldier: "soldier",
