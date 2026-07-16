@@ -554,10 +554,12 @@ const REPLACE_HEAD_BOOST = 1.3;
 const KNIGHT_HEAD_BOOST = 1.2;
 
 /**
- * Head gear. Closed styles (`knight`, `sciFi`, `goat`) and deep cowls (`hood`)
- * are sized as *head replacements* matching `generateHead` egg proportions —
- * assembly hides the skin skull (and usually face/hair). Cap-like styles
- * (`cap`, `crown`, `wizard`, `bandana`) overlay the crown only.
+ * Head gear. Closed styles (`knight`, `knightGreat`, `knightWinged`,
+ * `knightSallet`, `sciFi`, `pilot`, `samurai`, `viking`, `ninja`, `goat`) and
+ * deep cowls (`hood`, `pharaoh`) are sized as *head replacements* matching
+ * `generateHead` egg proportions — assembly hides the skin skull (and usually
+ * face/hair). Cap-like styles (`cap`, `crown`, `king`, `princess`, `wizard`,
+ * `bandana`) overlay the crown only.
  */
 export function generateHelmet(opts: {
   style: HelmetStyle;
@@ -944,6 +946,447 @@ export function generateHelmet(opts: {
     g.add(
       mesh(new ConeGeometry(r * 0.12, r * 0.3, 5), fur, 0, cy - r * 0.82 * tall, r * 0.5),
     );
+  }
+
+  if (opts.style === "knightGreat") {
+    // Cylindrical great helm — flat bucket silhouette, cross slits.
+    const r = CHIBI.skullR * s * KNIGHT_HEAD_BOOST;
+    const slit = toon(opts.visor ?? "#1a1c2c");
+
+    const barrel = new Mesh(new CylinderGeometry(r * 0.88, r * 0.95, r * 1.55, 12), mat);
+    barrel.position.set(0, cy + r * 0.05 * tall, -0.02);
+    g.add(barrel);
+
+    const lid = new Mesh(new CylinderGeometry(r * 0.7, r * 0.92, r * 0.18, 12), mat);
+    lid.position.set(0, cy + r * 0.88 * tall, -0.02);
+    g.add(lid);
+    g.add(
+      mesh(new CylinderGeometry(r * 0.55, r * 0.7, 0.05, 10), mat, 0, cy + r * 1.0 * tall, -0.02),
+    );
+
+    // Rivet bands
+    g.add(
+      mesh(new CylinderGeometry(r * 0.97, r * 0.97, 0.06, 12), mat, 0, cy + r * 0.35 * tall, -0.02),
+    );
+    g.add(
+      mesh(new CylinderGeometry(r * 0.97, r * 0.97, 0.06, 12), mat, 0, cy - r * 0.25 * tall, -0.02),
+    );
+
+    const faceZ = r * 0.92;
+    const slitY = cy + r * 0.12 * tall;
+    g.add(mesh(new BoxGeometry(r * 1.15, r * 0.1, 0.08), slit, 0, slitY, faceZ));
+    g.add(
+      mesh(new BoxGeometry(r * 0.1, r * 0.7, 0.08), slit, 0, slitY - r * 0.15, faceZ + 0.01),
+    );
+
+    // Chin rim
+    g.add(
+      mesh(new CylinderGeometry(r * 0.82, r * 0.95, 0.1, 12), mat, 0, cy - r * 0.78 * tall, 0),
+    );
+  }
+
+  if (opts.style === "knightWinged") {
+    // Winged kettle — Elite kettle body + lateral wing plates.
+    const r = CHIBI.skullR * s * KNIGHT_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const slit = toon(opts.visor ?? "#1a1c2c");
+    const trim = toon(opts.visor ?? "#c7cfcc");
+
+    const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
+    dome.position.set(skullPos.x, skullPos.y, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.02, shellEgg.y * 0.88, shellEgg.z * 1.0);
+    g.add(dome);
+
+    const lid = new Mesh(new CylinderGeometry(r * 0.72, r * 0.92, r * 0.22, 12), mat);
+    lid.position.set(0, cy + r * 0.78 * tall, -0.02);
+    g.add(lid);
+
+    g.add(
+      mesh(new BoxGeometry(r * 1.7, r * 0.18, r * 0.42), mat, 0, cy + r * 0.22 * tall, r * 0.55),
+    );
+
+    const bevor = new Mesh(new SphereGeometry(r * 0.62, 12, 10), mat);
+    bevor.position.set(0, cy - r * 0.55 * tall, r * 0.12);
+    bevor.scale.set(1.05, 0.72 * tall, 0.88);
+    g.add(bevor);
+
+    const faceZ = r * 0.95;
+    const slitY = cy + r * 0.08 * tall;
+    g.add(mesh(new BoxGeometry(r * 1.35, r * 0.1, 0.09), slit, 0, slitY + r * 0.12, faceZ));
+    g.add(mesh(new BoxGeometry(r * 1.15, r * 0.08, 0.08), slit, 0, slitY - r * 0.08, faceZ + 0.01));
+    g.add(
+      mesh(new BoxGeometry(r * 0.1, r * 0.55, 0.08), mat, 0, slitY + r * 0.02, faceZ + 0.02),
+    );
+
+    // Lateral wings — silhouette punctuation from iso
+    for (const side of [-1, 1] as const) {
+      const wing = new Mesh(new BoxGeometry(r * 0.12, r * 0.85, r * 0.55), trim);
+      wing.position.set(side * r * 1.05, cy + r * 0.25 * tall, -r * 0.1);
+      wing.rotation.z = side * 0.35;
+      wing.rotation.y = side * 0.15;
+      g.add(wing);
+      const tip = new Mesh(new ConeGeometry(r * 0.1, r * 0.35, 5), trim);
+      tip.position.set(side * r * 1.15, cy + r * 0.75 * tall, -r * 0.15);
+      tip.rotation.z = side * 0.2;
+      g.add(tip);
+    }
+
+    // Short plume stub on crown
+    g.add(mesh(new ConeGeometry(r * 0.08, r * 0.35, 5), trim, 0, top - r * 0.05, -0.04));
+  }
+
+  if (opts.style === "knightSallet") {
+    // Sallet + bevor — swept rear tail, single eye slit.
+    const r = CHIBI.skullR * s * KNIGHT_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const slit = toon(opts.visor ?? "#1a1c2c");
+
+    const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
+    dome.position.set(skullPos.x, skullPos.y + r * 0.05, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.0, shellEgg.y * 0.85, shellEgg.z * 1.05);
+    g.add(dome);
+
+    // Swept rear tail / neck guard
+    const tail = new Mesh(new SphereGeometry(r * 0.55, 12, 10), mat);
+    tail.position.set(0, cy - r * 0.15 * tall, -r * 0.55);
+    tail.scale.set(1.1, 0.7 * tall, 1.35);
+    tail.rotation.x = 0.45;
+    g.add(tail);
+    g.add(
+      mesh(new BoxGeometry(r * 1.0, r * 0.35, r * 0.55), mat, 0, cy - r * 0.45 * tall, -r * 0.75),
+    );
+
+    // Single horizontal eye slit + pointed brow
+    g.add(
+      mesh(new BoxGeometry(r * 1.55, r * 0.22, r * 0.35), mat, 0, cy + r * 0.28 * tall, r * 0.5),
+    );
+    g.add(
+      mesh(new BoxGeometry(r * 1.2, r * 0.1, 0.08), slit, 0, cy + r * 0.12 * tall, r * 0.92),
+    );
+
+    // Pointed bevor / chin cup
+    const chin = new Mesh(new SphereGeometry(r * 0.52, 10, 8), mat);
+    chin.position.set(0, cy - r * 0.55 * tall, r * 0.2);
+    chin.scale.set(1.0, 0.75 * tall, 0.95);
+    g.add(chin);
+    const point = new Mesh(new ConeGeometry(r * 0.28, r * 0.35, 6), mat);
+    point.position.set(0, cy - r * 0.85 * tall, r * 0.35);
+    point.rotation.x = Math.PI / 2 + 0.35;
+    g.add(point);
+  }
+
+  if (opts.style === "king") {
+    // Arched royal crown — taller than the simple circlet.
+    const gem = toon(opts.visor ?? "#f5e07a");
+    const band = new Mesh(new CylinderGeometry(r * 0.98, r * 1.02, 0.12, 12), mat);
+    band.position.set(0, top - 0.12, 0);
+    g.add(band);
+
+    // Cross arches over the crown
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2;
+      const arch = new Mesh(new BoxGeometry(r * 0.1, r * 0.55, r * 0.08), mat);
+      arch.position.set(Math.cos(a) * r * 0.55, top + r * 0.12, Math.sin(a) * r * 0.55);
+      arch.rotation.z = -Math.cos(a) * 0.35;
+      arch.rotation.x = Math.sin(a) * 0.35;
+      g.add(arch);
+    }
+    g.add(mesh(new SphereGeometry(0.07, 8, 6), gem, 0, top + r * 0.42, 0));
+
+    // Fleur / cross spikes around the rim
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 - Math.PI * 0.5;
+      const spike = new Mesh(new ConeGeometry(0.045, 0.2, 5), mat);
+      spike.position.set(Math.cos(a) * r * 0.95, top + 0.02, Math.sin(a) * r * 0.95);
+      g.add(spike);
+    }
+    g.add(mesh(new SphereGeometry(0.055, 8, 6), gem, 0, top - 0.02, r * 0.95));
+  }
+
+  if (opts.style === "princess") {
+    // Delicate tiara — thin circlet, center jewel, side pearls.
+    const gem = toon(opts.visor ?? "#e8a0c8");
+    const pearl = toon(opts.visor ?? "#f5e8f0");
+    const band = new Mesh(new CylinderGeometry(r * 0.92, r * 0.95, 0.05, 14), mat);
+    band.position.set(0, top - 0.1, 0.02);
+    g.add(band);
+
+    // Center peak
+    const peak = new Mesh(new ConeGeometry(0.06, 0.22, 5), mat);
+    peak.position.set(0, top + 0.04, r * 0.55);
+    g.add(peak);
+    g.add(mesh(new SphereGeometry(0.055, 8, 6), gem, 0, top + 0.12, r * 0.55));
+
+    // Side peaks + pearls
+    for (const side of [-1, 1] as const) {
+      const sidePeak = new Mesh(new ConeGeometry(0.04, 0.14, 5), mat);
+      sidePeak.position.set(side * r * 0.55, top - 0.02, r * 0.4);
+      g.add(sidePeak);
+      g.add(
+        mesh(new SphereGeometry(0.04, 6, 5), pearl, side * r * 0.75, top - 0.08, r * 0.55),
+      );
+    }
+  }
+
+  if (opts.style === "pilot") {
+    // Flight / pilot helmet — rounded shell, goggle band, cheek cups.
+    const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const visorMat = toon(opts.visor ?? "#5ad4a0");
+    const dark = toon("#1a1c2c");
+
+    const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
+    dome.position.set(skullPos.x, skullPos.y, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.0, shellEgg.y * 0.95, shellEgg.z * 1.0);
+    g.add(dome);
+
+    // Rounded crown bulge
+    const crown = new Mesh(new SphereGeometry(r * 0.55, 12, 8), mat);
+    crown.position.set(0, cy + r * 0.7 * tall, -0.04);
+    crown.scale.set(1.15, 0.55 * tall, 1.05);
+    g.add(crown);
+
+    // Goggle / visor band
+    g.add(
+      mesh(new BoxGeometry(r * 1.45, r * 0.32, 0.1), visorMat, 0, cy + r * 0.08 * tall, r * 0.85),
+    );
+    g.add(
+      mesh(new BoxGeometry(r * 1.25, r * 0.14, 0.06), dark, 0, cy + r * 0.08 * tall, r * 0.92),
+    );
+    // Goggle frames
+    for (const side of [-1, 1] as const) {
+      const frame = new Mesh(new CylinderGeometry(r * 0.22, r * 0.22, 0.06, 10), dark);
+      frame.position.set(side * r * 0.32, cy + r * 0.08 * tall, r * 0.88);
+      frame.rotation.x = Math.PI / 2;
+      g.add(frame);
+    }
+
+    // Cheek / ear cups
+    for (const side of [-1, 1] as const) {
+      const cup = new Mesh(new SphereGeometry(r * 0.32, 10, 8), mat);
+      cup.position.set(side * r * 0.85, cy - r * 0.05 * tall, 0.05);
+      cup.scale.set(0.7, 0.95 * tall, 0.85);
+      g.add(cup);
+    }
+
+    // Chin strap cup
+    const chin = new Mesh(new SphereGeometry(r * 0.42, 10, 8), mat);
+    chin.position.set(0, cy - r * 0.65 * tall, r * 0.15);
+    chin.scale.set(1.0, 0.55 * tall, 0.8);
+    g.add(chin);
+
+    // Short mic / antenna stub
+    g.add(
+      mesh(new CylinderGeometry(0.02, 0.025, 0.14, 6), mat, r * 0.55, top - 0.08, -0.1),
+    );
+  }
+
+  if (opts.style === "samurai") {
+    // Kabuto — bowl dome, mabizashi brim, fukigaeshi flaps, maedate crest.
+    const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const dark = toon(opts.visor ?? "#1a1c2c");
+    const crest = toon(opts.visor ?? "#e83b3b");
+
+    const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
+    dome.position.set(skullPos.x, skullPos.y + r * 0.05, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.05, shellEgg.y * 0.9, shellEgg.z * 1.0);
+    g.add(dome);
+
+    // Mabizashi (front brim / brow shade)
+    const brim = new Mesh(new BoxGeometry(r * 1.7, r * 0.12, r * 0.55), mat);
+    brim.position.set(0, cy + r * 0.2 * tall, r * 0.55);
+    brim.rotation.x = -0.35;
+    g.add(brim);
+
+    // Face mask plate (mempo stub)
+    g.add(
+      mesh(new BoxGeometry(r * 1.2, r * 0.55, r * 0.35), dark, 0, cy - r * 0.25 * tall, r * 0.55),
+    );
+    g.add(
+      mesh(new BoxGeometry(r * 0.9, r * 0.08, 0.06), dark, 0, cy + r * 0.05 * tall, r * 0.78),
+    );
+
+    // Fukigaeshi — side flaps turned outward
+    for (const side of [-1, 1] as const) {
+      const flap = new Mesh(new BoxGeometry(r * 0.35, r * 0.45, r * 0.12), mat);
+      flap.position.set(side * r * 0.95, cy + r * 0.15 * tall, r * 0.15);
+      flap.rotation.y = side * 0.85;
+      flap.rotation.z = side * 0.15;
+      g.add(flap);
+    }
+
+    // Shikoro-ish nape rings (short stack)
+    for (let i = 0; i < 3; i++) {
+      g.add(
+        mesh(
+          new CylinderGeometry(r * (0.85 + i * 0.06), r * (0.9 + i * 0.06), 0.06, 12),
+          mat,
+          0,
+          cy - r * (0.35 + i * 0.18) * tall,
+          -r * (0.15 + i * 0.08),
+        ),
+      );
+    }
+
+    // Maedate — tall front crest
+    const maedate = new Mesh(new ConeGeometry(r * 0.12, r * 0.7, 6), crest);
+    maedate.position.set(0, cy + r * 1.05 * tall, r * 0.15);
+    g.add(maedate);
+    g.add(mesh(new SphereGeometry(r * 0.1, 8, 6), crest, 0, cy + r * 1.35 * tall, r * 0.12));
+  }
+
+  if (opts.style === "viking") {
+    // Nasal helm + horns — rounded dome, nose guard, cheek flaps.
+    const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const horn = toon(opts.visor ?? "#e8e4d8");
+    const dark = toon("#1a1c2c");
+
+    const dome = new Mesh(new SphereGeometry(shellR, 14, 12), mat);
+    dome.position.set(skullPos.x, skullPos.y, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.0, shellEgg.y * 0.92, shellEgg.z * 1.0);
+    g.add(dome);
+
+    const lid = new Mesh(new CylinderGeometry(r * 0.55, r * 0.75, r * 0.16, 10), mat);
+    lid.position.set(0, cy + r * 0.72 * tall, -0.02);
+    g.add(lid);
+
+    // Nasal guard
+    g.add(
+      mesh(new BoxGeometry(r * 0.14, r * 0.7, r * 0.12), mat, 0, cy - r * 0.05 * tall, r * 0.85),
+    );
+    // Brow band
+    g.add(
+      mesh(new BoxGeometry(r * 1.5, r * 0.16, r * 0.3), mat, 0, cy + r * 0.25 * tall, r * 0.55),
+    );
+    // Eye pits
+    g.add(mesh(new BoxGeometry(r * 0.35, r * 0.12, 0.06), dark, -r * 0.32, cy + r * 0.08 * tall, r * 0.9));
+    g.add(mesh(new BoxGeometry(r * 0.35, r * 0.12, 0.06), dark, r * 0.32, cy + r * 0.08 * tall, r * 0.9));
+
+    // Cheek flaps
+    for (const side of [-1, 1] as const) {
+      const cheek = new Mesh(new BoxGeometry(r * 0.28, r * 0.55, r * 0.4), mat);
+      cheek.position.set(side * r * 0.75, cy - r * 0.15 * tall, r * 0.25);
+      cheek.rotation.z = side * 0.1;
+      g.add(cheek);
+    }
+
+    // Outward-curving horns
+    for (const side of [-1, 1] as const) {
+      const root = new Mesh(new SphereGeometry(r * 0.18, 8, 6), horn);
+      root.position.set(side * r * 0.7, cy + r * 0.55 * tall, -r * 0.1);
+      g.add(root);
+      const mid = new Mesh(new ConeGeometry(r * 0.16, r * 0.55, 6), horn);
+      mid.position.set(side * r * 1.05, cy + r * 0.85 * tall, -r * 0.05);
+      mid.rotation.z = -side * 0.75;
+      mid.rotation.x = -0.25;
+      g.add(mid);
+      const tip = new Mesh(new ConeGeometry(r * 0.08, r * 0.4, 5), horn);
+      tip.position.set(side * r * 1.35, cy + r * 1.15 * tall, r * 0.15);
+      tip.rotation.z = -side * 0.35;
+      tip.rotation.x = 0.55;
+      g.add(tip);
+    }
+  }
+
+  if (opts.style === "pharaoh") {
+    // Nemes headdress — striped lappets, uraeus; face stays open.
+    const r = CHIBI.skullR * s * KNIGHT_HEAD_BOOST;
+    const stripe = toon(opts.visor ?? "#1a1c2c");
+    const gold = mat;
+
+    // Crown dome / cloth wrap over skull
+    const wrap = new Mesh(new SphereGeometry(r * 0.95, 14, 12), gold);
+    wrap.position.set(0, skullPos.y + r * 0.1, skullPos.z);
+    wrap.scale.set(shellEgg.x * 1.08, shellEgg.y * 0.95, shellEgg.z * 1.05);
+    g.add(wrap);
+
+    // Flat top band
+    g.add(
+      mesh(new CylinderGeometry(r * 0.7, r * 0.95, r * 0.2, 12), gold, 0, cy + r * 0.75 * tall, -0.02),
+    );
+
+    // Stripe bands across forehead
+    g.add(
+      mesh(new BoxGeometry(r * 1.6, r * 0.1, r * 0.2), stripe, 0, cy + r * 0.45 * tall, r * 0.55),
+    );
+    g.add(
+      mesh(new BoxGeometry(r * 1.5, r * 0.08, r * 0.18), gold, 0, cy + r * 0.32 * tall, r * 0.52),
+    );
+
+    // Lappets beside the face
+    for (const side of [-1, 1] as const) {
+      const lap = new Mesh(new BoxGeometry(r * 0.35, r * 1.1, r * 0.22), gold);
+      lap.position.set(side * r * 0.85, cy - r * 0.15 * tall, r * 0.15);
+      lap.rotation.z = side * 0.08;
+      g.add(lap);
+      g.add(
+        mesh(
+          new BoxGeometry(r * 0.12, r * 1.0, r * 0.08),
+          stripe,
+          side * r * 0.85,
+          cy - r * 0.15 * tall,
+          r * 0.28,
+        ),
+      );
+    }
+
+    // Rear queue / braid stub
+    const queue = new Mesh(new CapsuleGeometry(r * 0.18, r * 0.45, 4, 8), gold);
+    queue.position.set(0, cy - r * 0.2 * tall, -r * 0.75);
+    queue.rotation.x = 0.4;
+    g.add(queue);
+
+    // Uraeus cobra on brow
+    const uraeus = new Mesh(new ConeGeometry(r * 0.08, r * 0.28, 5), stripe);
+    uraeus.position.set(0, cy + r * 0.65 * tall, r * 0.7);
+    g.add(uraeus);
+    g.add(mesh(new SphereGeometry(r * 0.07, 6, 5), stripe, 0, cy + r * 0.82 * tall, r * 0.72));
+  }
+
+  if (opts.style === "ninja") {
+    // Masked cowl — wrapped head + lower menpo; eye slit only.
+    const r = CHIBI.skullR * s * KNIGHT_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const dark = toon(opts.visor ?? "#1a1c2c");
+
+    const wrap = new Mesh(new SphereGeometry(shellR * 1.02, 14, 12), mat);
+    wrap.position.set(0, skullPos.y + r * 0.05, skullPos.z);
+    wrap.scale.set(shellEgg.x * 1.02, shellEgg.y * 1.0, shellEgg.z * 1.05);
+    g.add(wrap);
+
+    // Crown wrap layer
+    const crown = new Mesh(new SphereGeometry(r * 0.65, 12, 8), mat);
+    crown.position.set(0, cy + r * 0.75 * tall, -0.08);
+    crown.scale.set(1.1, 0.45 * tall, 1.0);
+    g.add(crown);
+
+    // Lower face mask
+    g.add(
+      mesh(new BoxGeometry(r * 1.35, r * 0.55, r * 0.4), mat, 0, cy - r * 0.25 * tall, r * 0.45),
+    );
+    g.add(
+      mesh(new BoxGeometry(r * 1.1, r * 0.2, r * 0.25), dark, 0, cy - r * 0.45 * tall, r * 0.55),
+    );
+
+    // Eye slit
+    g.add(
+      mesh(new BoxGeometry(r * 1.15, r * 0.14, 0.08), dark, 0, cy + r * 0.12 * tall, r * 0.9),
+    );
+
+    // Side wrap knots
+    for (const side of [-1, 1] as const) {
+      g.add(
+        mesh(new SphereGeometry(r * 0.14, 8, 6), mat, side * r * 0.9, cy + r * 0.2 * tall, -r * 0.15),
+      );
+    }
+
+    // Rear hanging tail
+    const tail = new Mesh(new CapsuleGeometry(r * 0.1, r * 0.4, 3, 6), mat);
+    tail.position.set(0, cy - r * 0.1 * tall, -r * 0.8);
+    tail.rotation.x = 0.5;
+    g.add(tail);
   }
 
   return g;

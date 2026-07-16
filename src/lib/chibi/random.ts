@@ -77,10 +77,20 @@ const HELMET: HelmetStyle[] = [
   "cap",
   "bandana",
   "crown",
+  "king",
+  "princess",
   "wizard",
   "hood",
   "knight",
+  "knightGreat",
+  "knightWinged",
+  "knightSallet",
   "sciFi",
+  "pilot",
+  "samurai",
+  "viking",
+  "pharaoh",
+  "ninja",
   "goat",
 ];
 
@@ -279,12 +289,24 @@ function randomHead(skinHint?: string): HeadBits {
           ? pick(["#5a4030", "#8b5a2b", "#433455", "#c98a6a", "#e8e4d8"])
           : pick(CLOTH),
       visor:
-        helmetStyle === "sciFi" || helmetStyle === "knight"
+        helmetStyle === "sciFi" ||
+        helmetStyle === "pilot" ||
+        helmetStyle === "knight" ||
+        helmetStyle === "knightGreat" ||
+        helmetStyle === "knightWinged" ||
+        helmetStyle === "knightSallet" ||
+        helmetStyle === "samurai" ||
+        helmetStyle === "viking" ||
+        helmetStyle === "ninja"
           ? pick(CLOTH)
           : helmetStyle === "goat"
             ? pick(["#e8e4d8", "#c7cfcc", "#f0d48a", "#ffe0bd"])
-            : helmetStyle === "crown" || helmetStyle === "wizard"
-              ? pick(["#f5e07a", "#e83b3b", "#c7cfcc", "#5ad4a0"])
+            : helmetStyle === "crown" ||
+                helmetStyle === "king" ||
+                helmetStyle === "princess" ||
+                helmetStyle === "wizard" ||
+                helmetStyle === "pharaoh"
+              ? pick(["#f5e07a", "#e83b3b", "#c7cfcc", "#5ad4a0", "#e8a0c8"])
               : undefined,
     },
   };
