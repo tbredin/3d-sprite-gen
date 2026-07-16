@@ -63,8 +63,8 @@ function lightenHex(hex: string, amount = 0.35): string {
 }
 
 /**
- * Shared scalp shell + light fringe. Tall iso skulls put the face lower in
- * world space — hair must sit on the *crown*, not drape over eyes/mouth.
+ * Shared scalp shell + fringe. Front stays high (brow, not mid-face);
+ * back wraps the occiput/nape so the skull never reads half-bald from iso.
  */
 function addHairFrame(
   g: Group,
@@ -85,16 +85,16 @@ function addHairFrame(
   const back = opts.back !== false;
   const coverForehead = opts.coverForehead !== false;
 
-  // Shallow crown shell only — stop well above the eye line
+  // Crown shell — slightly back-biased so the front rim clears the eyes
   const cap = new Mesh(
-    new SphereGeometry(shellR, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.48),
+    new SphereGeometry(shellR, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.58),
     mat,
   );
-  cap.position.set(0, cy + 0.28, -0.04);
-  cap.scale.set(1.0, 0.95, 1.0);
+  cap.position.set(0, cy + 0.2, -0.1);
+  cap.scale.set(1.06, 0.98, 1.12);
   g.add(cap);
 
-  g.add(mesh(new SphereGeometry(shellR * 0.28, 10, 8), hi, 0, cy + 0.42, -0.02));
+  g.add(mesh(new SphereGeometry(shellR * 0.28, 10, 8), hi, 0, cy + 0.4, -0.06));
 
   // Fringe sits on the brow ridge (above eyes), never mid-face
   if (coverForehead || bangs) {
@@ -105,16 +105,28 @@ function addHairFrame(
   }
 
   if (sides) {
-    // Temples only — keep clear of the face pad
-    g.add(mesh(new SphereGeometry(0.12, 10, 8), mat, -0.4, cy + 0.12, 0.02));
-    g.add(mesh(new SphereGeometry(0.12, 10, 8), mat, 0.4, cy + 0.12, 0.02));
-    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, -0.38, cy + 0.0, -0.02));
-    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, 0.38, cy + 0.0, -0.02));
+    // Temples + rear wrap — clear of the face pad, closes the bald side-back gap
+    g.add(mesh(new SphereGeometry(0.13, 10, 8), mat, -0.4, cy + 0.12, 0.02));
+    g.add(mesh(new SphereGeometry(0.13, 10, 8), mat, 0.4, cy + 0.12, 0.02));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.38, cy + 0.0, -0.08));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, 0.38, cy + 0.0, -0.08));
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, -0.34, cy + 0.04, -0.28));
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, 0.34, cy + 0.04, -0.28));
   }
 
   if (back) {
-    g.add(mesh(new SphereGeometry(0.22, 12, 10), mat, 0, cy + 0.12, -0.36));
-    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, 0, cy - 0.02, -0.4));
+    // Occiput plate — main fix for “bald back of head”
+    const occiput = new Mesh(
+      new SphereGeometry(shellR * 0.92, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.62),
+      mat,
+    );
+    occiput.position.set(0, cy + 0.02, -0.3);
+    occiput.scale.set(0.98, 1.08, 0.9);
+    g.add(occiput);
+    // Nape fill down toward the neck
+    g.add(mesh(new SphereGeometry(shellR * 0.55, 12, 10), mat, 0, cy - 0.1, -0.4));
+    g.add(mesh(new SphereGeometry(shellR * 0.38, 10, 8), mat, 0, cy - 0.22, -0.34));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), hi, 0, cy + 0.08, -0.42));
   }
 }
 
@@ -289,8 +301,9 @@ export function generateHair(opts: {
 
   if (opts.style === "afro") {
     const R = 0.48 + n * 0.02;
-    g.add(mesh(new SphereGeometry(R, 12, 10), mat, 0, cy + 0.28, -0.02));
-    g.add(mesh(new SphereGeometry(R * 0.32, 8, 6), hi, -0.12, cy + 0.48, 0.1));
+    g.add(mesh(new SphereGeometry(R, 12, 10), mat, 0, cy + 0.22, -0.08));
+    g.add(mesh(new SphereGeometry(R * 0.85, 12, 10), mat, 0, cy + 0.02, -0.28));
+    g.add(mesh(new SphereGeometry(R * 0.32, 8, 6), hi, -0.12, cy + 0.42, 0.05));
     // Light brow fringe only
     g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.1, cy + 0.26, 0.36));
     g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, 0.1, cy + 0.28, 0.36));
@@ -379,13 +392,13 @@ export function generateHair(opts: {
   }
 
   if (opts.style === "pixie") {
-    // Short choppy crop — tight shell, irregular fringe tips
+    // Short choppy crop — tight shell, still covers occiput (no bald patch)
     addHairFrame(g, mat, hi, {
       shellR: 0.38,
       bangs: true,
       coverForehead: true,
       sides: true,
-      back: false,
+      back: true,
     });
     for (let i = 0; i < n + 1; i++) {
       const t = (i / Math.max(n, 1)) * 2 - 1;
@@ -444,9 +457,9 @@ export function generateHair(opts: {
       shellR: 0.42,
       bangs: true,
       coverForehead: true,
-      back: false,
+      back: true,
     });
-    // Business front, party back
+    // Business front, party back (extra length on top of occiput cover)
     g.add(mesh(new SphereGeometry(0.22, 10, 8), mat, 0, cy - 0.08, -0.38));
     for (const s of [-1, 1] as const) {
       const flap = new Mesh(new CapsuleGeometry(0.12, 0.42, 4, 8), mat);
