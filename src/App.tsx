@@ -46,6 +46,7 @@ import {
   getFacing,
   loadFacingPersist,
   saveFacingPersist,
+  ROTATE_FACING_SPEED,
   type FacingId,
 } from "./lib/facing";
 import {
@@ -156,6 +157,9 @@ export default function App() {
   const [size, setSize] = useState<SpriteSize>(42);
   const [zoom, setZoom] = useState(1);
   const [cameraHeight, setCameraHeight] = useState(() => loadCameraHeight());
+  const [autoRotate, setAutoRotate] = useState(false);
+  /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
+  const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
   const [presetId, setPresetId] = useState<PresetId | "random">("mage");
   const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
   const [specText, setSpecText] = useState(() =>
@@ -203,14 +207,66 @@ export default function App() {
     rotX: number;
     rotY: number;
   } | null>(null);
+  const spinYawRef = useRef(facingPersist.rotationY);
 
   const displayPx = size * 4;
+  const spinSpeed =
+    holdDir !== 0
+      ? holdDir * ROTATE_FACING_SPEED
+      : autoRotate
+        ? ROTATE_FACING_SPEED
+        : 0;
+  const spinning = spinSpeed !== 0;
+  const rotateMode = spinning;
+
+  const stopSpinAndCommit = () => {
+    setAutoRotate(false);
+    setHoldDir(0);
+    const yaw = spinYawRef.current;
+    setFacing("custom");
+    setRotationY(yaw);
+  };
 
   const applyFacing = (id: FacingId) => {
     if (id === "custom") return;
+    setAutoRotate(false);
+    setHoldDir(0);
     setFacing(id);
     setRotationX(0);
-    setRotationY(getFacing(id).rotationY);
+    const yaw = getFacing(id).rotationY;
+    setRotationY(yaw);
+    spinYawRef.current = yaw;
+  };
+
+  const toggleAutoRotate = () => {
+    if (autoRotate) {
+      stopSpinAndCommit();
+      return;
+    }
+    setHoldDir(0);
+    spinYawRef.current = rotationY;
+    setFacing("custom");
+    setAutoRotate(true);
+  };
+
+  const onHoldRotateStart = (dir: -1 | 1) => (e: ReactPointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (!spinning) spinYawRef.current = rotationY;
+    setFacing("custom");
+    setHoldDir(dir);
+  };
+
+  const onHoldRotateEnd = (e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setHoldDir(0);
+    if (!autoRotate) {
+      const yaw = spinYawRef.current;
+      setFacing("custom");
+      setRotationY(yaw);
+    }
   };
 
   useEffect(() => {
@@ -384,12 +440,20 @@ export default function App() {
   const onPreviewPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
+    // Snap off the turntable at the live yaw so drag doesn't jump.
+    const rotY = spinning ? spinYawRef.current : rotationY;
+    if (spinning) {
+      setAutoRotate(false);
+      setHoldDir(0);
+      setFacing("custom");
+      setRotationY(rotY);
+    }
     dragRef.current = {
       pointerId: e.pointerId,
       x: e.clientX,
       y: e.clientY,
       rotX: rotationX,
-      rotY: rotationY,
+      rotY,
     };
   };
 
@@ -572,6 +636,10 @@ export default function App() {
                     cameraHeight={cameraHeight}
                     rotationX={rotationX}
                     rotationY={rotationY}
+                    spinning={spinning}
+                    rotateMode={rotateMode}
+                    spinSpeed={spinSpeed}
+                    spinYawRef={spinYawRef}
                     spec={spec}
                     mirror={mirror}
                     rimLights={rimLights}
@@ -589,6 +657,41 @@ export default function App() {
                   Loading…
                 </div>
               )}
+              <div className="spin-controls" style={{ width: displayPx }}>
+                <button
+                  type="button"
+                  className="spin-btn"
+                  title="Hold to rotate left"
+                  aria-label="Rotate left"
+                  onPointerDown={onHoldRotateStart(-1)}
+                  onPointerUp={onHoldRotateEnd}
+                  onPointerCancel={onHoldRotateEnd}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  ←
+                </button>
+                <button
+                  type="button"
+                  className={`spin-btn spin-btn-main${autoRotate ? " is-active" : ""}`}
+                  title={autoRotate ? "Pause continuous rotate" : "Continuous rotate"}
+                  aria-pressed={autoRotate}
+                  onClick={toggleAutoRotate}
+                >
+                  {autoRotate ? "Pause" : "Rotate"}
+                </button>
+                <button
+                  type="button"
+                  className="spin-btn"
+                  title="Hold to rotate right"
+                  aria-label="Rotate right"
+                  onPointerDown={onHoldRotateStart(1)}
+                  onPointerUp={onHoldRotateEnd}
+                  onPointerCancel={onHoldRotateEnd}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  →
+                </button>
+              </div>
               <p className="meta drag-hint">Drag to rotate · NN preview · iso checker</p>
             </div>
 

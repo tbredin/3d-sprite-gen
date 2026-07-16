@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
   DoubleSide,
+  Group,
   MeshDepthMaterial,
   MeshNormalMaterial,
   NearestFilter,
@@ -18,6 +19,7 @@ import {
   isoCameraPosition,
   DEFAULT_CAMERA_HEIGHT,
 } from "../lib/isoCamera";
+import { ANIMATED_BAKE_INTERVAL_MS } from "../lib/facing";
 import { ChibiCharacter } from "./ChibiCharacter";
 import { downloadDataUrl } from "../lib/capture";
 import {
@@ -89,6 +91,14 @@ type BakeProps = {
   cameraHeight?: number;
   rotationX: number;
   rotationY: number;
+  /** Continuous yaw turntable (auto-rotate or hold-to-rotate). */
+  spinning?: boolean;
+  /** Holding live yaw in the pivot (while spinning). */
+  rotateMode?: boolean;
+  /** Signed rad/s applied each frame while spinning. */
+  spinSpeed?: number;
+  /** Mirrors the live spin yaw so drag can snap off the turntable. */
+  spinYawRef?: MutableRefObject<number>;
   spec: CharacterSpec;
   /** Mirror character left/right by swapping leadSide (not X-scale). */
   mirror?: boolean;
@@ -105,6 +115,8 @@ type BakeProps = {
 /**
  * Continuously bake the quantized sprite whenever the scene / view changes.
  * Short debounce keeps drag-rotate smooth while the PNG panel stays live.
+ * Animated facings (e.g. Rotate) rebake on a fixed interval so the PNG tracks
+ * the turntable.
  */
 function BakeCapture({
   size,
@@ -116,6 +128,7 @@ function BakeCapture({
   cameraHeight,
   rotationX,
   rotationY,
+  spinning,
   mirror,
   rimKey,
   edgeOutline,
@@ -131,6 +144,7 @@ function BakeCapture({
   cameraHeight: number;
   rotationX: number;
   rotationY: number;
+  spinning: boolean;
   mirror: boolean;
   /** Changes when lighting knobs move so the PNG rebakes. */
   rimKey: string;
@@ -139,6 +153,7 @@ function BakeCapture({
   onCaptured: (dataUrl: string) => void;
 }) {
   const { gl, scene } = useThree();
+  const [animTick, setAnimTick] = useState(0);
   const target = useMemo(
     () =>
       new WebGLRenderTarget(size, size, {
@@ -165,6 +180,7 @@ function BakeCapture({
   edgeOutlineRef.current = edgeOutline;
   const bayerDitherRef = useRef(bayerDither);
   bayerDitherRef.current = bayerDither;
+  const bakingRef = useRef(false);
 
   useEffect(() => () => target.dispose(), [target]);
   useEffect(
@@ -176,118 +192,134 @@ function BakeCapture({
   );
 
   useEffect(() => {
+    if (!spinning) return;
+    const id = window.setInterval(
+      () => setAnimTick((t) => t + 1),
+      ANIMATED_BAKE_INTERVAL_MS,
+    );
+    return () => window.clearInterval(id);
+  }, [spinning]);
+
+  useEffect(() => {
     let cancelled = false;
+    // Animated modes skip the drag debounce so the interval hits ~exactly 10 Hz.
+    const delay = spinning ? 0 : 40;
     const timer = window.setTimeout(() => {
       requestAnimationFrame(() => {
-        if (cancelled) return;
+        if (cancelled || bakingRef.current) return;
+        bakingRef.current = true;
 
-        target.setSize(size, size);
-        placeIsoCamera(bakeCam, 1, zoom, cameraHeight);
+        try {
+          target.setSize(size, size);
+          placeIsoCamera(bakeCam, 1, zoom, cameraHeight);
 
-        const prev = gl.getRenderTarget();
-        gl.setRenderTarget(target);
-        gl.setClearColor(0x000000, 0);
-        gl.clear(true, true, true);
-        gl.render(scene, bakeCam);
-        gl.setRenderTarget(prev);
-
-        const buffer = new Uint8Array(size * size * 4);
-        gl.readRenderTargetPixels(target, 0, 0, size, size, buffer);
-        const flipped = flipRowsRGBA(buffer, size);
-
-        const pass = outlinePassRef.current;
-        let idFlipped: Uint8Array | undefined;
-        // Skip the ID pass when seams are off — it is an extra full render.
-        if (pass.partSeams) {
-          const idBuffer = renderPartGroupBuffer(gl, scene, bakeCam, size, target);
-          idFlipped = flipRowsRGBA(idBuffer, size);
-        }
-
-        const opaqueMask = new Uint8Array(size * size);
-        for (let i = 0; i < size * size; i++) {
-          opaqueMask[i] = flipped[i * 4 + 3] >= 8 ? 1 : 0;
-        }
-
-        const imageData = new ImageData(new Uint8ClampedArray(flipped), size, size);
-        quantizeImageData(imageData, colors, bayerDitherRef.current);
-
-        // Internal creases first; silhouette + part seams paint on top.
-        const edge = edgeOutlineRef.current;
-        if (edge.enabled) {
-          const hiddenHulls: Object3D[] = [];
-          scene.traverse((obj) => {
-            if (obj.userData.isOutline && obj.visible) {
-              hiddenHulls.push(obj);
-              obj.visible = false;
-            }
-          });
-          const prevOverride = scene.overrideMaterial;
-
-          scene.overrideMaterial = depthMaterial;
+          const prev = gl.getRenderTarget();
           gl.setRenderTarget(target);
           gl.setClearColor(0x000000, 0);
           gl.clear(true, true, true);
           gl.render(scene, bakeCam);
-          const depthRaw = new Uint8Array(size * size * 4);
-          gl.readRenderTargetPixels(target, 0, 0, size, size, depthRaw);
-
-          scene.overrideMaterial = normalMaterial;
-          gl.clear(true, true, true);
-          gl.render(scene, bakeCam);
-          const normalRaw = new Uint8Array(size * size * 4);
-          gl.readRenderTargetPixels(target, 0, 0, size, size, normalRaw);
-
-          scene.overrideMaterial = prevOverride;
           gl.setRenderTarget(prev);
-          for (const obj of hiddenHulls) obj.visible = true;
 
-          const depthFlipped = flipRowsRGBA(depthRaw, size);
-          const normalFlipped = flipRowsRGBA(normalRaw, size);
-          const depthPacked = decodeDepthBuffer(depthFlipped, size);
-          const depthWorld = new Float32Array(depthPacked.length);
-          for (let i = 0; i < depthPacked.length; i++) {
-            depthWorld[i] = depthToWorldUnits(depthPacked[i], bakeCam.near, bakeCam.far);
+          const buffer = new Uint8Array(size * size * 4);
+          gl.readRenderTargetPixels(target, 0, 0, size, size, buffer);
+          const flipped = flipRowsRGBA(buffer, size);
+
+          const pass = outlinePassRef.current;
+          let idFlipped: Uint8Array | undefined;
+          // Skip the ID pass when seams are off — it is an extra full render.
+          if (pass.partSeams) {
+            const idBuffer = renderPartGroupBuffer(gl, scene, bakeCam, size, target);
+            idFlipped = flipRowsRGBA(idBuffer, size);
           }
-          const normals = decodeNormalBuffer(normalFlipped, size);
 
-          const edges = detectDepthNormalEdges(
-            opaqueMask,
-            depthWorld,
-            normals,
-            size,
-            size,
-            edge,
-          );
-          applyEdgeMask(
+          const opaqueMask = new Uint8Array(size * size);
+          for (let i = 0; i < size * size; i++) {
+            opaqueMask[i] = flipped[i * 4 + 3] >= 8 ? 1 : 0;
+          }
+
+          const imageData = new ImageData(new Uint8ClampedArray(flipped), size, size);
+          quantizeImageData(imageData, colors, bayerDitherRef.current);
+
+          // Internal creases first; silhouette + part seams paint on top.
+          const edge = edgeOutlineRef.current;
+          if (edge.enabled) {
+            const hiddenHulls: Object3D[] = [];
+            scene.traverse((obj) => {
+              if (obj.userData.isOutline && obj.visible) {
+                hiddenHulls.push(obj);
+                obj.visible = false;
+              }
+            });
+            const prevOverride = scene.overrideMaterial;
+
+            scene.overrideMaterial = depthMaterial;
+            gl.setRenderTarget(target);
+            gl.setClearColor(0x000000, 0);
+            gl.clear(true, true, true);
+            gl.render(scene, bakeCam);
+            const depthRaw = new Uint8Array(size * size * 4);
+            gl.readRenderTargetPixels(target, 0, 0, size, size, depthRaw);
+
+            scene.overrideMaterial = normalMaterial;
+            gl.clear(true, true, true);
+            gl.render(scene, bakeCam);
+            const normalRaw = new Uint8Array(size * size * 4);
+            gl.readRenderTargetPixels(target, 0, 0, size, size, normalRaw);
+
+            scene.overrideMaterial = prevOverride;
+            gl.setRenderTarget(prev);
+            for (const obj of hiddenHulls) obj.visible = true;
+
+            const depthFlipped = flipRowsRGBA(depthRaw, size);
+            const normalFlipped = flipRowsRGBA(normalRaw, size);
+            const depthPacked = decodeDepthBuffer(depthFlipped, size);
+            const depthWorld = new Float32Array(depthPacked.length);
+            for (let i = 0; i < depthPacked.length; i++) {
+              depthWorld[i] = depthToWorldUnits(depthPacked[i], bakeCam.near, bakeCam.far);
+            }
+            const normals = decodeNormalBuffer(normalFlipped, size);
+
+            const edges = detectDepthNormalEdges(
+              opaqueMask,
+              depthWorld,
+              normals,
+              size,
+              size,
+              edge,
+            );
+            applyEdgeMask(
+              imageData,
+              edges,
+              edge.color,
+              edge.opacity,
+              edge.dilate,
+              edge.blur,
+              colors,
+            );
+          }
+
+          applyPartOutline(
             imageData,
-            edges,
-            edge.color,
-            edge.opacity,
-            edge.dilate,
-            edge.blur,
-            colors,
+            {
+              silhouette: silhouetteOutlineHex,
+              partSeams: partSeamsOutlineHex,
+            },
+            idFlipped,
+            idFlipped ? decodePartGroupPixel : undefined,
+            pass,
           );
+
+          const out = document.createElement("canvas");
+          out.width = size;
+          out.height = size;
+          const ctx = out.getContext("2d")!;
+          ctx.putImageData(imageData, 0, 0);
+          onCapturedRef.current(out.toDataURL("image/png"));
+        } finally {
+          bakingRef.current = false;
         }
-
-        applyPartOutline(
-          imageData,
-          {
-            silhouette: silhouetteOutlineHex,
-            partSeams: partSeamsOutlineHex,
-          },
-          idFlipped,
-          idFlipped ? decodePartGroupPixel : undefined,
-          pass,
-        );
-
-        const out = document.createElement("canvas");
-        out.width = size;
-        out.height = size;
-        const ctx = out.getContext("2d")!;
-        ctx.putImageData(imageData, 0, 0);
-        onCapturedRef.current(out.toDataURL("image/png"));
       });
-    }, 40);
+    }, delay);
 
     return () => {
       cancelled = true;
@@ -306,6 +338,8 @@ function BakeCapture({
     cameraHeight,
     rotationX,
     rotationY,
+    spinning,
+    animTick,
     mirror,
     rimKey,
     target,
@@ -352,6 +386,75 @@ function IsoCameraSquare({
   return <primitive object={camera} />;
 }
 
+/**
+ * Pivot group for the chibi. When `spinSpeed` ≠ 0, advances yaw every frame
+ * without touching React state — keeps BakeCapture from thrashing.
+ * `rotateMode` keeps the live yaw while spinning (or paused mid-hold sync).
+ */
+function CharacterPivot({
+  rotateMode,
+  spinSpeed,
+  rotationX,
+  rotationY,
+  spinYawRef,
+  spec,
+  mirror,
+}: {
+  rotateMode: boolean;
+  /** Signed rad/s; 0 = frozen at live yaw while rotateMode, else follows props. */
+  spinSpeed: number;
+  rotationX: number;
+  rotationY: number;
+  spinYawRef?: MutableRefObject<number>;
+  spec: CharacterSpec;
+  mirror: boolean;
+}) {
+  const groupRef = useRef<Group>(null);
+  const yawRef = useRef(rotationY);
+  const wasRotateMode = useRef(rotateMode);
+
+  useLayoutEffect(() => {
+    if (rotateMode && !wasRotateMode.current) {
+      yawRef.current = rotationY;
+      if (spinYawRef) spinYawRef.current = rotationY;
+    }
+    wasRotateMode.current = rotateMode;
+
+    if (!rotateMode) {
+      yawRef.current = rotationY;
+      if (spinYawRef) spinYawRef.current = rotationY;
+      if (groupRef.current) {
+        groupRef.current.rotation.set(rotationX, rotationY, 0);
+      }
+    }
+  }, [rotateMode, rotationX, rotationY, spinYawRef]);
+
+  useFrame((_, dt) => {
+    const g = groupRef.current;
+    if (!g) return;
+    if (spinSpeed !== 0) {
+      yawRef.current += dt * spinSpeed;
+      if (spinYawRef) spinYawRef.current = yawRef.current;
+    }
+    if (rotateMode || spinSpeed !== 0) {
+      g.rotation.set(rotationX, yawRef.current, 0);
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={[0, CHARACTER_PIVOT_Y, 0]}>
+      <group position={[0, -CHARACTER_PIVOT_Y, 0]}>
+        <ChibiCharacter
+          spec={spec}
+          rotationY={rotationY}
+          yawRef={rotateMode ? yawRef : undefined}
+          mirror={mirror}
+        />
+      </group>
+    </group>
+  );
+}
+
 export function BakeCanvas({
   size,
   colors,
@@ -362,6 +465,10 @@ export function BakeCanvas({
   cameraHeight = DEFAULT_CAMERA_HEIGHT,
   rotationX,
   rotationY,
+  spinning = false,
+  rotateMode = false,
+  spinSpeed = 0,
+  spinYawRef,
   spec,
   mirror = false,
   rimLights,
@@ -447,11 +554,15 @@ export function BakeCanvas({
         intensity={rimLights.blueBrightness}
         position={rim.right}
       />
-      <group position={[0, CHARACTER_PIVOT_Y, 0]} rotation={[rotationX, rotationY, 0]}>
-        <group position={[0, -CHARACTER_PIVOT_Y, 0]}>
-          <ChibiCharacter spec={spec} rotationY={rotationY} mirror={mirror} />
-        </group>
-      </group>
+      <CharacterPivot
+        rotateMode={rotateMode}
+        spinSpeed={spinSpeed}
+        rotationX={rotationX}
+        rotationY={rotationY}
+        spinYawRef={spinYawRef}
+        spec={spec}
+        mirror={mirror}
+      />
       <BakeCapture
         size={size}
         colors={colors}
@@ -462,6 +573,7 @@ export function BakeCanvas({
         cameraHeight={cameraHeight}
         rotationX={rotationX}
         rotationY={rotationY}
+        spinning={spinning}
         mirror={mirror}
         rimKey={rimKey}
         edgeOutline={edgeOutline}
