@@ -353,7 +353,7 @@ def generate_variation(
     steps: int = 24,
 ) -> GenerateResult:
     ensure_dirs()
-    if size not in (32, 40, 48, 64):
+    if size not in (8, 16, 24, 32, 40, 48, 56, 64):
         raise ValueError(f"unsupported size {size}")
     if not palette_colors:
         raise ValueError("palette_colors required")

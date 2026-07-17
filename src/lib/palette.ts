@@ -5,7 +5,13 @@ export type Palette = {
   colors: string[];
 };
 
-export type SpriteSize = 32 | 40 | 48 | 64;
+/** Discrete bake resolutions (also the stepped size slider values). */
+export const SPRITE_SIZES = [8, 16, 24, 32, 40, 48, 56, 64] as const;
+export type SpriteSize = (typeof SPRITE_SIZES)[number];
+
+export const SPRITE_SIZE_MIN = SPRITE_SIZES[0];
+export const SPRITE_SIZE_MAX = SPRITE_SIZES[SPRITE_SIZES.length - 1];
+export const SPRITE_SIZE_STEP = 8;
 
 export function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");
