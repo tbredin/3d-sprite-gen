@@ -35,7 +35,7 @@ We need the bake as a **strong spatial prior** and diffusion + a pixel LoRA as t
 | Layout | Character \| Bake on top; **full-width timeline** below |
 | Stream UX | Play/Pause; **3 concurrent** jobs; each completion queues the next while playing |
 | Live updates | New jobs use **latest** pre-quantize + palette + steer |
-| Pause | **Drain** in-flight (≤3); do not start new |
+| Pause | Enter **idle reroll** if locked timeline images exist: keep generating from random locked images instead of the live 3D bake; Play resumes live-bake sources; idle stops after 60 minutes |
 | Timeline tile | Download PNG + **Lock** (survives clear) |
 | Clear | Deletes **unlocked only** (on disk + UI) |
 | Training | **Not v1.** Revisit after ~20–40 locked “good” gens if house style still drifts |
@@ -119,10 +119,11 @@ First Play downloads SDXL / ControlNet / LoRA into the Hugging Face cache ($0).
 2. Confirm pre-quantize callback updates while rotating the character.
 3. Hit Play — up to 3 jobs in flight; tiles appear as they finish.
 4. Change pose mid-stream — later tiles follow the new bake.
-5. Pause — in-flight finish; no new jobs start.
-6. Lock a favorite; Clear — locked remains; unlocked gone from disk.
-7. Download a tile — PNG is `size×size`, palette-locked, outlined.
-8. If models missing — status shows not ready; UI explains install (no crash).
+5. Lock a favorite, then Pause — new jobs keep streaming from random locked images rather than the live 3D bake.
+6. Hit Play again — later jobs resume using the current live 3D bake.
+7. Clear — locked remains; unlocked gone from disk.
+8. Download a tile — PNG is `size×size`, palette-locked, outlined.
+9. If models missing — status shows not ready; UI explains install (no crash).
 
 ## Roadmap
 

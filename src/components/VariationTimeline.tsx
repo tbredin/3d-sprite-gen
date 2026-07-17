@@ -15,6 +15,10 @@ import { downloadDataUrl } from "../lib/capture";
 
 const CONCURRENCY = 3;
 const PREVIEW_GAP = 8;
+const IDLE_REROLL_MS = 60 * 60 * 1000;
+const IDLE_REROLL_TICK_MS = 30 * 1000;
+
+type StreamMode = "stopped" | "playing" | "idleReroll";
 
 type HoverPreview = {
   src: string;
@@ -39,7 +43,7 @@ export function VariationTimeline({
   outlineHex,
   buildPrompt,
 }: Props) {
-  const [playing, setPlaying] = useState(false);
+  const [mode, setMode] = useState<StreamMode>("stopped");
   const [items, setItems] = useState<VariationMeta[]>([]);
   const [status, setStatus] = useState<VariationStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,18 +53,21 @@ export function VariationTimeline({
   const [phase, setPhase] = useState<string | null>(null);
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
 
-  const playingRef = useRef(false);
+  const modeRef = useRef<StreamMode>("stopped");
   const sourceRef = useRef(sourceDataUrl);
+  const itemsRef = useRef(items);
   const steerRef = useRef(steer);
   const buildPromptRef = useRef(buildPrompt);
   const workersRef = useRef(0);
   const runJobRef = useRef<() => void>(() => {});
   const warmupPromiseRef = useRef<Promise<void> | null>(null);
+  const idleDeadlineRef = useRef<number | null>(null);
 
   sourceRef.current = sourceDataUrl;
+  itemsRef.current = items;
   steerRef.current = steer;
   buildPromptRef.current = buildPrompt;
-  playingRef.current = playing;
+  modeRef.current = mode;
 
   useEffect(() => {
     void listVariations()
@@ -104,9 +111,55 @@ export function VariationTimeline({
     await warmupPromiseRef.current;
   };
 
+  const stopStream = (message?: string) => {
+    idleDeadlineRef.current = null;
+    modeRef.current = "stopped";
+    setMode("stopped");
+    if (message) setPhase(message);
+  };
+
+  const startIdleReroll = () => {
+    const lockedCount = itemsRef.current.filter((item) => item.locked).length;
+    if (lockedCount === 0) {
+      stopStream("Paused — lock at least one timeline image to idle-reroll.");
+      return;
+    }
+    idleDeadlineRef.current = Date.now() + IDLE_REROLL_MS;
+    modeRef.current = "idleReroll";
+    setMode("idleReroll");
+    setError(null);
+    setPhase(null);
+  };
+
+  const getIdleRemainingMs = () => {
+    if (modeRef.current !== "idleReroll" || !idleDeadlineRef.current) return null;
+    return Math.max(0, idleDeadlineRef.current - Date.now());
+  };
+
+  const stopExpiredIdleReroll = () => {
+    const remaining = getIdleRemainingMs();
+    if (remaining === null || remaining > 0) return false;
+    stopStream("Idle reroll stopped after 60 minutes.");
+    return true;
+  };
+
+  const resolveSource = () => {
+    if (modeRef.current === "playing") return sourceRef.current;
+    if (modeRef.current !== "idleReroll") return null;
+    if (stopExpiredIdleReroll()) return null;
+
+    const lockedItems = itemsRef.current.filter((item) => item.locked);
+    if (lockedItems.length === 0) {
+      stopStream("Idle reroll stopped — no locked timeline images remain.");
+      return null;
+    }
+
+    return lockedItems[Math.floor(Math.random() * lockedItems.length)].image;
+  };
+
   const runJob = async () => {
-    const src = sourceRef.current;
-    if (!src || !playingRef.current) return;
+    const src = resolveSource();
+    if (!src) return;
     if (workersRef.current >= CONCURRENCY) return;
 
     workersRef.current += 1;
@@ -115,7 +168,7 @@ export function VariationTimeline({
 
     try {
       await ensureWarm();
-      if (!playingRef.current) return;
+      if (modeRef.current === "stopped") return;
       setPhase(null);
       const prompt = buildPromptRef.current(steerRef.current);
       const meta = await generateVariation({
@@ -132,13 +185,12 @@ export function VariationTimeline({
       setError(msg);
       setPhase(null);
       if (/503|Missing ML|RuntimeError|CUDA out of memory|warmup/i.test(msg)) {
-        playingRef.current = false;
-        setPlaying(false);
+        stopStream();
       }
     } finally {
       workersRef.current = Math.max(0, workersRef.current - 1);
       setInflight(workersRef.current);
-      if (playingRef.current) {
+      if (modeRef.current !== "stopped") {
         queueMicrotask(() => runJobRef.current());
       }
     }
@@ -149,18 +201,25 @@ export function VariationTimeline({
   };
 
   useEffect(() => {
-    if (!playing) return;
+    if (mode === "stopped") return;
     for (let i = workersRef.current; i < CONCURRENCY; i++) {
       void runJob();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- play edge only
-  }, [playing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mode edge only
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "idleReroll") return;
+    const timer = window.setInterval(() => {
+      stopExpiredIdleReroll();
+    }, IDLE_REROLL_TICK_MS);
+    return () => window.clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- idle deadline only
+  }, [mode]);
 
   const onPlayPause = () => {
-    if (playing) {
-      setPlaying(false);
-      playingRef.current = false;
-      setPhase(null);
+    if (mode === "playing") {
+      startIdleReroll();
       return;
     }
     if (!sourceDataUrl) {
@@ -168,8 +227,10 @@ export function VariationTimeline({
       return;
     }
     setError(null);
-    setPlaying(true);
-    playingRef.current = true;
+    setPhase(null);
+    idleDeadlineRef.current = null;
+    modeRef.current = "playing";
+    setMode("playing");
   };
 
   const onClear = async () => {
@@ -211,6 +272,12 @@ export function VariationTimeline({
   const thumbPx = Math.min(96, size * 2);
   const previewPx = thumbPx * 2;
   const pendingSlots = Math.max(0, inflight);
+  const playing = mode === "playing";
+  const idleRerolling = mode === "idleReroll";
+  const lockedCount = items.filter((item) => item.locked).length;
+  const idleRemainingMs = getIdleRemainingMs();
+  const idleRemainingMinutes =
+    idleRemainingMs === null ? null : Math.ceil(idleRemainingMs / 60000);
 
   const showThumbPreview = (
     e: MouseEvent<HTMLImageElement>,
@@ -241,9 +308,15 @@ export function VariationTimeline({
         <div className="timeline-controls">
           <button
             type="button"
-            className={`timeline-play${playing ? " is-playing" : ""}`}
+            className={`timeline-play${mode !== "stopped" ? " is-playing" : ""}`}
             onClick={onPlayPause}
-            title={playing ? "Pause (drain in-flight)" : "Play stream"}
+            title={
+              playing
+                ? "Pause to idle-reroll from locked timeline images"
+                : idleRerolling
+                  ? "Resume stream from 3D bake"
+                  : "Play stream"
+            }
           >
             {playing ? "Pause" : "Play"}
           </button>
@@ -256,6 +329,16 @@ export function VariationTimeline({
           </button>
           <span className="meta timeline-status">
             {inflight}/{CONCURRENCY} in flight
+            {playing ? " · 3D source" : ""}
+            {idleRerolling
+              ? ` · idle reroll from ${lockedCount} lock${
+                  lockedCount === 1 ? "" : "s"
+                }${
+                  idleRemainingMinutes === null
+                    ? ""
+                    : ` · ${idleRemainingMinutes}m left`
+                }`
+              : ""}
             {warming ? " · warming up" : ""}
             {status
               ? ` · ${
