@@ -86,6 +86,7 @@ export async function listVariations(): Promise<VariationMeta[]> {
 }
 
 export async function generateVariation(opts: {
+  /** Data URL from the live bake or a variation image URL for idle rerolls. */
   sourceDataUrl: string;
   size: number;
   paletteSlug: string;
