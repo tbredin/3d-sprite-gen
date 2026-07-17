@@ -1,19 +1,19 @@
-import type { Object3D } from "three";
+import type { Mesh, MeshBasicMaterial, Object3D } from "three";
 import { isoCameraGroundDir } from "../isoCamera";
+import { setEyeLook, type EyeLook } from "./faceTexture";
 
 /**
- * Soft FF-style per-eye visibility for the fixed iso camera.
+ * Soft FF-style face visibility for the fixed iso camera.
  *
- * Toward / front-¾: both eyes. Approaching profile: drop the far eye.
- * Away: hide eyes + mouth. Keep transforms gentle — no big yaw or forward
- * boost (those made the discs stick out / look weird).
+ * Away: hide both. Mostly front-on: both eyes. Near profile: camera-nearest only.
+ * Gaze colour sits on the screen-facing half of each visible eye.
  */
 export function applySpriteFaceCheat(root: Object3D, bodyRotationY: number) {
-  const eyes: Object3D[] = [];
-  let mouth: Object3D | undefined;
+  const eyes: Mesh[] = [];
   root.traverse((obj) => {
-    if (obj.name === "eye-left" || obj.name === "eye-right") eyes.push(obj);
-    if (obj.name === "mouth") mouth = obj;
+    if (obj.name === "eye-left" || obj.name === "eye-right") {
+      eyes.push(obj as Mesh);
+    }
   });
   if (!eyes.length) return;
 
@@ -26,33 +26,26 @@ export function applySpriteFaceCheat(root: Object3D, bodyRotationY: number) {
   const rightZ = -Math.sin(bodyRotationY);
   const rightTowardCam = rightX * tx + rightZ * tz;
 
-  if (towardCam < 0.08) {
-    for (const eye of eyes) {
-      eye.visible = false;
-      if (eye.userData.restRotY != null) eye.rotation.y = eye.userData.restRotY;
-      if (eye.userData.restZ != null) eye.position.z = eye.userData.restZ;
-    }
-    if (mouth) mouth.visible = false;
+  if (towardCam < 0.15) {
+    for (const eye of eyes) eye.visible = false;
     return;
   }
 
-  if (mouth) mouth.visible = towardCam > 0.35;
+  // Only a narrow front cone shows both; near-profile (one eye) is the default.
+  const showBoth = towardCam >= 0.88;
+  const preferRight = rightTowardCam >= 0;
+  for (const eye of eyes) {
+    const isRight = eye.name === "eye-right";
+    eye.visible = showBoth || isRight === preferRight;
+  }
+
+  const camRightX = -tz;
+  const camRightZ = tx;
+  const forwardOnScreen = fx * camRightX + fz * camRightZ;
+  const look: EyeLook = forwardOnScreen >= 0 ? "right" : "left";
 
   for (const eye of eyes) {
-    if (eye.userData.restZ == null) {
-      eye.userData.restZ = eye.position.z;
-      eye.userData.restRotY = eye.rotation.y;
-    }
-    const restZ = eye.userData.restZ as number;
-    const restRotY = eye.userData.restRotY as number;
-    const side = eye.name === "eye-right" ? 1 : -1;
-    const sideFavor = side * rightTowardCam;
-
-    // Front-on: both. Near profile: camera-side only.
-    const visible = towardCam >= 0.55 || sideFavor > -0.12;
-    eye.visible = visible;
-    // Keep flat on the face plane — no yaw/push that makes rects stick out.
-    eye.position.z = restZ;
-    eye.rotation.y = restRotY;
+    if (!eye.visible) continue;
+    setEyeLook(eye.material as MeshBasicMaterial, look);
   }
 }

@@ -33,15 +33,24 @@ import { legsYawForLead, resolveLeadSide, torsoYawForLead } from "./stance";
  * (and hair); closed helms also skip face/eyes so the replacement mesh is
  * the readable head silhouette.
  */
-export function assembleCharacter(spec: CharacterSpec): Group {
+export type AssembleOptions = {
+  /** Draw cartoon eyes on the face. Default true. */
+  showEyes?: boolean;
+};
+
+export function assembleCharacter(
+  spec: CharacterSpec,
+  opts?: AssembleOptions,
+): Group {
   const root = new Group();
   root.name = "chibi";
 
   const leadSide = resolveLeadSide(spec.leadSide);
+  const showEyes = opts?.showEyes ?? true;
 
   const helmetMode = helmetModeFor(spec.helmet?.style);
   const replaceHead = helmetMode.mount === "replace";
-  const showFace = !replaceHead || helmetMode.showFace;
+  const showFace = (!replaceHead || helmetMode.showFace) && showEyes;
   const headScale = spec.head?.scale ?? 1;
   const headShape = spec.head?.shape;
 
@@ -59,11 +68,10 @@ export function assembleCharacter(spec: CharacterSpec): Group {
   // Face stays un-outlined so eyes stay crisp (skipped under closed helms)
   if (showFace) {
     const face = generateFace({
-      skin: spec.skin,
       eyeColor: spec.face?.eyeColor,
-      nose: spec.face?.nose,
-      // Independent of head.scale — scientist bumps face without touching hair.
+      // Independent of head.scale — scientist bumps eyes without touching hair.
       scale: spec.face?.scale ?? 1,
+      headScale,
       shape: headShape,
     });
     root.add(face);
@@ -234,7 +242,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "mage", scale: 1 },
     hair: { style: "long", color: "#7a5cb8", complexity: 7 },
-    face: { eyeColor: "#3a2060", nose: false },
+    face: { eyeColor: "#3a2060" },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "robe", color: "#3d6e70", trim: "#c7cfcc" },
     accessories: {
@@ -258,7 +266,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "knight", scale: 0.96 },
     hair: { style: "undercut", color: "#2a2035", complexity: 3 },
-    face: { eyeColor: "#1a1c2c", nose: true },
+    face: { eyeColor: "#1a1c2c" },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "fullPlate", color: "#b0b8c4", trim: "#6a7484" },
     accessories: {
@@ -287,7 +295,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "soldier", scale: 1 },
     hair: { style: "bowl", color: "#1a1c2c", complexity: 2 },
-    face: { eyeColor: "#1a1c2c", nose: true },
+    face: { eyeColor: "#1a1c2c" },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "chestplate", color: "#5ad4a0", trim: "#2a2540" },
     accessories: {
@@ -314,7 +322,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "rogue", scale: 1 },
     hair: { style: "messy", color: "#c8b878", complexity: 7 },
-    face: { eyeColor: "#2a6ebd", nose: false },
+    face: { eyeColor: "#2a6ebd" },
     helmet: { style: "bandana", color: "#1a1c2c" },
     torso: { style: "jacket", color: "#322947", trim: "#e83b3b" },
     accessories: {
@@ -338,7 +346,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "scientist", scale: 1.08 },
     hair: { style: "mohawk", color: "#ff4a3a", complexity: 8 },
-    face: { eyeColor: "#2a7080", nose: true, scale: 1.1 },
+    face: { eyeColor: "#2a7080", scale: 1.1 },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "jacket", color: "#c7cfcc", trim: "#3d6e70" },
     accessories: {
@@ -364,7 +372,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "cleric", scale: 1 },
     hair: { style: "bob", color: "#f0ece0", complexity: 5 },
-    face: { eyeColor: "#4a7a80", nose: false },
+    face: { eyeColor: "#4a7a80" },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "robe", color: "#c7cfcc", trim: "#f5e07a" },
     accessories: {
@@ -388,7 +396,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "ranger", scale: 1 },
     hair: { style: "braid", color: "#5a3018", complexity: 6 },
-    face: { eyeColor: "#2a4550", nose: true },
+    face: { eyeColor: "#2a4550" },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "jacket", color: "#3d5c40", trim: "#8b5a2b" },
     accessories: {
@@ -415,7 +423,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "barbarian", scale: 1.05 },
     hair: { style: "topknot", color: "#0a0c12", complexity: 7 },
-    face: { eyeColor: "#c42828", nose: true },
+    face: { eyeColor: "#c42828" },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "tank", color: "#5a4030", trim: "#8b5a2b" },
     accessories: {
@@ -444,7 +452,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "acolyte", scale: 1.02 },
     hair: { style: "twinTails", color: "#4ab0c8", complexity: 6 },
-    face: { eyeColor: "#6a3a8a", nose: false },
+    face: { eyeColor: "#6a3a8a" },
     helmet: { style: "none", color: "#000000" },
     torso: { style: "robe", color: "#5a4a7a", trim: "#c7cfcc" },
     accessories: {
@@ -468,7 +476,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "left",
     head: { shape: "pirate", scale: 1 },
     hair: { style: "messy", color: "#12141c", complexity: 7 },
-    face: { eyeColor: "#1a1c2c", nose: true },
+    face: { eyeColor: "#1a1c2c" },
     helmet: { style: "bandana", color: "#e83b3b" },
     torso: { style: "jacket", color: "#3d6e70", trim: "#e83b3b" },
     accessories: {
@@ -610,7 +618,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "acolyte", scale: 1 },
     hair: { style: "long", color: "#f0d48a", complexity: 7 },
-    face: { eyeColor: "#6a3a8a", nose: false },
+    face: { eyeColor: "#6a3a8a" },
     helmet: { style: "princess", color: "#f5e07a", visor: "#e8a0c8" },
     torso: { style: "robe", color: "#c06090", trim: "#f5e07a" },
     accessories: {
@@ -632,7 +640,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "cleric", scale: 1 },
     hair: { style: "bowl", color: "#2a2035", complexity: 3 },
-    face: { eyeColor: "#1a1c2c", nose: true },
+    face: { eyeColor: "#1a1c2c" },
     helmet: { style: "king", color: "#f5e07a", visor: "#e83b3b" },
     torso: { style: "robe", color: "#3a5080", trim: "#f5e07a" },
     accessories: {
@@ -738,7 +746,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     leadSide: "right",
     head: { shape: "cleric", scale: 1 },
     hair: { style: "bald", color: "#1a1c2c" },
-    face: { eyeColor: "#1a1c2c", nose: true },
+    face: { eyeColor: "#1a1c2c" },
     helmet: { style: "pharaoh", color: "#f5e07a", visor: "#1a1c2c" },
     torso: { style: "robe", color: "#3a6e8a", trim: "#f5e07a" },
     accessories: {

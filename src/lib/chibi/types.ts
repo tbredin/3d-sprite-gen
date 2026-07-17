@@ -166,10 +166,8 @@ export type CharacterSpec = {
   };
   face?: {
     eyeColor?: string;
-    /** Soft sphere nose. */
-    nose?: boolean;
     /**
-     * Optional multiplier for eye/mouth/nose layout (default 1).
+     * Optional multiplier for eye layout (default 1).
      * Independent of `head.scale` so hair can stay fixed (scientist).
      */
     scale?: number;

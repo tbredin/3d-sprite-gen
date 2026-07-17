@@ -102,6 +102,8 @@ type BakeProps = {
   spec: CharacterSpec;
   /** Mirror character left/right by swapping leadSide (not X-scale). */
   mirror?: boolean;
+  /** Toggle the cartoon eye plates. Default true. */
+  showEyes?: boolean;
   rimLights: RimLightSettings;
   /** Depth+normal discontinuity outline pass — see docs/SPIKE-depth-normal-edges.md. */
   edgeOutline?: EdgeOutlineSettings;
@@ -135,6 +137,7 @@ function BakeCapture({
   rotationY,
   spinning,
   mirror,
+  showEyes,
   rimKey,
   edgeOutline,
   bayerDither,
@@ -152,6 +155,8 @@ function BakeCapture({
   rotationY: number;
   spinning: boolean;
   mirror: boolean;
+  /** Rebake when eye visibility toggles. */
+  showEyes: boolean;
   /** Changes when lighting knobs move so the PNG rebakes. */
   rimKey: string;
   edgeOutline: EdgeOutlineSettings;
@@ -363,6 +368,7 @@ function BakeCapture({
     spinning,
     animTick,
     mirror,
+    showEyes,
     rimKey,
     target,
     bakeCam,
@@ -421,6 +427,7 @@ function CharacterPivot({
   spinYawRef,
   spec,
   mirror,
+  showEyes,
 }: {
   rotateMode: boolean;
   /** Signed rad/s; 0 = frozen at live yaw while rotateMode, else follows props. */
@@ -430,6 +437,7 @@ function CharacterPivot({
   spinYawRef?: MutableRefObject<number>;
   spec: CharacterSpec;
   mirror: boolean;
+  showEyes: boolean;
 }) {
   const groupRef = useRef<Group>(null);
   const yawRef = useRef(rotationY);
@@ -471,6 +479,7 @@ function CharacterPivot({
           rotationY={rotationY}
           yawRef={rotateMode ? yawRef : undefined}
           mirror={mirror}
+          showEyes={showEyes}
         />
       </group>
     </group>
@@ -493,6 +502,7 @@ export function BakeCanvas({
   spinYawRef,
   spec,
   mirror = false,
+  showEyes = true,
   rimLights,
   edgeOutline = DEFAULT_EDGE_OUTLINE_SETTINGS,
   bayerDither = DEFAULT_BAYER_DITHER,
@@ -585,6 +595,7 @@ export function BakeCanvas({
         spinYawRef={spinYawRef}
         spec={spec}
         mirror={mirror}
+        showEyes={showEyes}
       />
       <BakeCapture
         size={size}
@@ -598,6 +609,7 @@ export function BakeCanvas({
         rotationY={rotationY}
         spinning={spinning}
         mirror={mirror}
+        showEyes={showEyes}
         rimKey={rimKey}
         edgeOutline={edgeOutline}
         bayerDither={bayerDither}

@@ -102,6 +102,7 @@ export {
   getPreset,
   PRESETS,
 } from "./assemble";
+export type { AssembleOptions } from "./assemble";
 export { applySpriteFaceCheat } from "./faceCheat";
 export {
   HELMET_CATALOG,
