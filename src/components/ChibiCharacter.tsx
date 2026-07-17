@@ -17,10 +17,17 @@ function disposeObject(root: Object3D) {
     };
     if (!mesh.isMesh) return;
     mesh.geometry?.dispose();
+    const disposeMat = (m: {
+      dispose: () => void;
+      map?: { dispose: () => void } | null;
+    }) => {
+      m.map?.dispose();
+      m.dispose();
+    };
     if (Array.isArray(mesh.material)) {
-      for (const m of mesh.material) m.dispose();
-    } else {
-      mesh.material?.dispose();
+      for (const m of mesh.material) disposeMat(m);
+    } else if (mesh.material) {
+      disposeMat(mesh.material);
     }
   });
 }
@@ -48,6 +55,7 @@ export function ChibiCharacter({
   rotationY = 0,
   yawRef,
   mirror = false,
+  showEyes = true,
 }: {
   spec: CharacterSpec;
   /** Body yaw from the iso facing control — drives FF-style face cheating. */
@@ -62,13 +70,18 @@ export function ChibiCharacter({
    * Keeps body facing / BakeCanvas rotationY unchanged.
    */
   mirror?: boolean;
+  /** Toggle the cartoon eye plates. */
+  showEyes?: boolean;
 }) {
   const effectiveSpec = useMemo(
     () => (mirror ? mirroredSpec(spec) : spec),
     [spec, mirror],
   );
 
-  const group = useMemo(() => assembleCharacter(effectiveSpec), [effectiveSpec]);
+  const group = useMemo(
+    () => assembleCharacter(effectiveSpec, { showEyes }),
+    [effectiveSpec, showEyes],
+  );
   const liveYaw = useRef(yawRef);
   liveYaw.current = yawRef;
 

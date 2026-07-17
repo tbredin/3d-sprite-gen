@@ -280,7 +280,6 @@ function randomHead(skinHint?: string): HeadBits {
     hair,
     face: {
       eyeColor: pick(EYES),
-      nose: Math.random() < 0.45,
     },
     helmet: {
       style: helmetStyle,

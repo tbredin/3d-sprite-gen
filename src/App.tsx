@@ -163,7 +163,7 @@ export default function App() {
   const [facing, setFacing] = useState<FacingId>(facingPersist.facing);
   const [rotationX, setRotationX] = useState(facingPersist.rotationX);
   const [rotationY, setRotationY] = useState(facingPersist.rotationY);
-  const [size, setSize] = useState<SpriteSize>(40);
+  const [size, setSize] = useState<SpriteSize>(48);
   const [zoom, setZoom] = useState(1);
   const [cameraHeight, setCameraHeight] = useState(() => loadCameraHeight());
   const [autoRotate, setAutoRotate] = useState(false);
@@ -182,6 +182,7 @@ export default function App() {
   const [charKey, setCharKey] = useState(0);
   const [locks, setLocks] = useState<PartLocks>({ ...EMPTY_LOCKS });
   const [mirror, setMirror] = useState(false);
+  const [showEyes, setShowEyes] = useState(true);
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
   );
@@ -692,6 +693,7 @@ export default function App() {
                     spinYawRef={spinYawRef}
                     spec={spec}
                     mirror={mirror}
+                    showEyes={showEyes}
                     rimLights={rimLights}
                     edgeOutline={edgeOutline}
                     bayerDither={bayerDither}
@@ -878,6 +880,15 @@ export default function App() {
                       title="Swap lead side (L↔R weapon / stance), same facing"
                     />
                     Mirror
+                  </label>
+                  <label className="part-lock">
+                    <input
+                      type="checkbox"
+                      checked={showEyes}
+                      onChange={() => setShowEyes((v) => !v)}
+                      title="Toggle cartoon eyes"
+                    />
+                    Show eyes
                   </label>
                 </div>
               </div>

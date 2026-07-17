@@ -67,7 +67,7 @@ function characterBits(spec: CharacterSpec): string[] {
   }
 
   if (spec.face?.eyeColor) {
-    bits.push("expressive eyes");
+    bits.push("tiny 2x2 pixel eyes, no mouth, no nose");
   }
 
   return bits;
