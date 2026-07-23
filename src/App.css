@@ -313,6 +313,9 @@ button.ghost {
 
 .canvas-wrap {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   image-rendering: pixelated;
   border: 1px solid #3a415c;
   overflow: hidden;
@@ -820,6 +823,19 @@ button.ghost {
   display: block;
   border: 1px solid #3a415c;
   background: #12141f;
+}
+
+.pixel-preview-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #3a415c;
+  overflow: hidden;
+}
+
+.pixel-preview-frame .pixel-preview {
+  border: 0;
+  background: transparent;
 }
 
 .bake-preview-row {

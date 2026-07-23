@@ -228,7 +228,9 @@ export default function App() {
   } | null>(null);
   const spinYawRef = useRef(facingPersist.rotationY);
 
-  const displayPx = size * 4;
+  // Sprite scales with bake size; frame stays at 64px-bake display to avoid CLS.
+  const spritePx = size * 4;
+  const framePx = 64 * 4;
   const spinSpeed =
     holdDir !== 0
       ? holdDir * ROTATE_FACING_SPEED
@@ -672,7 +674,7 @@ export default function App() {
               {palette ? (
                 <div
                   className="canvas-wrap preview-bg-checker"
-                  style={{ width: displayPx, height: displayPx }}
+                  style={{ width: framePx, height: framePx }}
                   onPointerDown={onPreviewPointerDown}
                   onPointerMove={onPreviewPointerMove}
                   onPointerUp={onPreviewPointerUp}
@@ -700,7 +702,7 @@ export default function App() {
                     rimLights={rimLights}
                     edgeOutline={edgeOutline}
                     bayerDither={bayerDither}
-                    displayPx={displayPx}
+                    displayPx={spritePx}
                     onCaptured={setPreview}
                     onSourceCaptured={setSourcePreview}
                   />
@@ -708,12 +710,12 @@ export default function App() {
               ) : (
                 <div
                   className="pixel-empty"
-                  style={{ width: displayPx, height: displayPx }}
+                  style={{ width: framePx, height: framePx }}
                 >
                   Loading…
                 </div>
               )}
-              <div className="spin-controls" style={{ width: displayPx }}>
+              <div className="spin-controls" style={{ width: framePx }}>
                 <button
                   type="button"
                   className="spin-btn"
@@ -1076,17 +1078,22 @@ export default function App() {
 
           <div className="bake-preview-row">
             {preview ? (
-              <img
-                className="pixel-preview"
-                src={preview}
-                alt="baked sprite"
-                width={displayPx}
-                height={displayPx}
-              />
+              <div
+                className="pixel-preview-frame preview-bg-checker"
+                style={{ width: framePx, height: framePx }}
+              >
+                <img
+                  className="pixel-preview"
+                  src={preview}
+                  alt="baked sprite"
+                  width={spritePx}
+                  height={spritePx}
+                />
+              </div>
             ) : (
               <div
                 className="pixel-empty"
-                style={{ width: displayPx, height: displayPx }}
+                style={{ width: framePx, height: framePx }}
               >
                 Preparing…
               </div>
