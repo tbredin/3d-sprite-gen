@@ -8,7 +8,7 @@ from typing import Tuple
 from PIL import Image
 
 # Common pixel-art frame sizes (largest first for preference).
-CELL_CANDIDATES = (64, 48, 40, 32)
+CELL_CANDIDATES = (64, 56, 48, 40, 32, 24, 16, 8)
 # Upscale tiny cells so distance-transform depth has enough resolution.
 MIN_CONCEPT_EDGE = 128
 

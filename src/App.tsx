@@ -85,6 +85,10 @@ import {
   saveBayerDitherSettings,
   saveOutlineColors,
   saveOutlinePassSettings,
+  SPRITE_SIZE_MAX,
+  SPRITE_SIZE_MIN,
+  SPRITE_SIZE_STEP,
+  SPRITE_SIZES,
   type BayerDitherSettings,
   type OutlineColors,
   type OutlinePassSettings,
@@ -164,7 +168,6 @@ export default function App() {
   const [rotationX, setRotationX] = useState(facingPersist.rotationX);
   const [rotationY, setRotationY] = useState(facingPersist.rotationY);
   const [size, setSize] = useState<SpriteSize>(48);
-  const [zoom, setZoom] = useState(1);
   const [cameraHeight, setCameraHeight] = useState(() => loadCameraHeight());
   const [autoRotate, setAutoRotate] = useState(false);
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
@@ -225,7 +228,9 @@ export default function App() {
   } | null>(null);
   const spinYawRef = useRef(facingPersist.rotationY);
 
-  const displayPx = size * 4;
+  // Sprite scales with bake size; frame stays at 64px-bake display to avoid CLS.
+  const spritePx = size * 4;
+  const framePx = 64 * 4;
   const spinSpeed =
     holdDir !== 0
       ? holdDir * ROTATE_FACING_SPEED
@@ -612,7 +617,7 @@ export default function App() {
           mesh_backend: "chibi-primitives",
           mesh_ready: true,
           message: "Local chibi primitive builder (no upload required).",
-          sizes: [32, 40, 48, 64],
+          sizes: [...SPRITE_SIZES],
           default_palette: "endesga-64",
         }),
       );
@@ -669,7 +674,7 @@ export default function App() {
               {palette ? (
                 <div
                   className="canvas-wrap preview-bg-checker"
-                  style={{ width: displayPx, height: displayPx }}
+                  style={{ width: framePx, height: framePx }}
                   onPointerDown={onPreviewPointerDown}
                   onPointerMove={onPreviewPointerMove}
                   onPointerUp={onPreviewPointerUp}
@@ -683,7 +688,7 @@ export default function App() {
                     silhouetteOutlineHex={outlineColors.silhouette}
                     partSeamsOutlineHex={outlineColors.partSeams}
                     outlinePass={outlinePass}
-                    zoom={zoom}
+                    zoom={1}
                     cameraHeight={cameraHeight}
                     rotationX={rotationX}
                     rotationY={rotationY}
@@ -697,7 +702,7 @@ export default function App() {
                     rimLights={rimLights}
                     edgeOutline={edgeOutline}
                     bayerDither={bayerDither}
-                    displayPx={displayPx}
+                    displayPx={spritePx}
                     onCaptured={setPreview}
                     onSourceCaptured={setSourcePreview}
                   />
@@ -705,12 +710,12 @@ export default function App() {
               ) : (
                 <div
                   className="pixel-empty"
-                  style={{ width: displayPx, height: displayPx }}
+                  style={{ width: framePx, height: framePx }}
                 >
                   Loading…
                 </div>
               )}
-              <div className="spin-controls" style={{ width: displayPx }}>
+              <div className="spin-controls" style={{ width: framePx }}>
                 <button
                   type="button"
                   className="spin-btn"
@@ -763,36 +768,21 @@ export default function App() {
                   <option value="custom">Custom</option>
                 </select>
               </label>
-              <label className="field">
-                Sprite size
-                <select
-                  value={size}
-                  onChange={(e) => setSize(Number(e.target.value) as SpriteSize)}
-                >
-                  <option value={32}>32</option>
-                  <option value={40}>40</option>
-                  <option value={48}>48</option>
-                  <option value={64}>64</option>
-                </select>
-              </label>
               <div className="field">
                 <div className="field-heading">
-                  <span>Zoom</span>
-                  <button
-                    type="button"
-                    className="field-reset"
-                    onClick={() => setZoom(1)}
-                  >
-                    Reset
-                  </button>
+                  <span>Sprite size</span>
+                  <span className="field-value">{size}px</span>
                 </div>
                 <input
                   type="range"
-                  min={0.7}
-                  max={1.6}
-                  step={0.05}
-                  value={zoom}
-                  onChange={(e) => setZoom(Number(e.target.value))}
+                  min={SPRITE_SIZE_MIN}
+                  max={SPRITE_SIZE_MAX}
+                  step={SPRITE_SIZE_STEP}
+                  value={size}
+                  onChange={(e) =>
+                    setSize(Number(e.target.value) as SpriteSize)
+                  }
+                  title={`Bake resolution (${SPRITE_SIZES.join(" / ")} px)`}
                 />
               </div>
               <div className="field">
@@ -1088,17 +1078,22 @@ export default function App() {
 
           <div className="bake-preview-row">
             {preview ? (
-              <img
-                className="pixel-preview"
-                src={preview}
-                alt="baked sprite"
-                width={displayPx}
-                height={displayPx}
-              />
+              <div
+                className="pixel-preview-frame preview-bg-checker"
+                style={{ width: framePx, height: framePx }}
+              >
+                <img
+                  className="pixel-preview"
+                  src={preview}
+                  alt="baked sprite"
+                  width={spritePx}
+                  height={spritePx}
+                />
+              </div>
             ) : (
               <div
                 className="pixel-empty"
-                style={{ width: displayPx, height: displayPx }}
+                style={{ width: framePx, height: framePx }}
               >
                 Preparing…
               </div>

@@ -36,12 +36,12 @@ class StatusResponse(BaseModel):
     mesh_backend: str
     mesh_ready: bool
     message: str
-    sizes: List[int] = Field(default_factory=lambda: [32, 48, 64])
+    sizes: List[int] = Field(default_factory=lambda: [8, 16, 24, 32, 40, 48, 56, 64])
     default_palette: str = "endesga-64"
     sample_model: Optional[str] = None
     how_it_works: str = (
         "Upload a character image or spritesheet. "
-        "Sheets are detected by 32 / 48 / 64 px cell size; we use the top-left cell. "
+        "Sheets are detected by 8–64 px cell size; we use the top-left cell. "
         "That frame is inflated into a rounded volumetric mesh (cylindrical limb/head "
         "cross-sections) for isometric pixel baking — local only, no paid APIs."
     )
