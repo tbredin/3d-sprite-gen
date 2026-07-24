@@ -745,17 +745,24 @@ export function generateHead(opts: {
 export function generateFace(opts: {
   eyeColor?: string;
   scale?: number;
+  /** Multiplier on baseline eye separation (default 1). */
+  spacing?: number;
   headScale?: number;
   shape?: HeadShape;
 }): Group {
   const g = new Group();
   g.name = "face";
   const faceScale = opts.scale ?? 1;
+  const spacing = opts.spacing ?? 1;
   const headScale = opts.headScale ?? 1;
   const shape = opts.shape ?? DEFAULT_HEAD_SHAPE;
-  const eyeW = 0.33 * faceScale * (2 / 5);
-  const eyeH = eyeW * (EYE_TEX_H / EYE_TEX_W);
-  const halfSep = eyeW * EYE_SEP_SCALE;
+  const baseEyeW = 0.33 * (2 / 5);
+  const baseEyeH = baseEyeW * (EYE_TEX_H / EYE_TEX_W);
+  // Width tracks size 1:1; height only moves ⅓ as far from the baseline.
+  const eyeW = baseEyeW * faceScale;
+  const eyeH = baseEyeH * (1 + (faceScale - 1) / 3);
+  // Separation uses unscaled base width so size + distance stay independent.
+  const halfSep = baseEyeW * EYE_SEP_SCALE * spacing;
   const eyeColor = opts.eyeColor ?? "#1a1c2c";
 
   for (const side of [-1, 1] as const) {

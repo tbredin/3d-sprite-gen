@@ -40,6 +40,8 @@ import {
 import { normalizeEdgeOutlineSettings } from "./lib/edgeOutline";
 import { CollapseSection } from "./components/CollapseSection";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
+import { PartColorMenu } from "./components/PartColorMenu";
+import { PaletteColorButton } from "./components/PaletteColorButton";
 import { VariationTimeline } from "./components/VariationTimeline";
 import { CaptionRefsPanel } from "./components/CaptionRefsPanel";
 import { fetchStatus, type StatusResponse } from "./api";
@@ -202,29 +204,35 @@ function humanize(s: string): string {
   return s.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }
 
-/** Labeled select for a single named sub-part in the debug Parts panel. */
-function PartSelect<T extends string>({
-  label,
+/** Compact unlabeled select for inline part rows. */
+function CompactSelect<T extends string>({
   value,
   options,
   onPick,
+  disabled,
+  title,
 }: {
-  label: string;
   value: T;
   options: readonly T[];
   onPick: (v: T) => void;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
-    <label className="part-select">
-      <span className="part-select-label">{label}</span>
-      <select value={value} onChange={(e) => onPick(e.target.value as T)}>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {humanize(o)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      className="part-inline-select"
+      value={value}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      onChange={(e) => onPick(e.target.value as T)}
+    >
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {humanize(o)}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -282,11 +290,13 @@ export default function App() {
   const [sourcePreview, setSourcePreview] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [specOpen, setSpecOpen] = useState(true);
+  const [specOpen, setSpecOpen] = useState(false);
   const [offhandVariant, setOffhandVariantState] = useState<string>(
     () => OFFHAND_VARIANT_IDS[getOffhandVariant()],
   );
+  const [characterOpen, setCharacterOpen] = useState(true);
   const [lightsOpen, setLightsOpen] = useState(true);
+  const [lightingProfileId, setLightingProfileId] = useState("");
   const [outlinesOpen, setOutlinesOpen] = useState(true);
   const dragRef = useRef<{
     pointerId: number;
@@ -488,6 +498,7 @@ export default function App() {
   };
 
   const patchRimLights = (patch: Partial<RimLightSettings>) => {
+    setLightingProfileId("");
     setRimLights((prev) => {
       const next = normalizeRimLightSettings({ ...prev, ...patch });
       saveRimLightSettings(next);
@@ -499,6 +510,7 @@ export default function App() {
     const next = { ...DEFAULT_RIM_LIGHTS };
     saveRimLightSettings(next);
     setRimLights(next);
+    setLightingProfileId("");
   };
 
   const persistProfiles = (next: LightingProfile[]) => {
@@ -525,11 +537,11 @@ export default function App() {
           : p,
       );
       persistProfiles(next);
+      setLightingProfileId(existing.id);
     } else {
-      persistProfiles([
-        ...lightingProfiles,
-        snapshotCurrentLighting(settings, name),
-      ]);
+      const created = snapshotCurrentLighting(settings, name);
+      persistProfiles([...lightingProfiles, created]);
+      setLightingProfileId(created.id);
     }
     setProfileName("");
   };
@@ -544,11 +556,13 @@ export default function App() {
     const next = normalizeRimLightSettings(profile.settings);
     saveRimLightSettings(next);
     setRimLights(next);
+    setLightingProfileId(id);
   };
 
   const deleteLightingProfile = (id: string) => {
     if (id.startsWith("builtin-")) return;
     persistProfiles(lightingProfiles.filter((p) => p.id !== id));
+    if (lightingProfileId === id) setLightingProfileId("");
   };
 
   const onPreviewPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -902,61 +916,71 @@ export default function App() {
             </div>
           </div>
 
-          <div className="char-picker">
-            <label className="field">
-              Body
-              <select
-                value={bodyProfileId}
-                onChange={(e) =>
-                  onBodyProfileChange(e.target.value as BodyProfileId)
-                }
-                title="Smaller torso/legs — hands & feet stay fixed for pixel legibility"
+          <CollapseSection
+            title="Character"
+            open={characterOpen}
+            onToggle={() => setCharacterOpen((v) => !v)}
+          >
+            <div className="char-picker">
+              <label className="field">
+                Body
+                <select
+                  value={bodyProfileId}
+                  onChange={(e) =>
+                    onBodyProfileChange(e.target.value as BodyProfileId)
+                  }
+                  title="Smaller torso/legs — hands & feet stay fixed for pixel legibility"
+                >
+                  {BODY_PROFILE_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {BODY_PROFILES[id].label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                Preset
+                <select
+                  value={presetId === "random" ? "" : presetId}
+                  onChange={(e) => applyPreset(e.target.value as PresetId)}
+                >
+                  {presetId === "random" ? (
+                    <option value="" disabled>
+                      random
+                    </option>
+                  ) : null}
+                  {PRESET_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {PRESET_LABELS[id]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="field-matched"
+                onClick={applyRandom}
               >
-                {BODY_PROFILE_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {BODY_PROFILES[id].label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field">
-              Preset
-              <select
-                value={presetId === "random" ? "" : presetId}
-                onChange={(e) => applyPreset(e.target.value as PresetId)}
-              >
-                {presetId === "random" ? (
-                  <option value="" disabled>
-                    random
-                  </option>
-                ) : null}
-                {PRESET_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {PRESET_LABELS[id]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="field-matched" onClick={applyRandom}>
-              Random
-            </button>
-          </div>
+                Random
+              </button>
+            </div>
 
-          <div className="part-controls">
-            <div className="stage-label">Parts</div>
+            <div className="part-toggles">
+              <label className="part-chip">
+                <input
+                  type="checkbox"
+                  checked={mirror}
+                  onChange={() => setMirror((v) => !v)}
+                  title="Swap lead side (L↔R weapon / stance), same facing"
+                />
+                Mirror
+              </label>
+            </div>
+
             <div className="part-grid">
-              <div className="part-row">
-                <span className="part-name">mirror</span>
-                <div className="part-actions">
-                  <label className="part-lock">
-                    <input
-                      type="checkbox"
-                      checked={mirror}
-                      onChange={() => setMirror((v) => !v)}
-                      title="Swap lead side (L↔R weapon / stance), same facing"
-                    />
-                    Mirror
-                  </label>
+              <div className="part-block">
+                <div className="part-row">
+                  <span className="part-name">eyes</span>
                   <label className="part-lock">
                     <input
                       type="checkbox"
@@ -964,165 +988,263 @@ export default function App() {
                       onChange={() => setShowEyes((v) => !v)}
                       title="Toggle cartoon eyes"
                     />
-                    Show eyes
+                    Show
+                  </label>
+                  <div className="part-actions">
+                    <PaletteColorButton
+                      value={spec.face?.eyeColor ?? "#1a1c2c"}
+                      paletteColors={palette?.colors ?? []}
+                      title="Eye colour"
+                      ariaLabel="Eye colour"
+                      disabled={!showEyes}
+                      onChange={(hex) =>
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, eyeColor: hex },
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+                <div
+                  className={`light-grid part-eye-sliders${showEyes ? "" : " is-disabled"}`}
+                >
+                  <label className="light-slider">
+                    <span
+                      className="light-slider-label"
+                      title="Distance between eyes"
+                    >
+                      Dist
+                    </span>
+                    <input
+                      type="range"
+                      min={0.55}
+                      max={1.55}
+                      step={0.05}
+                      value={spec.face?.spacing ?? 1}
+                      disabled={!showEyes}
+                      onChange={(e) => {
+                        const spacing = Number(e.target.value);
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, spacing },
+                        }));
+                      }}
+                      title="Distance between eyes"
+                    />
+                    <span className="slider-val">
+                      {(spec.face?.spacing ?? 1).toFixed(2)}
+                    </span>
+                  </label>
+                  <label className="light-slider">
+                    <span className="light-slider-label" title="Eye size">
+                      Size
+                    </span>
+                    <input
+                      type="range"
+                      min={0.55}
+                      max={1.65}
+                      step={0.05}
+                      value={spec.face?.scale ?? 1}
+                      disabled={!showEyes}
+                      onChange={(e) => {
+                        const scale = Number(e.target.value);
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, scale },
+                        }));
+                      }}
+                      title="Eye size"
+                    />
+                    <span className="slider-val">
+                      {(spec.face?.scale ?? 1).toFixed(2)}
+                    </span>
                   </label>
                 </div>
               </div>
-              {PART_IDS.map((part) => (
-                <div key={part} className="part-block">
-                  <div className="part-row">
-                    <span className="part-name">{part}</span>
-                    <div className="part-actions">
-                      <label className="part-lock">
-                        <input
-                          type="checkbox"
-                          checked={locks[part]}
-                          onChange={() => toggleLock(part)}
+
+              {PART_IDS.map((part) => {
+                const locked = locks[part];
+                return (
+                  <div
+                    key={part}
+                    className={`part-block${locked ? " is-locked" : ""}`}
+                  >
+                    <div className="part-row">
+                      <span className="part-name">{part}</span>
+
+                      <div className="part-inline-controls">
+                        {part === "head" ? (
+                          <>
+                            <CompactSelect<HeadShape>
+                              title="shape"
+                              value={spec.head?.shape ?? "lozenge"}
+                              options={HEAD_SHAPES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setHeadShape(s, v))
+                              }
+                            />
+                            <CompactSelect<HairStyle>
+                              title="hair"
+                              value={spec.hair?.style ?? "bald"}
+                              options={HAIR_STYLES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setHairStyle(s, v))
+                              }
+                            />
+                            <CompactSelect<HelmetStyle>
+                              title="helmet"
+                              value={spec.helmet?.style ?? "none"}
+                              options={HELMET_STYLES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setHelmetStyle(s, v))
+                              }
+                            />
+                          </>
+                        ) : null}
+                        {part === "torso" ? (
+                          <>
+                            <CompactSelect<TorsoStyle>
+                              title="style"
+                              value={spec.torso.style}
+                              options={TORSO_STYLES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setTorsoStyle(s, v))
+                              }
+                            />
+                            <CompactSelect<HemStyle>
+                              title="hem"
+                              value={spec.accessories?.hem ?? "none"}
+                              options={HEM_STYLES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setHemStyle(s, v))
+                              }
+                            />
+                            <CompactSelect<"off" | "on">
+                              title="cape"
+                              value={spec.accessories?.cape ? "on" : "off"}
+                              options={["off", "on"]}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setCape(s, v === "on"))
+                              }
+                            />
+                            <CompactSelect<BackLoadout>
+                              title="back"
+                              value={spec.accessories?.backLoadout ?? "none"}
+                              options={BACK_LOADOUTS}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setBackLoadout(s, v))
+                              }
+                            />
+                          </>
+                        ) : null}
+                        {part === "arms" ? (
+                          <>
+                            <CompactSelect<ArmPose>
+                              title="pose"
+                              value={spec.arms.pose}
+                              options={ARM_POSES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setArmPose(s, v))
+                              }
+                            />
+                            <CompactSelect<WeaponType>
+                              title="weapon"
+                              value={spec.weapon?.type ?? "none"}
+                              options={WEAPON_TYPES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setWeaponType(s, v))
+                              }
+                            />
+                            <CompactSelect<WeaponType>
+                              title="offhand"
+                              value={spec.offhand?.type ?? "none"}
+                              options={OFFHAND_TYPES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setOffhandType(s, v))
+                              }
+                            />
+                            {spec.offhand &&
+                            spec.offhand.type !== "none" &&
+                            spec.offhand.type !== "shield" ? (
+                              <CompactSelect<string>
+                                title="offhand angle"
+                                value={offhandVariant}
+                                options={OFFHAND_VARIANT_IDS}
+                                disabled={locked}
+                                onPick={(v) => {
+                                  setOffhandVariant(
+                                    OFFHAND_VARIANT_IDS.indexOf(v),
+                                  );
+                                  setOffhandVariantState(v);
+                                  applyPartEdit((s) => s);
+                                }}
+                              />
+                            ) : null}
+                          </>
+                        ) : null}
+                        {part === "legs" ? (
+                          <CompactSelect<LegPose>
+                            title="pose"
+                            value={spec.legs.pose}
+                            options={LEG_POSES}
+                            disabled={locked}
+                            onPick={(v) =>
+                              applyPartEdit((s) => setLegPose(s, v))
+                            }
+                          />
+                        ) : null}
+                      </div>
+
+                      <div className="part-actions">
+                        <button
+                          type="button"
+                          className="part-icon-btn"
+                          onClick={() => applyRerollPart(part)}
+                          disabled={locked}
+                          title={
+                            locked ? "Unlock to reroll this part" : "Reroll part"
+                          }
+                          aria-label={`Reroll ${part}`}
+                        >
+                          🎲
+                        </button>
+                        <button
+                          type="button"
+                          className={`part-icon-btn${locked ? " is-locked" : ""}`}
+                          onClick={() => toggleLock(part)}
+                          title={locked ? "Unlock" : "Lock"}
+                          aria-label={
+                            locked ? `Unlock ${part}` : `Lock ${part}`
+                          }
+                          aria-pressed={locked}
+                        >
+                          {locked ? "🔒" : "🔓"}
+                        </button>
+                        <PartColorMenu
+                          part={part}
+                          spec={spec}
+                          paletteColors={palette?.colors ?? []}
+                          onEdit={applyPartEdit}
+                          onReroll={() => applyRerollColors(part)}
                         />
-                        Lock
-                      </label>
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => applyRerollPart(part)}
-                        disabled={locks[part]}
-                        title={
-                          locks[part]
-                            ? "Unlock to reroll this part"
-                            : "Reroll this part"
-                        }
-                      >
-                        Reroll
-                      </button>
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => applyRerollColors(part)}
-                      >
-                        Colors
-                      </button>
+                      </div>
                     </div>
                   </div>
-
-                  {part === "head" ? (
-                    <div className="part-subgrid">
-                      <PartSelect<HeadShape>
-                        label="shape"
-                        value={spec.head?.shape ?? "lozenge"}
-                        options={HEAD_SHAPES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setHeadShape(s, v))
-                        }
-                      />
-                      <PartSelect<HairStyle>
-                        label="hair"
-                        value={spec.hair?.style ?? "bald"}
-                        options={HAIR_STYLES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setHairStyle(s, v))
-                        }
-                      />
-                      <PartSelect<HelmetStyle>
-                        label="helmet"
-                        value={spec.helmet?.style ?? "none"}
-                        options={HELMET_STYLES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setHelmetStyle(s, v))
-                        }
-                      />
-                    </div>
-                  ) : null}
-
-                  {part === "torso" ? (
-                    <div className="part-subgrid">
-                      <PartSelect<TorsoStyle>
-                        label="style"
-                        value={spec.torso.style}
-                        options={TORSO_STYLES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setTorsoStyle(s, v))
-                        }
-                      />
-                      <PartSelect<HemStyle>
-                        label="hem"
-                        value={spec.accessories?.hem ?? "none"}
-                        options={HEM_STYLES}
-                        onPick={(v) => applyPartEdit((s) => setHemStyle(s, v))}
-                      />
-                      <PartSelect<"off" | "on">
-                        label="cape"
-                        value={spec.accessories?.cape ? "on" : "off"}
-                        options={["off", "on"]}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setCape(s, v === "on"))
-                        }
-                      />
-                      <PartSelect<BackLoadout>
-                        label="back"
-                        value={spec.accessories?.backLoadout ?? "none"}
-                        options={BACK_LOADOUTS}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setBackLoadout(s, v))
-                        }
-                      />
-                    </div>
-                  ) : null}
-
-                  {part === "arms" ? (
-                    <div className="part-subgrid">
-                      <PartSelect<ArmPose>
-                        label="pose"
-                        value={spec.arms.pose}
-                        options={ARM_POSES}
-                        onPick={(v) => applyPartEdit((s) => setArmPose(s, v))}
-                      />
-                      <PartSelect<WeaponType>
-                        label="weapon"
-                        value={spec.weapon?.type ?? "none"}
-                        options={WEAPON_TYPES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setWeaponType(s, v))
-                        }
-                      />
-                      <PartSelect<WeaponType>
-                        label="offhand"
-                        value={spec.offhand?.type ?? "none"}
-                        options={OFFHAND_TYPES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setOffhandType(s, v))
-                        }
-                      />
-                      {spec.offhand &&
-                      spec.offhand.type !== "none" &&
-                      spec.offhand.type !== "shield" ? (
-                        <PartSelect<string>
-                          label="offhand angle"
-                          value={offhandVariant}
-                          options={OFFHAND_VARIANT_IDS}
-                          onPick={(v) => {
-                            setOffhandVariant(OFFHAND_VARIANT_IDS.indexOf(v));
-                            setOffhandVariantState(v);
-                            applyPartEdit((s) => s);
-                          }}
-                        />
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  {part === "legs" ? (
-                    <div className="part-subgrid">
-                      <PartSelect<LegPose>
-                        label="pose"
-                        value={spec.legs.pose}
-                        options={LEG_POSES}
-                        onPick={(v) => applyPartEdit((s) => setLegPose(s, v))}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ))}
+                );
+              })}
             </div>
-          </div>
+          </CollapseSection>
 
           <CollapseSection
             title="Lighting"
@@ -1135,31 +1257,41 @@ export default function App() {
             }
           >
             <div className="light-profiles">
-              <p className="light-subhead">Presets</p>
-              <ul className="light-profile-list light-preset-list">
-                {BUILTIN_LIGHTING_PRESETS.map((profile) => (
-                  <li key={profile.id} className="light-profile-row">
-                    <span className="light-profile-label" title={profile.name}>
-                      {profile.name}
-                    </span>
-                    <div className="part-actions">
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => loadLightingProfile(profile.id)}
-                      >
-                        Load
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <p className="light-subhead">Saved</p>
+              <label className="field light-profile-select">
+                Profile
+                <select
+                  value={lightingProfileId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    if (id) loadLightingProfile(id);
+                    else setLightingProfileId("");
+                  }}
+                  aria-label="Lighting profile"
+                >
+                  <option value="">Custom / none</option>
+                  <optgroup label="Built-in">
+                    {BUILTIN_LIGHTING_PRESETS.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {lightingProfiles.length > 0 ? (
+                    <optgroup label="Saved">
+                      {lightingProfiles.map((profile) => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                </select>
+              </label>
               <div className="light-profile-save">
                 <input
                   type="text"
                   className="light-profile-name"
-                  placeholder="Profile name"
+                  placeholder="Save as…"
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
                   onKeyDown={(e) => {
@@ -1173,38 +1305,25 @@ export default function App() {
                   onClick={saveLightingProfile}
                   disabled={!profileName.trim()}
                 >
-                  Save current
+                  Save
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => deleteLightingProfile(lightingProfileId)}
+                  disabled={
+                    !lightingProfileId ||
+                    lightingProfileId.startsWith("builtin-")
+                  }
+                  title={
+                    lightingProfileId.startsWith("builtin-")
+                      ? "Built-in presets cannot be deleted"
+                      : "Delete selected saved profile"
+                  }
+                >
+                  Delete
                 </button>
               </div>
-              {lightingProfiles.length === 0 ? (
-                <p className="hint">No saved profiles yet.</p>
-              ) : (
-                <ul className="light-profile-list">
-                  {lightingProfiles.map((profile) => (
-                    <li key={profile.id} className="light-profile-row">
-                      <span className="light-profile-label" title={profile.name}>
-                        {profile.name}
-                      </span>
-                      <div className="part-actions">
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => loadLightingProfile(profile.id)}
-                        >
-                          Load
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => deleteLightingProfile(profile.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
             <p className="hint light-hint">
               Amb = soft fill; red/blue = harsh rear rims (raise Behind to skim).
