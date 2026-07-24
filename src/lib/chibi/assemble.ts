@@ -25,7 +25,8 @@ import { legsYawForLead, resolveLeadSide, torsoYawForLead } from "./stance";
  *
  * Hierarchy for silhouette stance (see stance.ts):
  *   root  — facing +Z; BakeCanvas rotationY turns the whole sprite
- *     head / face / hair / helmet  — stay on root so faceCheat uses body yaw
+ *     headPivot — head / face / hair / helmet; ChibiCharacter yaws it a little
+ *       toward the camera (see headStick.ts) so the face stays "sticky"
  *     upperBody (yaw ≈ ±45°) — torso, hem, cape, back gear, arms (+ weapons)
  *     legs (yaw ≈ 40% of torso) — planted ipsilateral lead; tracks ¾ body
  *
@@ -54,13 +55,20 @@ export function assembleCharacter(
   const headScale = spec.head?.scale ?? 1;
   const headShape = spec.head?.shape;
 
+  // Head, face, hair and helmet share one pivot so dynamic head rotation can
+  // yaw them together in place (skull sits on x=z=0, so rotation.y spins it
+  // about its own vertical axis). See headStick.ts / ChibiCharacter.
+  const headPivot = new Group();
+  headPivot.name = "headPivot";
+  root.add(headPivot);
+
   if (!replaceHead) {
     const head = generateHead({
       skin: spec.skin,
       scale: headScale,
       shape: headShape,
     });
-    root.add(head);
+    headPivot.add(head);
     addHullOutlines(head, 0.03);
     tagPartGroup(head, PartGroupId.HEAD);
   }
@@ -74,7 +82,7 @@ export function assembleCharacter(
       headScale,
       shape: headShape,
     });
-    root.add(face);
+    headPivot.add(face);
     tagPartGroup(face, PartGroupId.HEAD);
   }
 
@@ -86,7 +94,7 @@ export function assembleCharacter(
       color: spec.hair.color,
       complexity: spec.hair.complexity,
     });
-    root.add(hair);
+    headPivot.add(hair);
     addHullOutlines(hair, 0.026);
     tagPartGroup(hair, PartGroupId.HEAD);
   }
@@ -98,7 +106,7 @@ export function assembleCharacter(
       visor: spec.helmet.visor,
       scale: headScale,
     });
-    root.add(helmet);
+    headPivot.add(helmet);
     addHullOutlines(helmet, 0.032);
     tagPartGroup(helmet, PartGroupId.HEAD);
   }
