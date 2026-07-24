@@ -54,9 +54,16 @@ export type HelmetStyle =
   | "knightGreat"
   | "knightWinged"
   | "knightSallet"
+  | "knightBarbute"
+  | "knightBascinet"
   | "cap"
   | "sciFi"
-  | "hood"
+  | "visor"
+  | "goggles"
+  | "astronautBubble"
+  | "astronautFlat"
+  | "astronautVintage"
+  | "scouter"
   | "crown"
   | "king"
   | "princess"
@@ -102,7 +109,15 @@ export type LegPose =
   | "kneel"
   | "guard";
 
-export type WeaponType = "none" | "sword" | "staff" | "rifle" | "shield";
+export type WeaponType =
+  | "none"
+  | "sword"
+  | "staff"
+  | "rifle"
+  | "shield"
+  | "axe"
+  | "maul"
+  | "spear";
 
 /**
  * Locked soft-diamond (`lozenge`) plus character-inspired rebuilds
@@ -232,7 +247,7 @@ export type CharacterSpec = {
    * Lets sword+shield read without replacing the lead blade.
    */
   offhand?: {
-    type: "none" | "shield";
+    type: WeaponType;
     color: string;
   };
 };
@@ -284,6 +299,128 @@ export const PRESET_LABELS: Record<PresetId, string> = {
   pharaoh: "pharaoh",
   ninja: "ninja",
 };
+
+/**
+ * Ordered option lists for the per-part debug dropdowns (App "Parts" panel).
+ * These mirror the union members so the UI can offer every named variant
+ * directly instead of a blind reroll.
+ */
+export const HAIR_STYLES: HairStyle[] = [
+  "bald",
+  "bowl",
+  "bob",
+  "spiky",
+  "mohawk",
+  "ponytail",
+  "long",
+  "afro",
+  "bun",
+  "braid",
+  "undercut",
+  "curls",
+  "topknot",
+  "fringe",
+  "twinTails",
+  "pixie",
+  "messy",
+  "dreads",
+  "mullet",
+  "pompadour",
+  "sidePart",
+  "wavy",
+  "anime",
+  "hime",
+  "odango",
+  "halfUp",
+  "layered",
+  "curtain",
+  "lob",
+  "spaceBuns",
+  "sidePonytail",
+  "pigtails",
+  "bubblePonytail",
+  "crownBraid",
+  "softWaves",
+  "bluntBangs",
+  "wolfCut",
+  "highPony",
+  "lowBun",
+  "ribbonTails",
+  "asymmetrical",
+  "ringlets",
+  "goddess",
+];
+
+export const HELMET_STYLES: HelmetStyle[] = [
+  "none",
+  "knight",
+  "knightGreat",
+  "knightWinged",
+  "knightSallet",
+  "knightBarbute",
+  "knightBascinet",
+  "cap",
+  "sciFi",
+  "visor",
+  "goggles",
+  "astronautBubble",
+  "astronautFlat",
+  "astronautVintage",
+  "scouter",
+  "crown",
+  "king",
+  "princess",
+  "wizard",
+  "bandana",
+  "goat",
+  "pilot",
+  "samurai",
+  "viking",
+  "pharaoh",
+  "ninja",
+];
+
+export const TORSO_STYLES: TorsoStyle[] = [
+  "plain",
+  "robe",
+  "hoodedRobe",
+  "chestplate",
+  "fullPlate",
+  "jacket",
+  "tank",
+];
+
+export const HEM_STYLES: HemStyle[] = ["none", "skirt", "loincloth"];
+
+export const WEAPON_TYPES: WeaponType[] = [
+  "none",
+  "sword",
+  "axe",
+  "staff",
+  "spear",
+  "maul",
+  "rifle",
+  "shield",
+];
+
+/** One-handed props that can ride in the trail hand (no 2H maul/spear). */
+export const OFFHAND_TYPES: WeaponType[] = [
+  "none",
+  "shield",
+  "sword",
+  "axe",
+  "staff",
+  "rifle",
+];
+
+export const BACK_LOADOUTS: BackLoadout[] = [
+  "none",
+  "scabbard",
+  "greatsword",
+  "quiver",
+  "pack",
+  "axe",
+];
 
 export const PRESET_IDS: PresetId[] = [
   "mage",

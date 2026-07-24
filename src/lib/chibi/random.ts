@@ -8,6 +8,7 @@ import type {
   BackLoadout,
   CharacterSpec,
   HairStyle,
+  HeadShape,
   HelmetStyle,
   HemStyle,
   LegPose,
@@ -110,12 +111,19 @@ const HELMET: HelmetStyle[] = [
   "king",
   "princess",
   "wizard",
-  "hood",
   "knight",
   "knightGreat",
   "knightWinged",
   "knightSallet",
+  "knightBarbute",
+  "knightBascinet",
   "sciFi",
+  "visor",
+  "goggles",
+  "astronautBubble",
+  "astronautFlat",
+  "astronautVintage",
+  "scouter",
   "pilot",
   "samurai",
   "viking",
@@ -150,8 +158,13 @@ const WEAPON: WeaponType[] = [
   "sword",
   "sword",
   "sword",
+  "axe",
+  "axe",
   "staff",
   "staff",
+  "spear",
+  "spear",
+  "maul",
   "rifle",
   "shield",
 ];
@@ -253,10 +266,17 @@ function poseForWeapon(weapon: WeaponType): { arm: ArmPose; leg: LegPose } {
       leg: pick(["guard", "wide", "ready"] as LegPose[]),
     };
   }
-  if (weapon === "sword") {
+  if (weapon === "sword" || weapon === "axe") {
     return {
       arm: pick(["ready", "extended", "reach"] as ArmPose[]),
       leg: pick(["ready", "lunge", "wide", "guard"] as LegPose[]),
+    };
+  }
+  if (weapon === "spear" || weapon === "maul") {
+    // Two-handers: lead forward so the shaft cuts a diagonal; trail is IK'd on.
+    return {
+      arm: pick(["ready", "extended", "guard"] as ArmPose[]),
+      leg: pick(["ready", "wide", "guard"] as LegPose[]),
     };
   }
   return {
@@ -293,6 +313,8 @@ function randomHead(skinHint?: string): HeadBits {
   const skin = skinHint ?? pick(SKINS);
   const helmetStyle = pick(HELMET);
   const hairColor = pick(HAIR_COLORS);
+  // Overlay helmets (goggles, scouter, cap, crowns…) keep the hair; only
+  // full head-replacement helms bald the skull.
   const hair =
     isHeadReplacement(helmetStyle)
       ? { style: "bald" as const, color: hairColor, complexity: 1 }
@@ -313,40 +335,13 @@ function randomHead(skinHint?: string): HeadBits {
     },
     helmet: {
       style: helmetStyle,
-      color:
-        helmetStyle === "goat"
-          ? pick(["#5a4030", "#8b5a2b", "#433455", "#c98a6a", "#e8e4d8"])
-          : pick(CLOTH),
-      visor:
-        helmetStyle === "sciFi" ||
-        helmetStyle === "pilot" ||
-        helmetStyle === "knight" ||
-        helmetStyle === "knightGreat" ||
-        helmetStyle === "knightWinged" ||
-        helmetStyle === "knightSallet" ||
-        helmetStyle === "samurai" ||
-        helmetStyle === "viking" ||
-        helmetStyle === "ninja"
-          ? pick(CLOTH)
-          : helmetStyle === "goat"
-            ? pick(["#e8e4d8", "#c7cfcc", "#f0d48a", "#ffe0bd"])
-            : helmetStyle === "crown" ||
-                helmetStyle === "king" ||
-                helmetStyle === "princess" ||
-                helmetStyle === "wizard" ||
-                helmetStyle === "pharaoh"
-              ? pick(["#f5e07a", "#e83b3b", "#c7cfcc", "#5ad4a0", "#e8a0c8"])
-              : undefined,
+      ...defaultHelmetColors(helmetStyle),
     },
   };
 }
 
-function randomTorso(helmetStyle?: HelmetStyle): TorsoBits {
-  // Avoid stacking `helmet: hood` with a torso cowl (double volume).
-  const torsoStyle =
-    helmetStyle === "hood"
-      ? pick(["robe", "jacket", "plain"] as TorsoStyle[])
-      : pick(TORSO);
+function randomTorso(_helmetStyle?: HelmetStyle): TorsoBits {
+  const torsoStyle = pick(TORSO);
   const cloth = pick(CLOTH);
   const trim = pickTrim(cloth);
 
@@ -401,11 +396,14 @@ function randomArms(
     Math.random() < 0.2
       ? 0.1 + Math.random() * 0.2
       : 0.5 + Math.random() * 0.4;
-  // Sword + shield is the classic combat silhouette — give it often.
-  const offhand =
-    weaponType === "sword" && Math.random() < 0.55
-      ? { type: "shield" as const, color: pick(CLOTH) }
-      : undefined;
+  // Sword + shield is the classic combat silhouette — give it often. Failing
+  // that, a blade sometimes gets a second low-held blade in the off hand.
+  let offhand: { type: WeaponType; color: string } | undefined;
+  if (weaponType === "sword" && Math.random() < 0.55) {
+    offhand = { type: "shield", color: pick(CLOTH) };
+  } else if (weaponType === "sword" && Math.random() < 0.35) {
+    offhand = { type: "sword", color: pick(CLOTH) };
+  }
   return {
     leadSide,
     arms: {
@@ -543,8 +541,9 @@ export function rerollPartColors(spec: CharacterSpec, part: PartId): CharacterSp
     if (next.hair) next.hair.color = pick(HAIR_COLORS);
     if (next.face) next.face.eyeColor = pick(EYES);
     if (next.helmet && next.helmet.style !== "none") {
-      next.helmet.color = pick(CLOTH);
-      if (next.helmet.visor) next.helmet.visor = pick(CLOTH);
+      const d = defaultHelmetColors(next.helmet.style);
+      next.helmet.color = d.color;
+      if (next.helmet.visor) next.helmet.visor = d.visor ?? pick(CLOTH);
     }
     return next;
   }
@@ -590,5 +589,208 @@ export function rerollPartColors(spec: CharacterSpec, part: PartId): CharacterSp
     pantColor: pick(CLOTH),
     bootColor: pick(BOOT),
   };
+  return next;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Direct part setters — pick a specific named variant (debug dropdowns).      */
+/* Keep existing colours; only fill sensible defaults when a slot is empty.    */
+/* -------------------------------------------------------------------------- */
+
+/** Bright lens tints so sci-fi visors read after Endesga lock. */
+const VISOR_TINTS = ["#5ad4a0", "#2a6ebd", "#e83b3b", "#f5e07a", "#3a9bb5"];
+/** Metal slit colours for closed helms. */
+const SLIT_TINTS = ["#1a1c2c", "#2a2035", "#12141c"];
+const CROWN_TINTS = ["#f5e07a", "#e83b3b", "#c7cfcc", "#5ad4a0", "#e8a0c8"];
+/** Classic wizard-hat cloth — deep blacks and midnight blues. */
+const WIZARD_TINTS = [
+  "#14151f",
+  "#1a1c2c",
+  "#232a4d",
+  "#2a3a6a",
+  "#1e2a52",
+  "#2b2f52",
+];
+/** Bright band / tip trims that pop against a dark wizard hat. */
+const WIZARD_TRIMS = ["#f5e07a", "#c7cfcc", "#8fb8ff", "#5ad4a0"];
+
+const VISOR_HELMETS: HelmetStyle[] = [
+  "sciFi",
+  "pilot",
+  "visor",
+  "goggles",
+  "astronautBubble",
+  "astronautFlat",
+  "astronautVintage",
+  "scouter",
+];
+const SLIT_HELMETS: HelmetStyle[] = [
+  "knight",
+  "knightGreat",
+  "knightWinged",
+  "knightSallet",
+  "knightBarbute",
+  "knightBascinet",
+  "samurai",
+  "viking",
+  "ninja",
+];
+const CROWN_HELMETS: HelmetStyle[] = [
+  "crown",
+  "king",
+  "princess",
+  "wizard",
+  "pharaoh",
+];
+
+function defaultHelmetColors(style: HelmetStyle): {
+  color: string;
+  visor?: string;
+} {
+  if (style === "none") return { color: "#000000" };
+  if (style === "goat") {
+    return {
+      color: pick(["#5a4030", "#8b5a2b", "#433455", "#c98a6a", "#e8e4d8"]),
+      visor: pick(["#e8e4d8", "#c7cfcc", "#f0d48a", "#ffe0bd"]),
+    };
+  }
+  if (style === "wizard") {
+    return { color: pick(WIZARD_TINTS), visor: pick(WIZARD_TRIMS) };
+  }
+  if (CROWN_HELMETS.includes(style)) {
+    return { color: pick(CROWN_TINTS), visor: pick(CROWN_TINTS) };
+  }
+  if (VISOR_HELMETS.includes(style)) {
+    return { color: pick(CLOTH), visor: pick(VISOR_TINTS) };
+  }
+  if (SLIT_HELMETS.includes(style)) {
+    return { color: pick(CLOTH), visor: pick(SLIT_TINTS) };
+  }
+  return { color: pick(CLOTH) };
+}
+
+/** True when a style renders a visor/gem accent (keep a `visor` colour). */
+function helmetUsesVisor(style: HelmetStyle): boolean {
+  return (
+    style === "goat" ||
+    CROWN_HELMETS.includes(style) ||
+    VISOR_HELMETS.includes(style) ||
+    SLIT_HELMETS.includes(style)
+  );
+}
+
+export function setHeadShape(spec: CharacterSpec, shape: HeadShape): CharacterSpec {
+  const next = structuredClone(spec);
+  next.head = { ...next.head, shape };
+  return next;
+}
+
+export function setHairStyle(spec: CharacterSpec, style: HairStyle): CharacterSpec {
+  const next = structuredClone(spec);
+  next.hair = {
+    style,
+    color: next.hair?.color ?? pick(HAIR_COLORS),
+    complexity: next.hair?.complexity ?? 5,
+  };
+  return next;
+}
+
+export function setHelmetStyle(
+  spec: CharacterSpec,
+  style: HelmetStyle,
+): CharacterSpec {
+  const next = structuredClone(spec);
+  const prev = next.helmet;
+  const defaults = defaultHelmetColors(style);
+  const keepColor =
+    prev?.color && prev.color !== "#000000" && prev.style !== "none"
+      ? prev.color
+      : defaults.color;
+  next.helmet = {
+    style,
+    color: keepColor,
+    visor: helmetUsesVisor(style)
+      ? prev?.visor ?? defaults.visor
+      : undefined,
+  };
+  return next;
+}
+
+export function setTorsoStyle(
+  spec: CharacterSpec,
+  style: TorsoStyle,
+): CharacterSpec {
+  const next = structuredClone(spec);
+  next.torso = { ...next.torso, style };
+  return next;
+}
+
+export function setHemStyle(spec: CharacterSpec, style: HemStyle): CharacterSpec {
+  const next = structuredClone(spec);
+  next.accessories = {
+    ...next.accessories,
+    hem: style,
+    hemColor:
+      next.accessories?.hemColor ?? next.torso.trim ?? pick(CLOTH),
+  };
+  return next;
+}
+
+export function setCape(spec: CharacterSpec, on: boolean): CharacterSpec {
+  const next = structuredClone(spec);
+  next.accessories = {
+    ...next.accessories,
+    cape: on,
+    capeColor:
+      next.accessories?.capeColor ?? next.torso.trim ?? pick(CLOTH),
+  };
+  return next;
+}
+
+export function setBackLoadout(
+  spec: CharacterSpec,
+  style: BackLoadout,
+): CharacterSpec {
+  const next = structuredClone(spec);
+  next.accessories = {
+    ...next.accessories,
+    backLoadout: style,
+    backLoadoutColor: next.accessories?.backLoadoutColor ?? pick(CLOTH),
+  };
+  return next;
+}
+
+export function setArmPose(spec: CharacterSpec, pose: ArmPose): CharacterSpec {
+  const next = structuredClone(spec);
+  next.arms = { ...next.arms, pose };
+  return next;
+}
+
+export function setWeaponType(
+  spec: CharacterSpec,
+  type: WeaponType,
+): CharacterSpec {
+  const next = structuredClone(spec);
+  const lead = next.leadSide ?? DEFAULT_LEAD;
+  next.weapon = {
+    type,
+    hand: next.weapon?.hand ?? handForWeapon(type, lead),
+    color: next.weapon?.color ?? pick(CLOTH),
+  };
+  return next;
+}
+
+export function setOffhandType(
+  spec: CharacterSpec,
+  type: WeaponType,
+): CharacterSpec {
+  const next = structuredClone(spec);
+  next.offhand = { type, color: next.offhand?.color ?? pick(CLOTH) };
+  return next;
+}
+
+export function setLegPose(spec: CharacterSpec, pose: LegPose): CharacterSpec {
+  const next = structuredClone(spec);
+  next.legs = { ...next.legs, pose };
   return next;
 }

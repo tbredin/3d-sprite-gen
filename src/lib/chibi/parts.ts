@@ -6,6 +6,7 @@ import {
   CylinderGeometry,
   Group,
   Mesh,
+  MeshToonMaterial,
   SphereGeometry,
   type Material,
 } from "three";
@@ -50,16 +51,40 @@ function limbCylinder(radius: number, height: number, radial = 8) {
   return new CylinderGeometry(radius, radius, height, radial);
 }
 
-/** Lift a hex color toward white for JRPG hair shine volumes. */
-function lightenHex(hex: string, amount = 0.35): string {
+function hexBytes(hex: string): [number, number, number] {
   const n = hex.replace("#", "");
   const v =
     n.length === 3
       ? n.split("").map((c) => parseInt(c + c, 16))
       : [n.slice(0, 2), n.slice(2, 4), n.slice(4, 6)].map((c) => parseInt(c, 16));
+  return [v[0]!, v[1]!, v[2]!];
+}
+
+function toHex(v: number[]): string {
+  return `#${v
+    .map((c) => Math.max(0, Math.min(255, Math.round(c)))
+      .toString(16)
+      .padStart(2, "0"))
+    .join("")}`;
+}
+
+/** Lift a hex color toward white for JRPG hair shine volumes. */
+function lightenHex(hex: string, amount = 0.35): string {
+  const v = hexBytes(hex);
   const lift = (c: number) =>
     Math.min(255, Math.round(c + (255 - c) * amount));
-  return `#${v.map((c) => lift(c).toString(16).padStart(2, "0")).join("")}`;
+  return toHex(v.map(lift));
+}
+
+/** Push a hex color toward black for contrasting shadow / cavity volumes. */
+function darkenHex(hex: string, amount = 0.4): string {
+  const v = hexBytes(hex);
+  return toHex(v.map((c) => c * (1 - amount)));
+}
+
+/** Displayed hex of a toon material (already lightened for dark fills). */
+function matHex(m: Material): string {
+  return `#${(m as MeshToonMaterial).color.getHexString()}`;
 }
 
 /**
@@ -85,6 +110,12 @@ function addHairFrame(
   const back = opts.back !== false;
   const coverForehead = opts.coverForehead !== false;
 
+  // Contrast accents derived from the hair colour so cel detail survives the
+  // Endesga nearest-colour lock: a bright specular core + a dark root shadow.
+  const baseHex = matHex(mat);
+  const hiCore = toonDetail(lightenHex(baseHex, 0.75));
+  const lo = toonDetail(darkenHex(baseHex, 0.34));
+
   // Crown shell — slightly back-biased so the front rim clears the eyes
   const cap = new Mesh(
     new SphereGeometry(shellR, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.58),
@@ -94,14 +125,18 @@ function addHairFrame(
   cap.scale.set(1.06, 0.98, 1.12);
   g.add(cap);
 
-  g.add(mesh(new SphereGeometry(shellR * 0.28, 10, 8), hi, 0, cy + 0.4, -0.06));
+  // Exaggerated crown shine: broad highlight + tight bright core (2-band shine)
+  g.add(mesh(new SphereGeometry(shellR * 0.34, 10, 8), hi, -0.04, cy + 0.42, 0.02));
+  g.add(mesh(new SphereGeometry(shellR * 0.16, 8, 6), hiCore, -0.06, cy + 0.46, 0.06));
 
   // Fringe sits on the brow ridge (above eyes), never mid-face
   if (coverForehead || bangs) {
     g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, -0.1, cy + 0.26, 0.32));
     g.add(mesh(new SphereGeometry(0.11, 8, 6), mat, 0.02, cy + 0.28, 0.34));
     g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, 0.12, cy + 0.26, 0.32));
-    g.add(mesh(new SphereGeometry(0.06, 6, 5), hi, 0, cy + 0.3, 0.33));
+    g.add(mesh(new SphereGeometry(0.07, 6, 5), hi, 0, cy + 0.31, 0.35));
+    // Dark parting shadow under the fringe so the bang mass reads separately
+    g.add(mesh(new SphereGeometry(0.07, 6, 5), lo, 0.02, cy + 0.2, 0.33));
   }
 
   if (sides) {
@@ -127,6 +162,8 @@ function addHairFrame(
     g.add(mesh(new SphereGeometry(shellR * 0.55, 12, 10), mat, 0, cy - 0.1, -0.4));
     g.add(mesh(new SphereGeometry(shellR * 0.38, 10, 8), mat, 0, cy - 0.22, -0.34));
     g.add(mesh(new SphereGeometry(0.12, 8, 6), hi, 0, cy + 0.08, -0.42));
+    // Deep nape shadow so the back mass separates from the neck after clamp
+    g.add(mesh(new SphereGeometry(0.12, 10, 8), lo, 0, cy - 0.2, -0.42));
   }
 }
 
@@ -146,7 +183,11 @@ function addSpikeTuft(
   spike.rotation.z = leanX;
   spike.rotation.x = leanZ;
   g.add(spike);
-  g.add(mesh(new SphereGeometry(0.07, 6, 5), hi, x, y + h * 0.35, z));
+  // Exaggerated tip shine + bright core so the spike keeps a lit edge post-clamp.
+  g.add(mesh(new SphereGeometry(0.085, 6, 5), hi, x, y + h * 0.32, z));
+  g.add(
+    mesh(new SphereGeometry(0.045, 6, 5), toonDetail(lightenHex(matHex(mat), 0.7)), x, y + h * 0.4, z),
+  );
 }
 
 /**
@@ -163,7 +204,7 @@ export function generateHair(opts: {
   if (opts.style === "bald") return g;
 
   const mat = toon(opts.color);
-  const hi = toon(lightenHex(opts.color, 0.4));
+  const hi = toon(lightenHex(opts.color, 0.52));
   const n = Math.max(1, Math.min(8, opts.complexity ?? 5));
   const top = LAYOUT.headTopY - 0.02;
   const cy = LAYOUT.headCenterY;
@@ -899,7 +940,7 @@ const KNIGHT_HEAD_BOOST = 1.2;
 /**
  * Head gear. Closed styles (`knight`, `knightGreat`, `knightWinged`,
  * `knightSallet`, `sciFi`, `pilot`, `samurai`, `viking`, `ninja`, `goat`) and
- * deep cowls (`hood`, `pharaoh`) are sized as *head replacements* matching
+ * deep cowls (`pharaoh`) are sized as *head replacements* matching
  * `generateHead` egg proportions — assembly hides the skin skull (and usually
  * face/hair). Cap-like styles (`cap`, `crown`, `king`, `princess`, `wizard`,
  * `bandana`) overlay the crown only.
@@ -920,7 +961,6 @@ export function generateHelmet(opts: {
   const s = opts.scale ?? 1;
   const r = CHIBI.skullR * s;
   const tall = HEAD_TALL;
-  const shellR = r * HELMET_SHELL;
   /** Flatter / slightly tighter than skin egg so closed helms stay compact. */
   const shellEgg = {
     x: SKULL_EGG.x * 0.98,
@@ -1009,17 +1049,27 @@ export function generateHelmet(opts: {
   }
 
   if (opts.style === "cap") {
-    // Overlay: brim + shallow crown on the top of the tall skull (clear of eyes)
-    const brim = new Mesh(new CylinderGeometry(r * 1.05, r * 1.05, 0.04, 12), mat);
-    brim.position.set(0, top - 0.06, 0.04);
-    g.add(brim);
+    // Baseball cap that sits OVER the hair crown rather than under it. The hair
+    // shell reaches ~cy+0.66 tall and ~r*1.25 wide (see addHairFrame), so a small
+    // crown clips straight through. This dome encloses the upper head/hair; the
+    // temple/back hair still shows below the brim line.
+    const crownR = r * 1.254;
     const crown = new Mesh(
-      new SphereGeometry(r * 0.78, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.42),
+      new SphereGeometry(crownR, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55),
       mat,
     );
-    crown.position.set(0, cy + r * 0.95 * tall, -0.04);
-    crown.scale.set(1.0, 0.75, 0.95);
+    crown.position.set(0, cy + 0.25, -0.03);
+    crown.scale.set(1.04, 1.14, 1.12);
     g.add(crown);
+    // Forward bill — keeps it reading as a cap, not a beanie.
+    const bill = new Mesh(new BoxGeometry(crownR * 1.5, 0.05, crownR * 0.82), mat);
+    bill.position.set(0, cy + 0.29, crownR * 0.9);
+    g.add(bill);
+    // Crown button — small bright accent that survives the palette clamp.
+    const trim = toon(opts.visor ?? lightenHex(opts.color, 0.4));
+    g.add(
+      mesh(new SphereGeometry(0.05, 8, 6), trim, 0, cy + 0.25 + crownR * 1.12, -0.03),
+    );
   }
 
   if (opts.style === "sciFi") {
@@ -1106,29 +1156,255 @@ export function generateHelmet(opts: {
     );
   }
 
-  if (opts.style === "hood") {
-    // Soft replacement cowl — open face window high; cheeks don't cover eyes.
-    const cowl = new Mesh(new SphereGeometry(shellR * 1.02, 14, 12), mat);
-    cowl.position.set(0, skullPos.y + r * 0.08, -0.08);
-    cowl.scale.set(shellEgg.x * 1.05, shellEgg.y * 1.05, shellEgg.z * 1.08);
-    g.add(cowl);
+  if (opts.style === "visor") {
+    // Sci-fi wrap-visor helm — smooth shell + one dominant angled visor band.
+    // Exaggerated bright lens + dark inset survives the Endesga colour lock.
+    const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const lens = toon(opts.visor ?? "#5ad4a0");
+    const lensHi = toon(lightenHex(opts.visor ?? "#5ad4a0", 0.55));
+    const dark = toon("#14151f");
+    const edge = toon(lightenHex(opts.color, 0.32));
 
-    const crown = new Mesh(new SphereGeometry(r * 0.62, 12, 8), mat);
-    crown.position.set(0, cy + r * 0.85 * tall, -0.1);
-    crown.scale.set(1.08, 0.4 * tall, 1.0);
-    g.add(crown);
+    // Smooth cranial shell
+    const dome = new Mesh(new SphereGeometry(shellR, 16, 14), mat);
+    dome.position.set(skullPos.x, skullPos.y, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.0, shellEgg.y * 0.96, shellEgg.z * 1.02);
+    g.add(dome);
 
-    // Cheek wings sit beside the face, not over it
-    for (const sSign of [-1, 1] as const) {
-      const flap = new Mesh(new SphereGeometry(r * 0.24, 10, 8), mat);
-      flap.position.set(sSign * r * 0.9, cy + r * 0.15 * tall, r * 0.05);
-      flap.scale.set(0.6, 1.0 * tall, 0.75);
-      g.add(flap);
+    // Bright crown ridge (lighter edge) — silhouette punctuation from iso
+    g.add(
+      mesh(new BoxGeometry(r * 0.16, r * 0.22, r * 1.45), edge, 0, top - r * 0.16, -0.04),
+    );
+
+    // Jaw / chin cup
+    const chin = new Mesh(new SphereGeometry(r * 0.58, 12, 10), mat);
+    chin.position.set(0, cy - r * 0.6 * tall, r * 0.14);
+    chin.scale.set(1.05, 0.6 * tall, 0.92);
+    g.add(chin);
+
+    // Full-width angled visor housing (dark) then bright lens proud of it
+    const housing = new Mesh(new BoxGeometry(r * 1.75, r * 0.52, r * 0.5), dark);
+    housing.position.set(0, cy + r * 0.08 * tall, r * 0.6);
+    housing.rotation.x = -0.14;
+    g.add(housing);
+    const lensBand = new Mesh(new BoxGeometry(r * 1.5, r * 0.32, r * 0.22), lens);
+    lensBand.position.set(0, cy + r * 0.1 * tall, r * 0.82);
+    lensBand.rotation.x = -0.14;
+    g.add(lensBand);
+    // Diagonal highlight streak so the lens keeps a specular read after clamp
+    const streak = new Mesh(new BoxGeometry(r * 0.55, r * 0.09, 0.05), lensHi);
+    streak.position.set(-r * 0.32, cy + r * 0.16 * tall, r * 0.94);
+    streak.rotation.z = 0.5;
+    g.add(streak);
+
+    // Side intakes (lighter) hugging the temples
+    for (const side of [-1, 1] as const) {
+      g.add(
+        mesh(new BoxGeometry(r * 0.14, r * 0.42, r * 0.5), edge, side * r * 0.82, cy - r * 0.02 * tall, r * 0.08),
+      );
+    }
+  }
+
+  if (opts.style === "goggles") {
+    // Aviator goggles overlay — keeps hair; twin lenses + brow strap. Lenses sit
+    // clearly in FRONT of the eye plane (eye z ≈ r*0.76) so the eye (hidden at
+    // assembly) never pokes through, and everything is oversized + high-contrast
+    // (dark frame · bright lens · white glare) to survive the palette clamp.
+    const r = CHIBI.skullR * s;
+    const frame = toonDetail(darkenHex(opts.color, 0.35));
+    const lens = toon(opts.visor ?? "#5ad4a0");
+    const lensHi = toonDetail(lightenHex(opts.visor ?? "#5ad4a0", 0.8));
+    const eyeY = cy - r * 0.16;
+    const eyeZ = r * 0.9;
+    const eyeX = r * 0.4;
+
+    // Brow strap linking the lenses + wrapping toward the temples (goggle read).
+    g.add(
+      mesh(new BoxGeometry(r * 1.65, r * 0.18, r * 0.16), frame, 0, eyeY + r * 0.16, eyeZ - r * 0.22),
+    );
+    for (const side of [-1, 1] as const) {
+      const strap = new Mesh(new BoxGeometry(r * 0.6, r * 0.16, r * 0.12), frame);
+      strap.position.set(side * (eyeX + r * 0.55), eyeY + r * 0.14, eyeZ - r * 0.55);
+      strap.rotation.y = side * 0.75;
+      g.add(strap);
+    }
+    // Chunky nose bridge
+    g.add(mesh(new BoxGeometry(r * 0.34, r * 0.14, r * 0.14), frame, 0, eyeY, eyeZ));
+
+    for (const side of [-1, 1] as const) {
+      // Bold frame ring (disc facing forward)
+      const rim = new Mesh(new CylinderGeometry(r * 0.36, r * 0.36, r * 0.16, 16), frame);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.set(side * eyeX, eyeY, eyeZ);
+      g.add(rim);
+      // Big bright lens, proud of the frame
+      const glass = new Mesh(new CylinderGeometry(r * 0.27, r * 0.27, r * 0.12, 16), lens);
+      glass.rotation.x = Math.PI / 2;
+      glass.position.set(side * eyeX, eyeY, eyeZ + r * 0.07);
+      g.add(glass);
+      // Bold diagonal glare streak — keeps the lens legible after clamp
+      const glare = new Mesh(new BoxGeometry(r * 0.24, r * 0.08, 0.03), lensHi);
+      glare.position.set(side * eyeX - r * 0.07, eyeY + r * 0.1, eyeZ + r * 0.15);
+      glare.rotation.z = 0.5;
+      g.add(glare);
+    }
+  }
+
+  if (opts.style === "astronautBubble") {
+    // Round EVA bubble — big sphere silhouette + wide gold visor bulge.
+    const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const glass = toon(opts.visor ?? "#f5c542");
+    const glassHi = toon(lightenHex(opts.visor ?? "#f5c542", 0.5));
+    const ring = toon(lightenHex(opts.color, 0.28));
+    const dark = toonDetail("#14151f");
+
+    // Big rounded dome (less egg than combat helms)
+    const dome = new Mesh(new SphereGeometry(shellR * 1.06, 18, 16), mat);
+    dome.position.set(skullPos.x, skullPos.y + r * 0.03, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.08, (shellEgg.y / 0.94) * 1.02, shellEgg.z * 1.08);
+    g.add(dome);
+
+    // Gold visor lens bulging from the front
+    const visor = new Mesh(new SphereGeometry(r * 0.72, 14, 12), glass);
+    visor.position.set(0, cy + r * 0.02 * tall, r * 0.5);
+    visor.scale.set(1.15, 0.82, 0.6);
+    g.add(visor);
+    // Dark seal frame around the visor top
+    g.add(
+      mesh(new BoxGeometry(r * 1.35, r * 0.14, r * 0.3), dark, 0, cy + r * 0.42 * tall, r * 0.55),
+    );
+    // Specular highlight blob on the visor
+    g.add(mesh(new SphereGeometry(r * 0.14, 8, 6), glassHi, -r * 0.28, cy + r * 0.2 * tall, r * 0.92));
+
+    // Neck ring (lighter) into the shoulders
+    g.add(
+      mesh(new CylinderGeometry(r * 0.72, r * 0.8, r * 0.18, 14), ring, 0, cy - r * 0.78 * tall, 0),
+    );
+    // Top comms light
+    g.add(mesh(new SphereGeometry(r * 0.1, 8, 6), toonDetail("#e83b3b"), 0, top + r * 0.02, -0.06));
+  }
+
+  if (opts.style === "astronautFlat") {
+    // Squared modern space helmet — boxy shell + rectangular flat visor.
+    const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const glass = toon(opts.visor ?? "#2a6ebd");
+    const glassHi = toon(lightenHex(opts.visor ?? "#2a6ebd", 0.5));
+    const edge = toon(lightenHex(opts.color, 0.3));
+    const dark = toonDetail("#14151f");
+    const ring = toon(lightenHex(opts.color, 0.28));
+
+    const dome = new Mesh(new SphereGeometry(shellR, 16, 14), mat);
+    dome.position.set(skullPos.x, skullPos.y, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.04, shellEgg.y * 0.98, shellEgg.z * 1.02);
+    g.add(dome);
+
+    // Boxy crown cap
+    g.add(
+      mesh(new BoxGeometry(r * 1.3, r * 0.36, r * 1.3), mat, 0, cy + r * 0.62 * tall, -0.02),
+    );
+    // Bright edge trim on the brow
+    g.add(
+      mesh(new BoxGeometry(r * 1.5, r * 0.12, r * 0.22), edge, 0, cy + r * 0.4 * tall, r * 0.52),
+    );
+
+    // Rectangular visor: dark housing + bright inset panel
+    g.add(
+      mesh(new BoxGeometry(r * 1.5, r * 0.52, r * 0.35), dark, 0, cy - r * 0.02 * tall, r * 0.5),
+    );
+    g.add(
+      mesh(new BoxGeometry(r * 1.3, r * 0.34, r * 0.18), glass, 0, cy - r * 0.02 * tall, r * 0.68),
+    );
+    g.add(
+      mesh(new BoxGeometry(r * 0.5, r * 0.08, 0.05), glassHi, -r * 0.28, cy + r * 0.08 * tall, r * 0.78),
+    );
+
+    // Neck ring + side antenna
+    g.add(
+      mesh(new CylinderGeometry(r * 0.7, r * 0.78, r * 0.16, 12), ring, 0, cy - r * 0.72 * tall, 0),
+    );
+    g.add(mesh(new CylinderGeometry(0.02, 0.028, r * 0.5, 6), edge, r * 0.62, top - r * 0.02, -0.08));
+    g.add(mesh(new SphereGeometry(r * 0.06, 6, 5), toonDetail("#e83b3b"), r * 0.62, top + r * 0.24, -0.08));
+  }
+
+  if (opts.style === "astronautVintage") {
+    // Mercury-era helmet — ribbed dome + round porthole visor.
+    const r = CHIBI.skullR * s * REPLACE_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const glass = toon(opts.visor ?? "#3a9bb5");
+    const glassHi = toon(lightenHex(opts.visor ?? "#3a9bb5", 0.5));
+    const rib = toon(lightenHex(opts.color, 0.3));
+    const dark = toonDetail(darkenHex(opts.color, 0.3));
+
+    const dome = new Mesh(new SphereGeometry(shellR, 16, 14), mat);
+    dome.position.set(skullPos.x, skullPos.y, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.02, shellEgg.y * 1.0, shellEgg.z * 1.02);
+    g.add(dome);
+
+    // Ribs — light bands wrapping crown → nape (front-to-back arcs)
+    for (const off of [-0.28, 0, 0.28] as const) {
+      const band = new Mesh(new CylinderGeometry(r * 0.1, r * 0.1, r * 1.5, 8), rib);
+      band.rotation.x = Math.PI / 2;
+      band.position.set(off * r, cy + r * 0.55 * tall, -0.02);
+      band.scale.set(1, 1, 1);
+      g.add(band);
     }
 
+    // Round porthole visor: dark ring + bright disc
+    const rimR = r * 0.72;
+    const ringM = new Mesh(new CylinderGeometry(rimR, rimR, r * 0.14, 16), dark);
+    ringM.rotation.x = Math.PI / 2;
+    ringM.position.set(0, cy - r * 0.05 * tall, r * 0.52);
+    g.add(ringM);
+    const disc = new Mesh(new CylinderGeometry(rimR * 0.82, rimR * 0.82, r * 0.1, 16), glass);
+    disc.rotation.x = Math.PI / 2;
+    disc.position.set(0, cy - r * 0.05 * tall, r * 0.6);
+    g.add(disc);
+    g.add(mesh(new SphereGeometry(r * 0.13, 8, 6), glassHi, -r * 0.28, cy + r * 0.14 * tall, r * 0.72));
+
+    // Chin / neck ring
     g.add(
-      mesh(new BoxGeometry(r * 1.0, r * 0.5, r * 0.22), mat, 0, cy - r * 0.35 * tall, -r * 0.7),
+      mesh(new CylinderGeometry(r * 0.68, r * 0.78, r * 0.16, 14), rib, 0, cy - r * 0.74 * tall, 0),
     );
+  }
+
+  if (opts.style === "scouter") {
+    // DBZ scouter overlay — keeps hair; single big angular lens over one eye
+    // (hidden at assembly). Lens sits well in FRONT of the face and is oversized
+    // + high-contrast (dark frame · bright lens · white scan glare) so it stays
+    // legible after the palette clamp.
+    const r = CHIBI.skullR * s;
+    const frame = toonDetail(darkenHex(opts.color, 0.25));
+    const lens = toon(opts.visor ?? "#37d36b");
+    const lensHi = toonDetail(lightenHex(opts.visor ?? "#37d36b", 0.85));
+    const side = 1; // over the character's right-screen eye
+    const eyeY = cy - r * 0.14;
+    const eyeZ = r * 0.94;
+    const eyeX = side * r * 0.42;
+
+    // Earpiece anchoring the scouter to the temple
+    g.add(mesh(new BoxGeometry(r * 0.22, r * 0.36, r * 0.26), frame, side * r * 0.76, eyeY + r * 0.06, r * 0.05));
+    // Arm sweeping to the lens
+    const arm = new Mesh(new BoxGeometry(r * 0.62, r * 0.1, r * 0.1), frame);
+    arm.position.set(side * r * 0.62, eyeY + r * 0.04, eyeZ - r * 0.34);
+    arm.rotation.y = -side * 0.7;
+    g.add(arm);
+    // Angular lens (oversized eye plate) — bright + dark frame + highlight
+    const rim = new Mesh(new BoxGeometry(r * 0.64, r * 0.46, r * 0.08), frame);
+    rim.position.set(eyeX, eyeY, eyeZ);
+    rim.rotation.z = 0.14;
+    g.add(rim);
+    const glass = new Mesh(new BoxGeometry(r * 0.52, r * 0.36, r * 0.07), lens);
+    glass.position.set(eyeX, eyeY, eyeZ + r * 0.06);
+    glass.rotation.z = 0.14;
+    g.add(glass);
+    // Bold scan glare across the lens
+    const glare = new Mesh(new BoxGeometry(r * 0.36, r * 0.09, 0.03), lensHi);
+    glare.position.set(eyeX - r * 0.06, eyeY + r * 0.11, eyeZ + r * 0.12);
+    glare.rotation.z = 0.14;
+    g.add(glare);
   }
 
   if (opts.style === "crown") {
@@ -1147,17 +1423,36 @@ export function generateHelmet(opts: {
   }
 
   if (opts.style === "wizard") {
-    // Overlay pointed hat — brim high on the crown
-    const brim = new Mesh(new CylinderGeometry(r * 1.15, r * 1.15, 0.04, 12), mat);
-    brim.position.set(0, top - 0.04, 0);
+    // Witch/wizard hat: wide brim at the hairline + a tall cone whose base is
+    // wider than the hair shell, so the cone fully ENCLOSES the hair crown
+    // instead of the old narrow cone that let tufts poke through. Side/back hair
+    // shows below the brim.
+    const brimY = cy + 0.3;
+    const brimR = r * 1.6625;
+    const brim = new Mesh(new CylinderGeometry(brimR, brimR, 0.05, 16), mat);
+    brim.position.set(0, brimY, 0.02);
     g.add(brim);
-    const cone = new Mesh(new ConeGeometry(r * 0.68, r * 1.1, 10), mat);
-    cone.position.set(0, top + r * 0.4, -0.02);
-    cone.rotation.z = 0.12;
-    cone.rotation.x = -0.08;
+    // Conical crown — base wider than the hair shell (incl. its deeper z-axis)
+    // and tall enough that the taper still clears the hair up near the crown.
+    const coneBaseR = r * 1.4725;
+    const coneH = r * 2.2325;
+    const cone = new Mesh(new ConeGeometry(coneBaseR, coneH, 14), mat);
+    cone.position.set(0, brimY + coneH * 0.5 - 0.02, -0.02);
+    cone.rotation.z = 0.1;
+    cone.rotation.x = -0.05;
     g.add(cone);
     const trim = toon(opts.visor ?? "#f5e07a");
-    g.add(mesh(new SphereGeometry(0.055, 8, 6), trim, 0.04, top + r * 0.9, -0.02));
+    // Hat band over the brim seam + bright tip bauble.
+    g.add(
+      mesh(
+        new CylinderGeometry(coneBaseR * 1.03, coneBaseR * 1.08, 0.09, 14),
+        trim,
+        0,
+        brimY + 0.06,
+        -0.02,
+      ),
+    );
+    g.add(mesh(new SphereGeometry(0.06, 8, 6), trim, 0.07, brimY + coneH - 0.02, -0.04));
   }
 
   if (opts.style === "bandana") {
@@ -1418,6 +1713,79 @@ export function generateHelmet(opts: {
     g.add(point);
   }
 
+  if (opts.style === "knightBarbute") {
+    // Italian barbute — smooth skull-hug shell with a bold Y face cut-out.
+    const r = CHIBI.skullR * s * KNIGHT_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const slit = toon(opts.visor ?? "#1a1c2c");
+    const edge = toon(lightenHex(opts.color, 0.28));
+
+    // Rounded shell, extended low over cheeks + nape
+    const dome = new Mesh(new SphereGeometry(shellR, 16, 14), mat);
+    dome.position.set(skullPos.x, skullPos.y, skullPos.z);
+    dome.scale.set(shellEgg.x * 1.02, shellEgg.y * 1.04, shellEgg.z * 1.04);
+    g.add(dome);
+    const jaw = new Mesh(new SphereGeometry(r * 0.7, 12, 10), mat);
+    jaw.position.set(0, cy - r * 0.5 * tall, r * 0.05);
+    jaw.scale.set(1.0, 0.85 * tall, 0.95);
+    g.add(jaw);
+
+    // Light central crest ridge front-to-back
+    g.add(mesh(new BoxGeometry(r * 0.12, r * 0.18, r * 1.4), edge, 0, top - r * 0.2, -0.04));
+
+    // Y-shaped face opening (dark): nasal slot + two angled eye cuts
+    const faceZ = r * 0.95;
+    const slitY = cy + r * 0.06 * tall;
+    g.add(mesh(new BoxGeometry(r * 0.16, r * 0.9, 0.1), slit, 0, slitY - r * 0.2, faceZ));
+    for (const side of [-1, 1] as const) {
+      const eyeCut = new Mesh(new BoxGeometry(r * 0.5, r * 0.14, 0.1), slit);
+      eyeCut.position.set(side * r * 0.28, slitY + r * 0.2, faceZ);
+      eyeCut.rotation.z = side * 0.35;
+      g.add(eyeCut);
+    }
+    // Light brow edge above the opening
+    g.add(mesh(new BoxGeometry(r * 1.3, r * 0.14, r * 0.3), edge, 0, slitY + r * 0.5, r * 0.7));
+  }
+
+  if (opts.style === "knightBascinet") {
+    // Houndskull bascinet — conical apex + pointed snout visor.
+    const r = CHIBI.skullR * s * KNIGHT_HEAD_BOOST;
+    const shellR = r * HELMET_SHELL;
+    const slit = toon(opts.visor ?? "#1a1c2c");
+    const edge = toon(lightenHex(opts.color, 0.28));
+
+    const dome = new Mesh(new SphereGeometry(shellR, 16, 14), mat);
+    dome.position.set(skullPos.x, skullPos.y + r * 0.05, skullPos.z);
+    dome.scale.set(shellEgg.x * 0.98, shellEgg.y * 1.0, shellEgg.z * 1.02);
+    g.add(dome);
+    // Conical apex swept back
+    const apex = new Mesh(new ConeGeometry(r * 0.5, r * 0.7, 12), mat);
+    apex.position.set(0, cy + r * 0.85 * tall, -r * 0.18);
+    apex.rotation.x = -0.3;
+    g.add(apex);
+
+    // Pointed snout visor (points forward + down)
+    const snout = new Mesh(new ConeGeometry(r * 0.55, r * 0.95, 10), mat);
+    snout.position.set(0, cy - r * 0.05 * tall, r * 0.55);
+    snout.rotation.x = Math.PI / 2 + 0.25;
+    g.add(snout);
+    // Dark breath holes down one side of the snout
+    for (let i = 0; i < 3; i++) {
+      g.add(
+        mesh(new SphereGeometry(r * 0.05, 6, 5), slit, r * 0.18, cy - r * (0.1 + i * 0.12) * tall, r * 0.95),
+      );
+    }
+    // Dark eye slit + light brow ridge
+    const faceZ = r * 0.86;
+    const slitY = cy + r * 0.18 * tall;
+    g.add(mesh(new BoxGeometry(r * 1.2, r * 0.12, 0.09), slit, 0, slitY, faceZ));
+    g.add(mesh(new BoxGeometry(r * 1.3, r * 0.12, r * 0.28), edge, 0, slitY + r * 0.2, r * 0.65));
+    // Light hinge studs at the temples
+    for (const side of [-1, 1] as const) {
+      g.add(mesh(new SphereGeometry(r * 0.1, 8, 6), edge, side * r * 0.85, slitY, r * 0.35));
+    }
+  }
+
   if (opts.style === "king") {
     // Arched royal crown — taller than the simple circlet.
     const gem = toon(opts.visor ?? "#f5e07a");
@@ -1483,25 +1851,34 @@ export function generateHelmet(opts: {
     dome.scale.set(shellEgg.x * 1.0, shellEgg.y * 0.95, shellEgg.z * 1.0);
     g.add(dome);
 
-    // Rounded crown bulge
+    // Rounded crown bulge + light edge trim (reworked for clamp contrast)
     const crown = new Mesh(new SphereGeometry(r * 0.55, 12, 8), mat);
     crown.position.set(0, cy + r * 0.7 * tall, -0.04);
     crown.scale.set(1.15, 0.55 * tall, 1.05);
     g.add(crown);
+    const edge = toon(lightenHex(opts.color, 0.32));
+    const visorHi = toon(lightenHex(opts.visor ?? "#5ad4a0", 0.55));
+    g.add(
+      mesh(new BoxGeometry(r * 1.4, r * 0.12, r * 0.24), edge, 0, cy + r * 0.34 * tall, r * 0.55),
+    );
 
-    // Goggle / visor band
+    // Dark goggle housing spanning the brow — reads as one bold band
     g.add(
-      mesh(new BoxGeometry(r * 1.45, r * 0.32, 0.1), visorMat, 0, cy + r * 0.08 * tall, r * 0.85),
+      mesh(new BoxGeometry(r * 1.45, r * 0.36, r * 0.28), dark, 0, cy + r * 0.08 * tall, r * 0.72),
     );
-    g.add(
-      mesh(new BoxGeometry(r * 1.25, r * 0.14, 0.06), dark, 0, cy + r * 0.08 * tall, r * 0.92),
-    );
-    // Goggle frames
+    // Twin bright lenses in dark rims + corner highlight
     for (const side of [-1, 1] as const) {
-      const frame = new Mesh(new CylinderGeometry(r * 0.22, r * 0.22, 0.06, 10), dark);
-      frame.position.set(side * r * 0.32, cy + r * 0.08 * tall, r * 0.88);
-      frame.rotation.x = Math.PI / 2;
-      g.add(frame);
+      const rim = new Mesh(new CylinderGeometry(r * 0.26, r * 0.26, r * 0.12, 12), dark);
+      rim.rotation.x = Math.PI / 2;
+      rim.position.set(side * r * 0.34, cy + r * 0.08 * tall, r * 0.84);
+      g.add(rim);
+      const glass = new Mesh(new CylinderGeometry(r * 0.19, r * 0.19, r * 0.08, 12), visorMat);
+      glass.rotation.x = Math.PI / 2;
+      glass.position.set(side * r * 0.34, cy + r * 0.08 * tall, r * 0.9);
+      g.add(glass);
+      g.add(
+        mesh(new BoxGeometry(r * 0.1, r * 0.05, 0.04), visorHi, side * r * 0.34 - r * 0.07, cy + r * 0.15 * tall, r * 0.95),
+      );
     }
 
     // Cheek / ear cups
@@ -1922,7 +2299,7 @@ export function generateTorso(opts: {
     );
     robe.position.set(0, midY - 0.04, 0);
     g.add(robe);
-    // Soft shoulder cowl only — prefer `helmet: hood` for a full head cowl.
+    // Soft shoulder cowl only (no full head cowl).
     // Keep this small so it doesn't balloon over the new cute skulls.
     const tall = HEAD_TALL;
     const skullR = CHIBI.skullR;
@@ -2159,34 +2536,63 @@ export function generateTorso(opts: {
 }
 
 /**
- * Mitten hand — palm blob + thumb nub. No fingers.
- * Origin at wrist; palm hangs below / slightly forward.
+ * Mitten-grip hand tuned for SILHOUETTE readability at 48px (fine finger detail
+ * is sub-pixel at bake scale, so this leans on big volumes + strong 2-tone):
+ *  - a chunky fist core, slightly wider than tall;
+ *  - a LIGHT knuckle ridge across the top-front with one BOLD dark groove under
+ *    it — the light/dark split reads as "fingers over palm";
+ *  - a distinct thumb bump protruding on the inner (weapon) side of the outline;
+ *  - a shallow front grip channel between thumb and fingers so a weapon handle
+ *    shows through it instead of being swallowed.
+ *
+ * Origin at wrist; fist hangs -Y, knuckles face +Z (forward).
  */
 export function generateHand(opts: {
   color: string;
-  /** Mirror thumb to the outside for left (-1) / right (+1). */
+  /** Thumb sits on the inner side; knuckles on the outer. left (-1) / right (+1). */
   side?: 1 | -1;
 }): Group {
   const g = new Group();
   g.name = "hand";
   const mat = toon(opts.color);
+  const shade = toon(darkenHex(opts.color, 0.45)); // palm / deep finger groove
+  const shine = toon(lightenHex(opts.color, 0.3)); // knuckle ridge catch-light
   const side = opts.side ?? 1;
   const s = CHIBI.handSize;
 
-  // Palm / mitt body
-  const palm = new Mesh(new SphereGeometry(s * 0.78, 10, 8), mat);
-  palm.position.set(0, -s * 0.35, s * 0.15);
-  palm.scale.set(1.05, 0.95, 1.25);
+  // Fist core — chunky, a touch wider than tall so it reads as a grip not a ball.
+  const core = new Mesh(new SphereGeometry(s * 0.86, 10, 8), mat);
+  core.position.set(0, -s * 0.5, s * 0.02);
+  core.scale.set(1.22, 1.12, 1.08);
+  g.add(core);
+
+  // Darker palm / lower-finger mass so the bottom half reads a shade down.
+  const palm = new Mesh(new SphereGeometry(s * 0.66, 8, 6), shade);
+  palm.position.set(0, -s * 0.78, s * 0.16);
+  palm.scale.set(1.15, 0.85, 1.05);
   g.add(palm);
 
-  // Rounded mitt tip (no finger splits)
-  g.add(mesh(new SphereGeometry(s * 0.55, 8, 6), mat, 0, -s * 0.7, s * 0.45));
+  // Light knuckle ridge across the top-front — the row of fingers catching key.
+  const ridge = new Mesh(new CapsuleGeometry(s * 0.34, s * 0.66, 4, 8), shine);
+  ridge.rotation.z = Math.PI / 2; // lie along X
+  ridge.position.set(0, -s * 0.3, s * 0.34);
+  g.add(ridge);
 
-  // Thumb nub — outside of mitt
-  const thumb = new Mesh(new SphereGeometry(s * 0.38, 8, 6), mat);
-  thumb.position.set(side * s * 0.7, -s * 0.25, s * 0.2);
-  thumb.scale.set(0.85, 1.1, 1.15);
+  // One bold dark groove right under the knuckles (fingers ↔ palm split).
+  const groove = new Mesh(new BoxGeometry(s * 1.2, s * 0.16, s * 0.22), shade);
+  groove.position.set(0, -s * 0.56, s * 0.42);
+  g.add(groove);
+
+  // Thumb — a fat bump protruding on the inner (weapon) side of the silhouette,
+  // pushed forward so it clamps over the grip channel.
+  const thumb = new Mesh(new SphereGeometry(s * 0.44, 8, 6), mat);
+  thumb.position.set(-side * s * 0.62, -s * 0.5, s * 0.34);
+  thumb.scale.set(0.95, 1.25, 1.05);
   g.add(thumb);
+  // Thumb knuckle highlight to lift it off the core after clamp.
+  const thumbLit = new Mesh(new SphereGeometry(s * 0.2, 6, 6), shine);
+  thumbLit.position.set(-side * s * 0.58, -s * 0.34, s * 0.46);
+  g.add(thumbLit);
 
   return g;
 }
@@ -2454,6 +2860,9 @@ export function generateArms(opts: {
   root: Group;
   leftHand: Group;
   rightHand: Group;
+  /** Upper-arm / forearm bone lengths, for two-handed grip IK. */
+  upperLen: number;
+  foreLen: number;
 } {
   const root = new Group();
   root.name = "arms";
@@ -2557,7 +2966,7 @@ export function generateArms(opts: {
     else leftHand = hand;
   }
 
-  return { root, leftHand, rightHand };
+  return { root, leftHand, rightHand, upperLen, foreLen };
 }
 
 export function generateLegs(opts: {
@@ -2676,52 +3085,111 @@ export function generateWeapon(opts: {
   const hx = opts.hand === "left" ? -1 : 1;
 
   if (opts.type === "sword") {
-    // Tip the whole sword forward so the blade clears the mitt silhouette.
-    g.rotation.x = -0.55;
-    g.position.set(0, -0.02, 0.08);
-    g.add(mesh(limbCylinder(0.055, 0.18), toonDetail("#4a3626"), 0, -0.03, 0.05));
-    g.add(mesh(new SphereGeometry(0.05, 8, 6), toonDetail("#2a1c14"), 0, -0.14, 0.05));
+    // Canonical grip: hold point at origin, blade up +Y, edge facing +Z.
+    // Assembly (aimHeldWeapon) rotates the whole prop into body space so it
+    // always reads as held blade-up regardless of arm pose.
+    g.add(mesh(limbCylinder(0.055, 0.2), toonDetail("#4a3626"), 0, -0.02, 0));
+    g.add(mesh(new SphereGeometry(0.05, 8, 6), toonDetail("#2a1c14"), 0, -0.14, 0));
     g.add(
-      mesh(
-        new BoxGeometry(t.swordGuardWidth, 0.07, 0.12),
-        toonDetail("#eef2f5"),
-        0,
-        0.12,
-        0.05,
-      ),
+      mesh(new BoxGeometry(t.swordGuardWidth, 0.07, 0.12), toonDetail("#eef2f5"), 0, 0.11, 0),
     );
     const blade = new Mesh(
       new CylinderGeometry(t.swordBladeR, t.swordBladeR * 0.8, t.swordBladeLength, 6),
       mat,
     );
-    blade.position.set(0, 0.12 + 0.04 + t.swordBladeLength * 0.5, 0.05);
+    blade.position.set(0, 0.15 + t.swordBladeLength * 0.5, 0);
     g.add(blade);
-    const tipY = 0.12 + 0.04 + t.swordBladeLength;
+    const tipY = 0.15 + t.swordBladeLength;
     const tip = new Mesh(new ConeGeometry(t.swordBladeR * 0.8, 0.14, 6), mat);
-    tip.position.set(0, tipY + 0.07, 0.05);
+    tip.position.set(0, tipY + 0.07, 0);
     g.add(tip);
   } else if (opts.type === "staff") {
-    g.rotation.x = -0.35;
-    g.position.set(0, 0, 0.06);
-    g.add(mesh(limbCylinder(0.06, 0.95), mat, 0, 0.15, 0.05));
+    // Canonical: shaft up +Y, grip near the lower third at the origin.
+    g.add(mesh(limbCylinder(0.06, 0.95), mat, 0, 0.2, 0));
     for (const s of [-1, 1] as const) {
       const prong = new Mesh(new ConeGeometry(0.04, 0.18, 5), toonDetail(accent));
-      prong.position.set(s * 0.1, 0.68, 0.05);
+      prong.position.set(s * 0.1, 0.73, 0);
       prong.rotation.z = s * 0.5;
       g.add(prong);
     }
-    g.add(mesh(new SphereGeometry(t.staffOrbR, 10, 8), toonDetail("#f5f8ff"), 0, 0.82, 0.05));
+    g.add(mesh(new SphereGeometry(t.staffOrbR, 10, 8), toonDetail("#f5f8ff"), 0, 0.87, 0));
+  } else if (opts.type === "axe") {
+    // Canonical: haft up +Y, grip at origin, bit facing +Z. One-handed.
+    const wood = toonDetail("#5a3d24");
+    g.add(mesh(limbCylinder(0.05, 0.66), wood, 0, 0.24, 0)); // haft
+    g.add(mesh(limbCylinder(0.058, 0.16), toonDetail("#3a2818"), 0, -0.01, 0)); // grip wrap
+    g.add(mesh(new SphereGeometry(0.06, 8, 6), toonDetail("#2a1c14"), 0, -0.13, 0)); // butt
+    const hy = 0.5;
+    g.add(mesh(new BoxGeometry(0.11, 0.22, 0.14), mat, 0, hy, 0.04)); // head socket
+    g.add(mesh(new BoxGeometry(0.05, 0.32, 0.26), mat, 0, hy, 0.23)); // bit plate
+    g.add(
+      mesh(
+        new BoxGeometry(0.03, 0.36, 0.05),
+        toonDetail(lightenHex(opts.color, 0.42)),
+        0,
+        hy,
+        0.38,
+      ),
+    ); // edge glint
+    g.add(mesh(new ConeGeometry(0.035, 0.13, 6), mat, 0, hy + 0.2, 0)); // top spike
+  } else if (opts.type === "maul") {
+    // Canonical: long haft up +Y, grip at origin, big hammer head at the top.
+    const wood = toonDetail("#5a3d24");
+    g.add(mesh(limbCylinder(0.056, 1.2), wood, 0, 0.3, 0)); // haft
+    g.add(mesh(limbCylinder(0.064, 0.18), toonDetail("#3a2818"), 0, -0.02, 0)); // grip wrap
+    g.add(mesh(new SphereGeometry(0.07, 8, 6), toonDetail("#2a1c14"), 0, -0.32, 0)); // butt
+    const hy = 0.82;
+    g.add(mesh(new BoxGeometry(0.3, 0.28, 0.3), mat, 0, hy, 0)); // hammer head
+    for (const dy of [-0.16, 0.16] as const) {
+      g.add(
+        mesh(new BoxGeometry(0.33, 0.06, 0.33), toonDetail("#2b3038"), 0, hy + dy, 0),
+      ); // reinforcing bands
+    }
+    for (const dz of [-1, 1] as const) {
+      g.add(
+        mesh(
+          new SphereGeometry(0.05, 6, 5),
+          toonDetail(lightenHex(opts.color, 0.4)),
+          0,
+          hy,
+          dz * 0.16,
+        ),
+      ); // face studs
+    }
+  } else if (opts.type === "spear") {
+    // Canonical: long shaft up +Y, grip at origin, leaf head at the top.
+    const wood = toonDetail("#6a4a2c");
+    g.add(mesh(limbCylinder(0.042, 1.4), wood, 0, 0.4, 0)); // shaft
+    g.add(mesh(limbCylinder(0.05, 0.18), toonDetail("#3a2818"), 0, -0.02, 0)); // grip wrap
+    const butt = new Mesh(new ConeGeometry(0.05, 0.14, 6), toonDetail("#c8ccd2"));
+    butt.rotation.x = Math.PI; // counterweight spike, points down
+    butt.position.set(0, -0.33, 0);
+    g.add(butt);
+    const hy = 1.02;
+    g.add(mesh(new BoxGeometry(0.07, 0.1, 0.07), toonDetail("#3a2818"), 0, hy - 0.14, 0)); // collar
+    const head = new Mesh(new ConeGeometry(0.1, 0.4, 4), mat); // leaf blade
+    head.position.set(0, hy + 0.12, 0);
+    g.add(head);
+    g.add(
+      mesh(
+        new BoxGeometry(0.02, 0.34, 0.03),
+        toonDetail(lightenHex(opts.color, 0.42)),
+        0,
+        hy + 0.12,
+        0.06,
+      ),
+    ); // edge glint
   } else if (opts.type === "rifle") {
-    g.rotation.x = -0.2;
-    g.position.set(0, 0.02, 0.1);
+    // Canonical: barrel forward +Z, grip/receiver at the origin. Assembly aims
+    // the muzzle forward (and slightly down) in body space.
     const barrel = new Mesh(limbCylinder(t.rifleBarrelR, 0.72), mat);
     barrel.rotation.x = Math.PI / 2;
-    barrel.position.set(0, 0.04, 0.38);
+    barrel.position.set(0, 0.04, 0.42);
     g.add(barrel);
-    g.add(mesh(new BoxGeometry(0.17, 0.2, 0.28), mat, 0, -0.02, 0.04));
+    g.add(mesh(new BoxGeometry(0.17, 0.2, 0.3), mat, 0, -0.02, 0.06));
     g.add(mesh(new BoxGeometry(0.1, 0.13, 0.28), mat, 0, -0.05, -0.2));
-    g.add(mesh(new BoxGeometry(0.036, 0.07, 0.036), toonDetail("#14151f"), 0, 0.14, 0.72));
-    g.add(mesh(new BoxGeometry(0.07, 0.18, 0.06), toonDetail("#14151f"), 0, -0.18, 0.16));
+    g.add(mesh(new BoxGeometry(0.036, 0.07, 0.036), toonDetail("#14151f"), 0, 0.14, 0.76));
+    g.add(mesh(new BoxGeometry(0.07, 0.18, 0.06), toonDetail("#14151f"), 0, -0.2, 0.18));
   } else if (opts.type === "shield") {
     // Nest shield slightly outboard of the trail mitt (mirrored per hand).
     const disc = new Mesh(
