@@ -979,9 +979,9 @@ export default function App() {
 
             <div className="part-grid">
               <div className="part-block">
-                <div className="part-row part-row-eyes">
+                <div className="part-row">
                   <span className="part-name">eyes</span>
-                  <label className="part-chip part-chip-inline">
+                  <label className="part-lock">
                     <input
                       type="checkbox"
                       checked={showEyes}
@@ -990,10 +990,30 @@ export default function App() {
                     />
                     Show
                   </label>
-                  <label
-                    className={`part-inline-slider${showEyes ? "" : " is-disabled"}`}
-                  >
-                    <span className="part-inline-slider-label" title="Distance between eyes">
+                  <div className="part-actions">
+                    <PaletteColorButton
+                      value={spec.face?.eyeColor ?? "#1a1c2c"}
+                      paletteColors={palette?.colors ?? []}
+                      title="Eye colour"
+                      ariaLabel="Eye colour"
+                      disabled={!showEyes}
+                      onChange={(hex) =>
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, eyeColor: hex },
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+                <div
+                  className={`light-grid part-eye-sliders${showEyes ? "" : " is-disabled"}`}
+                >
+                  <label className="light-slider">
+                    <span
+                      className="light-slider-label"
+                      title="Distance between eyes"
+                    >
                       Dist
                     </span>
                     <input
@@ -1012,14 +1032,12 @@ export default function App() {
                       }}
                       title="Distance between eyes"
                     />
-                    <span className="part-inline-slider-val">
+                    <span className="slider-val">
                       {(spec.face?.spacing ?? 1).toFixed(2)}
                     </span>
                   </label>
-                  <label
-                    className={`part-inline-slider${showEyes ? "" : " is-disabled"}`}
-                  >
-                    <span className="part-inline-slider-label" title="Eye size">
+                  <label className="light-slider">
+                    <span className="light-slider-label" title="Eye size">
                       Size
                     </span>
                     <input
@@ -1038,25 +1056,10 @@ export default function App() {
                       }}
                       title="Eye size"
                     />
-                    <span className="part-inline-slider-val">
+                    <span className="slider-val">
                       {(spec.face?.scale ?? 1).toFixed(2)}
                     </span>
                   </label>
-                  <div className="part-actions">
-                    <PaletteColorButton
-                      value={spec.face?.eyeColor ?? "#1a1c2c"}
-                      paletteColors={palette?.colors ?? []}
-                      title="Eye colour"
-                      ariaLabel="Eye colour"
-                      disabled={!showEyes}
-                      onChange={(hex) =>
-                        applyPartEdit((s) => ({
-                          ...s,
-                          face: { ...s.face, eyeColor: hex },
-                        }))
-                      }
-                    />
-                  </div>
                 </div>
               </div>
 

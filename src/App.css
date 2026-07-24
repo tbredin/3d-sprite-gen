@@ -726,56 +726,15 @@ button.ghost {
   flex: 0 0 auto;
 }
 
-.part-row-eyes {
-  flex-wrap: wrap;
-  row-gap: 0.15rem;
-}
-
-.part-inline-slider {
-  display: grid;
-  grid-template-columns: 1.7rem minmax(2.5rem, 1fr) 1.7rem;
-  align-items: center;
-  gap: 0.2rem;
-  flex: 1 1 6.5rem;
-  min-width: 5.5rem;
+.part-eye-sliders {
   margin: 0;
-  font-size: 0.58rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  padding: 0.12rem 0.3rem 0.18rem;
+  border-top: 1px solid #2a3048;
+  background: #0d0f18;
 }
 
-.part-inline-slider.is-disabled {
+.part-eye-sliders.is-disabled {
   opacity: 0.4;
-}
-
-.part-inline-slider-label {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.panel .part-inline-slider input[type="range"] {
-  width: 100%;
-  min-width: 0;
-  height: 1.1rem !important;
-  max-height: 1.1rem;
-  margin: 0;
-  padding: 0 !important;
-}
-
-.part-inline-slider-val {
-  font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.55rem;
-  color: var(--text);
-  text-align: right;
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.part-color-popover-swatches {
-  width: 9.5rem;
-  padding: 0.25rem;
 }
 
 .part-grid {
