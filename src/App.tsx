@@ -286,6 +286,9 @@ export default function App() {
   const [offhandVariant, setOffhandVariantState] = useState<string>(
     () => OFFHAND_VARIANT_IDS[getOffhandVariant()],
   );
+  const [bodyOpen, setBodyOpen] = useState(true);
+  const [presetsOpen, setPresetsOpen] = useState(true);
+  const [partsOpen, setPartsOpen] = useState(true);
   const [lightsOpen, setLightsOpen] = useState(true);
   const [outlinesOpen, setOutlinesOpen] = useState(true);
   const dragRef = useRef<{
@@ -902,9 +905,13 @@ export default function App() {
             </div>
           </div>
 
-          <div className="char-picker">
+          <CollapseSection
+            title="Body"
+            open={bodyOpen}
+            onToggle={() => setBodyOpen((v) => !v)}
+          >
             <label className="field">
-              Body
+              Profile
               <select
                 value={bodyProfileId}
                 onChange={(e) =>
@@ -919,31 +926,47 @@ export default function App() {
                 ))}
               </select>
             </label>
-            <label className="field">
-              Preset
-              <select
-                value={presetId === "random" ? "" : presetId}
-                onChange={(e) => applyPreset(e.target.value as PresetId)}
-              >
-                {presetId === "random" ? (
-                  <option value="" disabled>
-                    random
-                  </option>
-                ) : null}
-                {PRESET_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {PRESET_LABELS[id]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="button" className="field-matched" onClick={applyRandom}>
-              Random
-            </button>
-          </div>
+          </CollapseSection>
 
-          <div className="part-controls">
-            <div className="stage-label">Parts</div>
+          <CollapseSection
+            title="Presets"
+            open={presetsOpen}
+            onToggle={() => setPresetsOpen((v) => !v)}
+          >
+            <div className="char-picker">
+              <label className="field">
+                Character
+                <select
+                  value={presetId === "random" ? "" : presetId}
+                  onChange={(e) => applyPreset(e.target.value as PresetId)}
+                >
+                  {presetId === "random" ? (
+                    <option value="" disabled>
+                      random
+                    </option>
+                  ) : null}
+                  {PRESET_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {PRESET_LABELS[id]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                className="field-matched"
+                onClick={applyRandom}
+              >
+                Random
+              </button>
+            </div>
+          </CollapseSection>
+
+          <CollapseSection
+            title="Parts"
+            open={partsOpen}
+            onToggle={() => setPartsOpen((v) => !v)}
+          >
             <div className="part-grid">
               <div className="part-row">
                 <span className="part-name">mirror</span>
@@ -1122,7 +1145,7 @@ export default function App() {
                 </div>
               ))}
             </div>
-          </div>
+          </CollapseSection>
 
           <CollapseSection
             title="Lighting"

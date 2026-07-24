@@ -690,10 +690,6 @@ button.ghost {
   padding: 0 0.7rem;
 }
 
-.part-controls {
-  margin-top: var(--gap);
-}
-
 .part-grid {
   display: flex;
   flex-direction: column;
