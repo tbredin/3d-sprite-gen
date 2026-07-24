@@ -477,7 +477,7 @@ export function VariationTimeline({
     );
   };
 
-  const thumbPx = Math.min(72, size * 2);
+  const thumbPx = Math.min(96, size * 2);
   const previewPx = thumbPx * 2;
   const pendingSlots = Math.max(0, inflight);
   const playing = mode === "playing";
