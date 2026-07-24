@@ -1580,6 +1580,7 @@ export default function App() {
             steer,
           })
         }
+        onRollRandom={applyRandom}
       />
 
       <CaptionRefsPanel />

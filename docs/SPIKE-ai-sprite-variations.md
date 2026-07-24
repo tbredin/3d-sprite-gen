@@ -24,7 +24,7 @@ We need the bake as a **strong spatial prior** and diffusion + a pixel LoRA as t
 | Topic | Decision |
 | --- | --- |
 | Meaning of “variation” | Finish a rough 3D pose into a more finished retro sprite (charm), not random costume lottery alone |
-| Freedom band | Polish + Costume + Soft redesign — exposed as a **weighted mix** in the stream (mostly Costume), **no strength knobs** in UI |
+| Freedom band | Polish + Costume + Soft redesign — exposed as a **weighted mix** in the stream (mostly Costume, then Soft; fewest Polish), **no strength knobs** in UI |
 | Prompt | Hybrid: deterministic template from character state + optional steer text; **no LLM in v1** |
 | Palette | One page-level Lospec slug dropdown; **bake and AI both quantize** to it (same source pattern as `../iso-sprite-gen`) |
 | AI conditioning image | **Pre-quantize** iso render (before palette crush / outline) |
@@ -42,11 +42,13 @@ We need the bake as a **strong spatial prior** and diffusion + a pixel LoRA as t
 
 ### Freedom weighting (hidden)
 
+Tuned from locked timeline keepers (~12% / 58% / 30%):
+
 | Mode | Approx share | ControlNet strength | img2img denoise |
 | --- | --- | --- | --- |
-| Polish | ~20% | high (~0.85–0.95) | low (~0.30–0.40) |
-| Costume | ~60% | mid (~0.65–0.80) | mid (~0.45–0.55) |
-| Soft | ~20% | lower (~0.40–0.55) | higher (~0.60–0.70) |
+| Polish | ~12% | high (~0.78) | low (~0.38) |
+| Costume | ~58% | mid (~0.68) | mid (~0.48) |
+| Soft | ~30% | lower (~0.50) | higher (~0.58) |
 
 ### Why not train first?
 

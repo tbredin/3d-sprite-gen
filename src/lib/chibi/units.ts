@@ -14,7 +14,7 @@ const FOOT_WIDTH = 0.24 * HEAD;
 const HEAD_TALL = 1.05 * HEAD;
 const SKULL_R = 0.4 * HEAD;
 
-export type BodyProfileId = "trim" | "compact" | "tiny";
+export type BodyProfileId = "normal" | "trim" | "compact" | "tiny";
 
 export type ChibiUnits = {
   readonly head: number;
@@ -55,13 +55,24 @@ type BodyProfileDef = {
 };
 
 /**
- * Three smaller-body options — torso + leg shafts shrink together.
+ * Body scale options — torso + leg shafts shrink together.
  * Hands & feet stay put for tiny-bake legibility (mitts/boots still read).
- * Baseline (pre-profile) was torso 0.34 · legs 0.40 · legThick 0.22.
+ * "normal" is the pre-profile baseline (torso 0.34 · legs 0.40 · legThick 0.22).
  */
 export const BODY_PROFILES: Record<BodyProfileId, BodyProfileDef> = {
+  normal: {
+    label: "A · −0% normal size",
+    torso: 0.34 * HEAD,
+    legs: 0.4 * HEAD,
+    hipWidth: 0.56 * HEAD,
+    shoulderWidth: 0.7 * HEAD,
+    torsoDepth: 0.4 * HEAD,
+    armLength: 0.38 * HEAD,
+    armThick: 0.2 * HEAD,
+    legThick: 0.22 * HEAD,
+  },
   trim: {
-    label: "A · trim (−12% body)",
+    label: "B · trim (−12% body)",
     torso: 0.3 * HEAD,
     legs: 0.32 * HEAD,
     hipWidth: 0.5 * HEAD,
@@ -73,7 +84,7 @@ export const BODY_PROFILES: Record<BodyProfileId, BodyProfileDef> = {
     legThick: 0.17 * HEAD,
   },
   compact: {
-    label: "B · compact (−24% body)",
+    label: "C · compact (−24% body)",
     torso: 0.26 * HEAD,
     legs: 0.26 * HEAD,
     hipWidth: 0.46 * HEAD,
@@ -84,7 +95,7 @@ export const BODY_PROFILES: Record<BodyProfileId, BodyProfileDef> = {
     legThick: 0.15 * HEAD,
   },
   tiny: {
-    label: "C · tiny (−35% body)",
+    label: "D · tiny (−35% body)",
     torso: 0.22 * HEAD,
     legs: 0.22 * HEAD,
     hipWidth: 0.42 * HEAD,
@@ -96,7 +107,12 @@ export const BODY_PROFILES: Record<BodyProfileId, BodyProfileDef> = {
   },
 };
 
-export const BODY_PROFILE_IDS: BodyProfileId[] = ["trim", "compact", "tiny"];
+export const BODY_PROFILE_IDS: BodyProfileId[] = [
+  "normal",
+  "trim",
+  "compact",
+  "tiny",
+];
 
 const BODY_PROFILE_STORAGE_KEY = "3d-sprite-gen:body-profile-v1";
 
@@ -143,7 +159,14 @@ export function applyBodyProfile(id: BodyProfileId) {
 export function loadBodyProfile(): BodyProfileId {
   try {
     const raw = localStorage.getItem(BODY_PROFILE_STORAGE_KEY);
-    if (raw === "trim" || raw === "compact" || raw === "tiny") return raw;
+    if (
+      raw === "normal" ||
+      raw === "trim" ||
+      raw === "compact" ||
+      raw === "tiny"
+    ) {
+      return raw;
+    }
   } catch {
     /* ignore */
   }
@@ -159,7 +182,7 @@ export function saveBodyProfile(id: BodyProfileId) {
 }
 
 const initialProfile = loadBodyProfile();
-export let CHIBI: ChibiUnits = buildChibi(BODY_PROFILES.trim);
+export let CHIBI: ChibiUnits = buildChibi(BODY_PROFILES.normal);
 export let LAYOUT: LayoutUnits = buildLayout(CHIBI);
 export let CHARACTER_PIVOT_Y = CHIBI.totalHeight * 0.5;
 
