@@ -528,18 +528,24 @@ button.ghost {
   margin: 0.35rem 0 0.3rem;
   padding-bottom: 0.28rem;
   border-bottom: 1px solid #3a415c;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-.light-profiles .light-subhead {
-  margin-bottom: 0.2rem;
+.light-profiles .light-profile-select {
+  margin: 0;
+}
+
+.light-profiles .light-profile-select select {
+  width: 100%;
 }
 
 .light-profile-save {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0.25rem;
   align-items: center;
-  margin-bottom: 0.2rem;
 }
 
 /* Beat `.panel input` (0,1,1) which pins height: var(--control-h) = 2rem */
@@ -579,18 +585,6 @@ button.ghost {
   display: flex;
   flex-direction: column;
   gap: 0.12rem;
-}
-
-.light-preset-list {
-  max-height: 14rem;
-  overflow-y: auto;
-  margin-bottom: 0.4rem;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--ink) 22%, #3a415c);
-}
-
-.light-profiles .light-subhead + .light-profile-save {
-  margin-top: 0.1rem;
 }
 
 .light-profile-row {

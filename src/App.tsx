@@ -282,12 +282,13 @@ export default function App() {
   const [sourcePreview, setSourcePreview] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [specOpen, setSpecOpen] = useState(true);
+  const [specOpen, setSpecOpen] = useState(false);
   const [offhandVariant, setOffhandVariantState] = useState<string>(
     () => OFFHAND_VARIANT_IDS[getOffhandVariant()],
   );
   const [characterOpen, setCharacterOpen] = useState(true);
   const [lightsOpen, setLightsOpen] = useState(true);
+  const [lightingProfileId, setLightingProfileId] = useState("");
   const [outlinesOpen, setOutlinesOpen] = useState(true);
   const dragRef = useRef<{
     pointerId: number;
@@ -489,6 +490,7 @@ export default function App() {
   };
 
   const patchRimLights = (patch: Partial<RimLightSettings>) => {
+    setLightingProfileId("");
     setRimLights((prev) => {
       const next = normalizeRimLightSettings({ ...prev, ...patch });
       saveRimLightSettings(next);
@@ -500,6 +502,7 @@ export default function App() {
     const next = { ...DEFAULT_RIM_LIGHTS };
     saveRimLightSettings(next);
     setRimLights(next);
+    setLightingProfileId("");
   };
 
   const persistProfiles = (next: LightingProfile[]) => {
@@ -526,11 +529,11 @@ export default function App() {
           : p,
       );
       persistProfiles(next);
+      setLightingProfileId(existing.id);
     } else {
-      persistProfiles([
-        ...lightingProfiles,
-        snapshotCurrentLighting(settings, name),
-      ]);
+      const created = snapshotCurrentLighting(settings, name);
+      persistProfiles([...lightingProfiles, created]);
+      setLightingProfileId(created.id);
     }
     setProfileName("");
   };
@@ -545,11 +548,13 @@ export default function App() {
     const next = normalizeRimLightSettings(profile.settings);
     saveRimLightSettings(next);
     setRimLights(next);
+    setLightingProfileId(id);
   };
 
   const deleteLightingProfile = (id: string) => {
     if (id.startsWith("builtin-")) return;
     persistProfiles(lightingProfiles.filter((p) => p.id !== id));
+    if (lightingProfileId === id) setLightingProfileId("");
   };
 
   const onPreviewPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -1144,31 +1149,41 @@ export default function App() {
             }
           >
             <div className="light-profiles">
-              <p className="light-subhead">Presets</p>
-              <ul className="light-profile-list light-preset-list">
-                {BUILTIN_LIGHTING_PRESETS.map((profile) => (
-                  <li key={profile.id} className="light-profile-row">
-                    <span className="light-profile-label" title={profile.name}>
-                      {profile.name}
-                    </span>
-                    <div className="part-actions">
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => loadLightingProfile(profile.id)}
-                      >
-                        Load
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <p className="light-subhead">Saved</p>
+              <label className="field light-profile-select">
+                Profile
+                <select
+                  value={lightingProfileId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    if (id) loadLightingProfile(id);
+                    else setLightingProfileId("");
+                  }}
+                  aria-label="Lighting profile"
+                >
+                  <option value="">Custom / none</option>
+                  <optgroup label="Built-in">
+                    {BUILTIN_LIGHTING_PRESETS.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  {lightingProfiles.length > 0 ? (
+                    <optgroup label="Saved">
+                      {lightingProfiles.map((profile) => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                </select>
+              </label>
               <div className="light-profile-save">
                 <input
                   type="text"
                   className="light-profile-name"
-                  placeholder="Profile name"
+                  placeholder="Save as…"
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
                   onKeyDown={(e) => {
@@ -1182,38 +1197,25 @@ export default function App() {
                   onClick={saveLightingProfile}
                   disabled={!profileName.trim()}
                 >
-                  Save current
+                  Save
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => deleteLightingProfile(lightingProfileId)}
+                  disabled={
+                    !lightingProfileId ||
+                    lightingProfileId.startsWith("builtin-")
+                  }
+                  title={
+                    lightingProfileId.startsWith("builtin-")
+                      ? "Built-in presets cannot be deleted"
+                      : "Delete selected saved profile"
+                  }
+                >
+                  Delete
                 </button>
               </div>
-              {lightingProfiles.length === 0 ? (
-                <p className="hint">No saved profiles yet.</p>
-              ) : (
-                <ul className="light-profile-list">
-                  {lightingProfiles.map((profile) => (
-                    <li key={profile.id} className="light-profile-row">
-                      <span className="light-profile-label" title={profile.name}>
-                        {profile.name}
-                      </span>
-                      <div className="part-actions">
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => loadLightingProfile(profile.id)}
-                        >
-                          Load
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => deleteLightingProfile(profile.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
             <p className="hint light-hint">
               Amb = soft fill; red/blue = harsh rear rims (raise Behind to skim).
