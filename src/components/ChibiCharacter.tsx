@@ -1,9 +1,17 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, type MutableRefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type MutableRefObject,
+} from "react";
 import { useFrame } from "@react-three/fiber";
 import {
   assembleCharacter,
   applySpriteFaceCheat,
   oppositeLeadSide,
+  stickyHeadYaw,
   type CharacterSpec,
 } from "../lib/chibi";
 import type { Object3D } from "three";
@@ -82,18 +90,31 @@ export function ChibiCharacter({
     () => assembleCharacter(effectiveSpec, { showEyes }),
     [effectiveSpec, showEyes],
   );
+  const headPivot = useMemo(() => group.getObjectByName("headPivot") ?? null, [group]);
   const liveYaw = useRef(yawRef);
   liveYaw.current = yawRef;
 
+  // Sticky head: lean the head a little toward the camera on top of the body
+  // yaw, then cull eyes against where the head actually points. Keyed to yaw
+  // only, so it works for presets, drag, and the turntable alike.
+  const applyHeadAndFace = useCallback(
+    (bodyYaw: number) => {
+      const delta = stickyHeadYaw(bodyYaw);
+      if (headPivot) headPivot.rotation.y = delta;
+      applySpriteFaceCheat(group, bodyYaw + delta);
+    },
+    [group, headPivot],
+  );
+
   useLayoutEffect(() => {
     if (yawRef) return;
-    applySpriteFaceCheat(group, rotationY);
-  }, [group, rotationY, yawRef]);
+    applyHeadAndFace(rotationY);
+  }, [applyHeadAndFace, rotationY, yawRef]);
 
   useFrame(() => {
     const ref = liveYaw.current;
     if (!ref) return;
-    applySpriteFaceCheat(group, ref.current);
+    applyHeadAndFace(ref.current);
   });
 
   useEffect(() => () => disposeObject(group), [group]);

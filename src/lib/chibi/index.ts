@@ -105,6 +105,12 @@ export {
 export type { AssembleOptions } from "./assemble";
 export { applySpriteFaceCheat } from "./faceCheat";
 export {
+  stickyHeadYaw,
+  CAMERA_YAW,
+  HEAD_STICKY_FRONT,
+  HEAD_STICKY_MAX,
+} from "./headStick";
+export {
   HELMET_CATALOG,
   helmetModeFor,
   isHeadReplacement,
