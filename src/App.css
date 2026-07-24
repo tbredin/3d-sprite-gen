@@ -209,6 +209,71 @@ body {
   padding-top: 0.1rem;
 }
 
+.iso-facing {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.iso-facing-label {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.iso-facing-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1.85rem);
+  grid-template-rows: repeat(3, 1.85rem);
+  gap: 0.2rem;
+  width: fit-content;
+}
+
+.iso-facing-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #3a415c;
+  border-radius: 4px;
+  background: #12141f;
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.iso-facing-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.iso-facing-btn.is-active {
+  border-color: var(--focus);
+  color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 14%, #12141f);
+}
+
+.iso-facing-center {
+  grid-row: 2;
+  grid-column: 2;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.iso-facing-center.is-custom {
+  border-color: color-mix(in srgb, var(--ink) 55%, #3a415c);
+  color: var(--ink);
+}
+
+.iso-facing-status {
+  margin: 0;
+  font-size: 0.65rem;
+}
+
 .field-heading {
   display: flex;
   align-items: baseline;
@@ -263,6 +328,10 @@ body {
 
   .preview-side .field {
     flex: 1 1 6rem;
+  }
+
+  .preview-side .iso-facing {
+    flex: 0 0 auto;
   }
 }
 
@@ -1286,9 +1355,9 @@ button.swatch-btn {
 .timeline-steer-block {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  margin: 0 0 0.75rem;
-  padding: 0.65rem 0.75rem 0.75rem;
+  gap: 0.3rem;
+  margin: 0 0 0.65rem;
+  padding: 0.45rem 0.65rem 0.55rem;
   border: 1px solid color-mix(in srgb, var(--ink) 28%, #3a415c);
   border-radius: 6px;
   background:
@@ -1297,14 +1366,6 @@ button.swatch-btn {
       color-mix(in srgb, var(--accent) 18%, #12141f) 0%,
       #12141f 100%
     );
-}
-
-.timeline-steer-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.25rem 0.75rem;
 }
 
 .timeline-steer-label {
@@ -1316,28 +1377,22 @@ button.swatch-btn {
   color: var(--ink);
 }
 
-.timeline-steer-hint {
-  margin: 0;
-  font-size: 0.68rem;
-  color: var(--muted);
-}
-
 .panel-timeline .timeline-steer-input,
 .panel-timeline textarea.timeline-steer-input {
   display: block;
   width: 100%;
   box-sizing: border-box;
   height: auto !important;
-  min-height: 4.75rem !important;
+  min-height: 2.5rem !important;
   margin: 0;
-  padding: 0.65rem 0.75rem !important;
+  padding: 0.4rem 0.55rem !important;
   border: 1px solid #3a415c;
   border-radius: 4px;
   background: #0c0e16;
   color: var(--text);
   font: inherit;
-  font-size: 0.95rem !important;
-  line-height: 1.45;
+  font-size: 0.85rem !important;
+  line-height: 1.35;
   resize: vertical;
 }
 
@@ -1353,8 +1408,8 @@ button.swatch-btn {
 .timeline-settings {
   display: grid;
   grid-template-columns: minmax(8rem, 1fr) repeat(2, minmax(7rem, 1fr));
-  gap: 0.55rem 0.75rem;
-  margin-top: 0.15rem;
+  gap: 0.4rem 0.75rem;
+  margin-top: 0.1rem;
 }
 
 .timeline-setting {
@@ -1396,6 +1451,33 @@ button.swatch-btn {
 .timeline-hint code {
   font-size: 0.68rem;
   color: var(--ink);
+}
+
+.timeline-browse {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin: 0 0 0.65rem;
+}
+
+.timeline-visibility {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.timeline-sort {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.panel-timeline .timeline-sort select {
+  width: auto;
+  min-width: 9.5rem;
 }
 
 .timeline-scroll {
