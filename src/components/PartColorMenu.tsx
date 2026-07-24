@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import {
   listPartColorSlots,
+  maxPartColorSlots,
   setPartColorSlot,
 } from "../lib/chibi/partColors";
 import type { CharacterSpec } from "../lib/chibi/types";
@@ -13,21 +14,29 @@ type Props = {
   paletteColors: string[];
   onEdit: (fn: (s: CharacterSpec) => CharacterSpec) => void;
   onReroll: () => void;
+  disabled?: boolean;
 };
 
-/** 🎨 — popover listing every colour slot for a part + Endesga swatches. */
+/** Clickable swatch stack — popover listing every colour slot for a part. */
 export function PartColorMenu({
   part,
   spec,
   paletteColors,
   onEdit,
   onReroll,
+  disabled = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [activeSlot, setActiveSlot] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const slots = listPartColorSlots(spec, part);
+  const capacity = maxPartColorSlots(part);
+  const empty = disabled || slots.length === 0;
+
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
 
   useEffect(() => {
     if (!open) {
@@ -49,18 +58,40 @@ export function PartColorMenu({
   }, [open]);
 
   return (
-    <div className="part-color-menu" ref={rootRef}>
+    <div className="color-control part-color-menu" ref={rootRef}>
       <button
         type="button"
-        className="part-icon-btn"
+        className="color-control-swatch-trigger"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={menuId}
+        disabled={disabled}
         title="Colours"
         aria-label={`${part} colours`}
         onClick={() => setOpen((v) => !v)}
       >
-        🎨
+        <span className="color-control-swatch-stack" aria-hidden>
+          {Array.from({ length: capacity }, (_, i) => {
+            const slot = empty ? undefined : slots[i];
+            if (!slot) {
+              return (
+                <span
+                  key={`pad-${i}`}
+                  className="swatch color-control-swatch color-control-swatch-empty"
+                />
+              );
+            }
+            const hex = normalizePaletteHex(slot.value);
+            return (
+              <span
+                key={slot.id}
+                className="swatch color-control-swatch"
+                style={{ background: `#${hex}` }}
+                title={`${slot.label} #${hex}`}
+              />
+            );
+          })}
+        </span>
       </button>
       {open ? (
         <div
@@ -78,8 +109,9 @@ export function PartColorMenu({
                 onReroll();
               }}
               title="Reroll all colours for this part"
+              aria-label="Reroll all colours for this part"
             >
-              Reroll
+              🎲
             </button>
           </div>
           {slots.length === 0 ? (

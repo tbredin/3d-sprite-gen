@@ -10,7 +10,7 @@ type Props = {
   disabled?: boolean;
 };
 
-/** 🎨 — single-slot Endesga colour popover. */
+/** Clickable swatch — single-slot Endesga colour popover. */
 export function PaletteColorButton({
   value,
   paletteColors,
@@ -23,6 +23,7 @@ export function PaletteColorButton({
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const hex = normalizePaletteHex(value);
+  const empty = disabled || paletteColors.length === 0;
 
   useEffect(() => {
     if (disabled) setOpen(false);
@@ -45,20 +46,19 @@ export function PaletteColorButton({
   }, [open]);
 
   return (
-    <div className="part-color-menu" ref={rootRef}>
+    <div className="color-control part-color-menu" ref={rootRef}>
       <button
         type="button"
-        className="part-icon-btn"
+        className={`swatch color-control-swatch swatch-btn${empty ? " color-control-swatch-empty" : ""}`}
+        style={empty ? undefined : { background: `#${hex}` }}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={menuId}
-        disabled={disabled}
-        title={`${title} #${hex}`}
+        disabled={disabled || paletteColors.length === 0}
+        title={empty ? title : `${title} #${hex}`}
         aria-label={ariaLabel ?? title}
         onClick={() => setOpen((v) => !v)}
-      >
-        🎨
-      </button>
+      />
       {open && paletteColors.length > 0 ? (
         <div
           id={menuId}

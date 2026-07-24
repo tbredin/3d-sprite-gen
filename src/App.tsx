@@ -39,6 +39,7 @@ import {
 } from "./lib/outlineProfiles";
 import { normalizeEdgeOutlineSettings } from "./lib/edgeOutline";
 import { CollapseSection } from "./components/CollapseSection";
+import { FreeformColorButton } from "./components/FreeformColorButton";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
 import { PartColorMenu } from "./components/PartColorMenu";
 import { PaletteColorButton } from "./components/PaletteColorButton";
@@ -181,19 +182,19 @@ const FILL_LIGHT_ROWS = [
 
 /** Harsh directional rims — parked behind the character (not ambient wash). */
 const RIM_LIGHT_ROWS = [
-  { key: "redBrightness", label: "R bri", min: 0, max: 8, step: 0.05, tone: "light-red" },
-  { key: "blueBrightness", label: "B bri", min: 0, max: 8, step: 0.05, tone: "light-blue" },
-  { key: "redBehind", label: "R beh", min: -1, max: 6, step: 0.05, tone: "light-red" },
-  { key: "blueBehind", label: "B beh", min: -1, max: 6, step: 0.05, tone: "light-blue" },
-  { key: "redSide", label: "R side", min: 0, max: 5, step: 0.05, tone: "light-red" },
-  { key: "blueSide", label: "B side", min: 0, max: 5, step: 0.05, tone: "light-blue" },
-  { key: "redHeight", label: "R hgt", min: -180, max: 180, step: 1, tone: "light-red" },
-  { key: "blueHeight", label: "B hgt", min: -180, max: 180, step: 1, tone: "light-blue" },
+  { key: "redBrightness", label: "L bri", min: 0, max: 8, step: 0.05, tone: "light-left" },
+  { key: "blueBrightness", label: "R bri", min: 0, max: 8, step: 0.05, tone: "light-right" },
+  { key: "redBehind", label: "L beh", min: -1, max: 6, step: 0.05, tone: "light-left" },
+  { key: "blueBehind", label: "R beh", min: -1, max: 6, step: 0.05, tone: "light-right" },
+  { key: "redSide", label: "L side", min: 0, max: 5, step: 0.05, tone: "light-left" },
+  { key: "blueSide", label: "R side", min: 0, max: 5, step: 0.05, tone: "light-right" },
+  { key: "redHeight", label: "L hgt", min: -180, max: 180, step: 1, tone: "light-left" },
+  { key: "blueHeight", label: "R hgt", min: -180, max: 180, step: 1, tone: "light-right" },
 ] as const;
 
 const RIM_COLOR_FIELDS = [
-  { key: "redColor", label: "Red" },
-  { key: "blueColor", label: "Blue" },
+  { key: "redColor", label: "Left" },
+  { key: "blueColor", label: "Right" },
 ] as const;
 
 function clampPitch(rad: number) {
@@ -280,6 +281,7 @@ export default function App() {
   const [outlineProfiles, setOutlineProfiles] = useState<OutlineProfile[]>(
     () => loadOutlineProfiles(),
   );
+  const [outlineProfileId, setOutlineProfileId] = useState("");
   const [outlineProfileName, setOutlineProfileName] = useState("");
   const [bayerDither, setBayerDither] = useState<BayerDitherSettings>(() =>
     loadBayerDitherSettings(),
@@ -608,6 +610,7 @@ export default function App() {
   }, [facing, rotationX, rotationY]);
 
   const patchOutlineColor = (patch: Partial<OutlineColors>) => {
+    setOutlineProfileId("");
     setOutlineColors((prev) => {
       const next = { ...prev, ...patch };
       saveOutlineColors(next);
@@ -616,6 +619,7 @@ export default function App() {
   };
 
   const patchOutlinePass = (patch: Partial<OutlinePassSettings>) => {
+    setOutlineProfileId("");
     setOutlinePass((prev) => {
       const next = { ...prev, ...patch };
       saveOutlinePassSettings(next);
@@ -624,6 +628,7 @@ export default function App() {
   };
 
   const patchEdgeOutline = (patch: Partial<EdgeOutlineSettings>) => {
+    setOutlineProfileId("");
     setEdgeOutline((prev) => {
       const next = normalizeEdgeOutlineSettings({ ...prev, ...patch });
       saveEdgeOutlineSettings(next);
@@ -639,6 +644,7 @@ export default function App() {
     const next = { ...DEFAULT_EDGE_OUTLINE_SETTINGS };
     saveEdgeOutlineSettings(next);
     setEdgeOutline(next);
+    setOutlineProfileId("");
   };
 
   const patchBayerDither = (patch: Partial<BayerDitherSettings>) => {
@@ -673,11 +679,15 @@ export default function App() {
             : p,
         ),
       );
+      setOutlineProfileId(existing.id);
     } else {
-      persistOutlineProfiles([
-        ...outlineProfiles,
-        snapshotCurrentOutline(settings, name, palette?.colors),
-      ]);
+      const created = snapshotCurrentOutline(
+        settings,
+        name,
+        palette?.colors,
+      );
+      persistOutlineProfiles([...outlineProfiles, created]);
+      setOutlineProfileId(created.id);
     }
     setOutlineProfileName("");
   };
@@ -693,10 +703,13 @@ export default function App() {
     const nextEdge = normalizeEdgeOutlineSettings(edge, palette?.colors);
     saveEdgeOutlineSettings(nextEdge);
     setEdgeOutline(nextEdge);
+    setOutlineProfileId(id);
   };
 
   const deleteOutlineProfile = (id: string) => {
+    if (!id) return;
     persistOutlineProfiles(outlineProfiles.filter((p) => p.id !== id));
+    if (outlineProfileId === id) setOutlineProfileId("");
   };
 
   useEffect(() => {
@@ -738,9 +751,12 @@ export default function App() {
           Procedural chibi → iso bake at {size}×{size}px · free / local
           {status ? ` · ${status.mesh_backend}` : ""}
         </p>
-        <label className="palette-slug-row">
-          <span className="field-label">Palette</span>
+        <div className="palette-slug-row">
+          <label className="field-label" htmlFor="palette-slug-input">
+            Palette
+          </label>
           <input
+            id="palette-slug-input"
             type="text"
             value={paletteSlugDraft}
             onChange={(e) => setPaletteSlugDraft(e.target.value)}
@@ -754,8 +770,17 @@ export default function App() {
           <button type="button" className="ghost-btn" onClick={applyPaletteSlug}>
             Apply
           </button>
+          <a
+            className="palette-lospec-link"
+            href={`https://lospec.com/palette-list/${encodeURIComponent(paletteSlug)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Open ${paletteSlug} on Lospec`}
+          >
+            Lospec
+          </a>
           <span className="meta">{palette?.name ?? "…"}</span>
-        </label>
+        </div>
         <p
           className={`tagline feature-boost-note${
             __GIT_BRANCH__ !== "main" ? " branch-not-main" : ""
@@ -988,8 +1013,10 @@ export default function App() {
                 type="button"
                 className="field-matched"
                 onClick={applyRandom}
+                title="Random character"
+                aria-label="Random character"
               >
-                Random
+                🎲
               </button>
             </div>
 
@@ -1354,11 +1381,11 @@ export default function App() {
               </div>
             </div>
             <p className="hint light-hint">
-              Amb = soft fill; red/blue = harsh rear rims (raise Behind to skim).
+              Amb = soft fill; L/R = harsh rear rims (raise Behind to skim).
             </p>
             <div className="light-grid light-fill-grid">
               {FILL_LIGHT_ROWS.map((row) => (
-                <label
+                <div
                   key={row.key}
                   className={`light-slider light-fill-row${row.tone ? ` ${row.tone}` : ""}`}
                 >
@@ -1377,39 +1404,34 @@ export default function App() {
                       })
                     }
                     title={row.title}
+                    aria-label={row.title}
                   />
                   <span className="slider-val">
                     {rimLights[row.key].toFixed(2)}
                   </span>
-                  <input
-                    type="color"
-                    className="light-inline-color"
+                  <FreeformColorButton
                     value={rimLights[row.colorKey]}
-                    onChange={(e) =>
-                      patchRimLights({ [row.colorKey]: e.target.value })
+                    onChange={(hex) =>
+                      patchRimLights({ [row.colorKey]: hex })
                     }
                     title={`${row.title} colour`}
+                    ariaLabel={`${row.title} colour`}
                   />
-                </label>
+                </div>
               ))}
             </div>
             <p className="light-subhead">Directional rims</p>
             <div className="light-colors">
               {RIM_COLOR_FIELDS.map((field) => (
-                <label key={field.key} className="light-color-field">
+                <div key={field.key} className="light-color-field">
                   <span className="light-slider-label">{field.label}</span>
-                  <input
-                    type="color"
+                  <FreeformColorButton
                     value={rimLights[field.key]}
-                    onChange={(e) =>
-                      patchRimLights({ [field.key]: e.target.value })
-                    }
-                    title={`${field.label} ${rimLights[field.key]}`}
+                    onChange={(hex) => patchRimLights({ [field.key]: hex })}
+                    title={`${field.label} colour`}
+                    ariaLabel={`${field.label} colour`}
                   />
-                  <span className="light-color-hex" title={rimLights[field.key]}>
-                    {rimLights[field.key]}
-                  </span>
-                </label>
+                </div>
               ))}
             </div>
             <div className="light-grid">
@@ -1545,6 +1567,7 @@ export default function App() {
                   saveOutlineColors(nextColors);
                   setOutlinePass(nextPass);
                   setOutlineColors(nextColors);
+                  setOutlineProfileId("");
                   resetEdgeOutline();
                 }}
               >
@@ -1553,12 +1576,34 @@ export default function App() {
             }
           >
             <div className="light-profiles">
-              <p className="light-subhead">Profiles</p>
+              <label className="field light-profile-select">
+                Profile
+                <select
+                  value={outlineProfileId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    if (id) loadOutlineProfile(id);
+                    else setOutlineProfileId("");
+                  }}
+                  aria-label="Outlines profile"
+                >
+                  <option value="">Custom / none</option>
+                  {outlineProfiles.length > 0 ? (
+                    <optgroup label="Saved">
+                      {outlineProfiles.map((profile) => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                </select>
+              </label>
               <div className="light-profile-save">
                 <input
                   type="text"
                   className="light-profile-name"
-                  placeholder="Profile name"
+                  placeholder="Save as…"
                   value={outlineProfileName}
                   onChange={(e) => setOutlineProfileName(e.target.value)}
                   onKeyDown={(e) => {
@@ -1572,41 +1617,18 @@ export default function App() {
                   onClick={saveOutlineProfile}
                   disabled={!outlineProfileName.trim()}
                 >
-                  Save current
+                  Save
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={() => deleteOutlineProfile(outlineProfileId)}
+                  disabled={!outlineProfileId}
+                  title="Delete selected saved profile"
+                >
+                  Delete
                 </button>
               </div>
-              {outlineProfiles.length === 0 ? (
-                <p className="hint">No saved profiles yet.</p>
-              ) : (
-                <ul className="light-profile-list">
-                  {outlineProfiles.map((profile) => (
-                    <li key={profile.id} className="light-profile-row">
-                      <span
-                        className="light-profile-label"
-                        title={profile.name}
-                      >
-                        {profile.name}
-                      </span>
-                      <div className="part-actions">
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => loadOutlineProfile(profile.id)}
-                        >
-                          Load
-                        </button>
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() => deleteOutlineProfile(profile.id)}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </div>
             <div className="part-grid">
               <div className="part-row">
@@ -1621,16 +1643,12 @@ export default function App() {
                   Silhouette
                 </label>
                 <div className="part-actions">
-                  {palette ? (
-                    <OutlineSwatchSelect
-                      colors={palette.colors}
-                      value={outlineColors.silhouette}
-                      onChange={(hex) => patchOutlineColor({ silhouette: hex })}
-                      disabled={!outlinePass.silhouette}
-                    />
-                  ) : (
-                    <span className="hint">…</span>
-                  )}
+                  <OutlineSwatchSelect
+                    colors={palette?.colors ?? []}
+                    value={outlineColors.silhouette}
+                    onChange={(hex) => patchOutlineColor({ silhouette: hex })}
+                    disabled={!outlinePass.silhouette || !palette}
+                  />
                 </div>
               </div>
               <div className="part-row">
@@ -1645,16 +1663,12 @@ export default function App() {
                   Part seams
                 </label>
                 <div className="part-actions">
-                  {palette ? (
-                    <OutlineSwatchSelect
-                      colors={palette.colors}
-                      value={outlineColors.partSeams}
-                      onChange={(hex) => patchOutlineColor({ partSeams: hex })}
-                      disabled={!outlinePass.partSeams}
-                    />
-                  ) : (
-                    <span className="hint">…</span>
-                  )}
+                  <OutlineSwatchSelect
+                    colors={palette?.colors ?? []}
+                    value={outlineColors.partSeams}
+                    onChange={(hex) => patchOutlineColor({ partSeams: hex })}
+                    disabled={!outlinePass.partSeams || !palette}
+                  />
                 </div>
               </div>
               <div className="part-row">
@@ -1669,16 +1683,12 @@ export default function App() {
                   Edge detection
                 </label>
                 <div className="part-actions">
-                  {palette ? (
-                    <OutlineSwatchSelect
-                      colors={palette.colors}
-                      value={edgeOutline.color}
-                      onChange={setEdgeColor}
-                      disabled={!edgeOutline.enabled}
-                    />
-                  ) : (
-                    <span className="hint">…</span>
-                  )}
+                  <OutlineSwatchSelect
+                    colors={palette?.colors ?? []}
+                    value={edgeOutline.color}
+                    onChange={setEdgeColor}
+                    disabled={!edgeOutline.enabled || !palette}
+                  />
                 </div>
               </div>
             </div>

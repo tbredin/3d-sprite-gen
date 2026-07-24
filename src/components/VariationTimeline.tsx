@@ -18,14 +18,30 @@ const CONCURRENCY = 3;
 const PREVIEW_GAP = 8;
 const IDLE_REROLL_MS = 60 * 60 * 1000;
 const IDLE_REROLL_TICK_MS = 30 * 1000;
+const REMIX_MAX_MS = 4 * 60 * 60 * 1000;
 
 const DEFAULT_STEPS = 30;
 const DEFAULT_GUIDANCE = 7;
+/** UI slider max — Remix always uses this. */
+const MAX_STEPS = 40;
+const GUIDANCE_MIN = 4;
+const GUIDANCE_MAX = 10;
+const GUIDANCE_STEP = 0.5;
 
-type StreamMode = "stopped" | "playing" | "playRandom" | "idleReroll";
+type StreamMode =
+  | "stopped"
+  | "playing"
+  | "playRandom"
+  | "idleReroll"
+  | "remixing";
 type FreedomChoice = "auto" | VariationFreedom;
 type VisibilityFilter = "all" | "locked" | "unlocked";
 type SortMode = "newest" | "oldest" | "lockedFirst";
+
+function randomGuidance(): number {
+  const steps = Math.round((GUIDANCE_MAX - GUIDANCE_MIN) / GUIDANCE_STEP);
+  return GUIDANCE_MIN + Math.floor(Math.random() * (steps + 1)) * GUIDANCE_STEP;
+}
 
 type HoverPreview = {
   src: string;
@@ -97,10 +113,12 @@ export function VariationTimeline({
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
   const [visibility, setVisibility] = useState<VisibilityFilter>("all");
   const [sort, setSort] = useState<SortMode>("newest");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
   const modeRef = useRef<StreamMode>("stopped");
   const sourceRef = useRef(sourceDataUrl);
   const itemsRef = useRef(items);
+  const selectedIdsRef = useRef(selectedIds);
   const steerRef = useRef(steer);
   const freedomRef = useRef(freedom);
   const stepsRef = useRef(steps);
@@ -111,9 +129,11 @@ export function VariationTimeline({
   const runJobRef = useRef<() => void>(() => {});
   const warmupPromiseRef = useRef<Promise<void> | null>(null);
   const idleDeadlineRef = useRef<number | null>(null);
+  const remixCursorRef = useRef(0);
 
   sourceRef.current = sourceDataUrl;
   itemsRef.current = items;
+  selectedIdsRef.current = selectedIds;
   steerRef.current = steer;
   freedomRef.current = freedom;
   stepsRef.current = steps;
@@ -190,16 +210,43 @@ export function VariationTimeline({
     setPhase(null);
   };
 
-  const getIdleRemainingMs = () => {
-    if (modeRef.current !== "idleReroll" || !idleDeadlineRef.current) return null;
+  const getDeadlineRemainingMs = (modes: StreamMode[]) => {
+    if (!modes.includes(modeRef.current) || !idleDeadlineRef.current) {
+      return null;
+    }
     return Math.max(0, idleDeadlineRef.current - Date.now());
   };
 
-  const stopExpiredIdleReroll = () => {
-    const remaining = getIdleRemainingMs();
-    if (remaining === null || remaining > 0) return false;
-    stopStream("Idle reroll stopped after 60 minutes.");
-    return true;
+  const stopExpiredDeadline = () => {
+    if (modeRef.current === "idleReroll") {
+      const remaining = getDeadlineRemainingMs(["idleReroll"]);
+      if (remaining === null || remaining > 0) return false;
+      stopStream("Idle reroll stopped after 60 minutes.");
+      return true;
+    }
+    if (modeRef.current === "remixing") {
+      const remaining = getDeadlineRemainingMs(["remixing"]);
+      if (remaining === null || remaining > 0) return false;
+      stopStream("Remix stopped after 4 hours.");
+      return true;
+    }
+    return false;
+  };
+
+  const resolveRemixSource = () => {
+    if (stopExpiredDeadline()) return null;
+
+    const selected = itemsRef.current.filter((item) =>
+      selectedIdsRef.current.has(item.id),
+    );
+    if (selected.length === 0) {
+      stopStream("Remix stopped — no selected timeline images remain.");
+      return null;
+    }
+
+    const index = remixCursorRef.current % selected.length;
+    remixCursorRef.current = index + 1;
+    return selected[index].image;
   };
 
   const resolveSource = () => {
@@ -209,8 +256,11 @@ export function VariationTimeline({
     ) {
       return sourceRef.current;
     }
+    if (modeRef.current === "remixing") {
+      return resolveRemixSource();
+    }
     if (modeRef.current !== "idleReroll") return null;
-    if (stopExpiredIdleReroll()) return null;
+    if (stopExpiredDeadline()) return null;
 
     const lockedItems = itemsRef.current.filter((item) => item.locked);
     if (lockedItems.length === 0) {
@@ -253,6 +303,7 @@ export function VariationTimeline({
 
       // Capture prompt against the character whose bake we are sending.
       const prompt = buildPromptRef.current(steerRef.current);
+      const remixing = modeRef.current === "remixing";
       const genPromise = generateVariation({
         sourceDataUrl: src,
         size,
@@ -260,8 +311,8 @@ export function VariationTimeline({
         prompt,
         outlineHex,
         freedom: freedomRef.current,
-        steps: stepsRef.current,
-        guidanceScale: guidanceRef.current,
+        steps: remixing ? MAX_STEPS : stepsRef.current,
+        guidanceScale: remixing ? randomGuidance() : guidanceRef.current,
       });
 
       // Roll the next character immediately so lights/outlines can be tweaked
@@ -303,12 +354,12 @@ export function VariationTimeline({
   }, [mode]);
 
   useEffect(() => {
-    if (mode !== "idleReroll") return;
+    if (mode !== "idleReroll" && mode !== "remixing") return;
     const timer = window.setInterval(() => {
-      stopExpiredIdleReroll();
+      stopExpiredDeadline();
     }, IDLE_REROLL_TICK_MS);
     return () => window.clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- idle deadline only
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deadline modes only
   }, [mode]);
 
   const onPlayPause = () => {
@@ -343,10 +394,51 @@ export function VariationTimeline({
     setMode("playRandom");
   };
 
+  const onRemix = () => {
+    if (mode === "remixing") {
+      stopStream();
+      return;
+    }
+    if (selectedIds.size === 0) {
+      setError("Select at least one variation to remix.");
+      return;
+    }
+    setError(null);
+    setPhase(null);
+    remixCursorRef.current = 0;
+    idleDeadlineRef.current = Date.now() + REMIX_MAX_MS;
+    modeRef.current = "remixing";
+    setMode("remixing");
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const pruneSelection = (ids: Iterable<string>) => {
+    const keep = new Set(ids);
+    setSelectedIds((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (keep.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  };
+
   const onClear = async () => {
     try {
       await clearUnlockedVariations();
-      setItems(await listVariations());
+      const next = await listVariations();
+      setItems(next);
+      pruneSelection(next.map((item) => item.id));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -365,6 +457,12 @@ export function VariationTimeline({
     try {
       await deleteVariation(id);
       setItems((prev) => prev.filter((x) => x.id !== id));
+      setSelectedIds((prev) => {
+        if (!prev.has(id)) return prev;
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -379,19 +477,25 @@ export function VariationTimeline({
     );
   };
 
-  const thumbPx = Math.min(96, size * 2);
+  const thumbPx = Math.min(72, size * 2);
   const previewPx = thumbPx * 2;
   const pendingSlots = Math.max(0, inflight);
   const playing = mode === "playing";
   const playingRandom = mode === "playRandom";
   const idleRerolling = mode === "idleReroll";
+  const remixing = mode === "remixing";
   const maxConcurrency = playingRandom ? 1 : CONCURRENCY;
   const lockedCount = items.filter((item) => item.locked).length;
   const unlockedCount = items.length - lockedCount;
+  const selectedCount = selectedIds.size;
   const visibleItems = filterAndSortItems(items, visibility, sort);
-  const idleRemainingMs = getIdleRemainingMs();
-  const idleRemainingMinutes =
-    idleRemainingMs === null ? null : Math.ceil(idleRemainingMs / 60000);
+  const deadlineRemainingMs = getDeadlineRemainingMs(
+    idleRerolling ? ["idleReroll"] : remixing ? ["remixing"] : [],
+  );
+  const deadlineRemainingMinutes =
+    deadlineRemainingMs === null
+      ? null
+      : Math.ceil(deadlineRemainingMs / 60000);
 
   const showThumbPreview = (
     e: MouseEvent<HTMLImageElement>,
@@ -420,6 +524,21 @@ export function VariationTimeline({
       <div className="timeline-header">
         <h2 className="panel-title">AI variations</h2>
         <div className="timeline-controls">
+          <button
+            type="button"
+            className={`timeline-play${remixing ? " is-playing" : ""}`}
+            onClick={onRemix}
+            disabled={!remixing && selectedCount === 0}
+            title={
+              remixing
+                ? "Stop remixing selected variations"
+                : selectedCount === 0
+                  ? "Select variations to remix"
+                  : `Remix ${selectedCount} selected (max steps, random CFG, up to 4h)`
+            }
+          >
+            Remix{selectedCount > 0 ? ` (${selectedCount})` : ""}
+          </button>
           <button
             type="button"
             className={`timeline-play${playing || idleRerolling ? " is-playing" : ""}`}
@@ -470,9 +589,16 @@ export function VariationTimeline({
               ? ` · idle reroll from ${lockedCount} lock${
                   lockedCount === 1 ? "" : "s"
                 }${
-                  idleRemainingMinutes === null
+                  deadlineRemainingMinutes === null
                     ? ""
-                    : ` · ${idleRemainingMinutes}m left`
+                    : ` · ${deadlineRemainingMinutes}m left`
+                }`
+              : ""}
+            {remixing
+              ? ` · remixing ${selectedCount} · steps ${MAX_STEPS} · random CFG${
+                  deadlineRemainingMinutes === null
+                    ? ""
+                    : ` · ${deadlineRemainingMinutes}m left`
                 }`
               : ""}
             {warming ? " · warming up" : ""}
@@ -490,19 +616,21 @@ export function VariationTimeline({
       </div>
 
       <div className="timeline-steer-block">
-        <label className="timeline-steer-label" htmlFor="timeline-steer">
-          Steer prompt
-        </label>
-        <textarea
-          id="timeline-steer"
-          className="timeline-steer-input"
-          value={steer}
-          rows={2}
-          spellCheck={false}
-          onChange={(e) => setSteer(e.target.value)}
-          placeholder="e.g. cuter eyes, mage robes with a gold trim…"
-          title="Appended to house style + facing + character parts (camera/lights come from the bake)"
-        />
+        <div className="timeline-steer-row">
+          <label className="timeline-steer-label" htmlFor="timeline-steer">
+            Steer
+          </label>
+          <textarea
+            id="timeline-steer"
+            className="timeline-steer-input"
+            value={steer}
+            rows={1}
+            spellCheck={false}
+            onChange={(e) => setSteer(e.target.value)}
+            placeholder="e.g. cuter eyes, mage robes with a gold trim…"
+            title="Appended to house style + facing + character parts (camera/lights come from the bake)"
+          />
+        </div>
         <div className="timeline-settings">
           <label className="timeline-setting" htmlFor="timeline-freedom">
             <span>Freedom</span>
@@ -511,7 +639,7 @@ export function VariationTimeline({
               value={freedom}
               onChange={(e) => setFreedom(e.target.value as FreedomChoice)}
             >
-              <option value="auto">Auto (weighted)</option>
+              <option value="auto">Auto</option>
               <option value="polish">Polish</option>
               <option value="costume">Costume</option>
               <option value="soft">Soft</option>
@@ -523,7 +651,7 @@ export function VariationTimeline({
               id="timeline-steps"
               type="range"
               min={16}
-              max={40}
+              max={MAX_STEPS}
               step={1}
               value={steps}
               onChange={(e) => setSteps(Number(e.target.value))}
@@ -534,9 +662,9 @@ export function VariationTimeline({
             <input
               id="timeline-guidance"
               type="range"
-              min={4}
-              max={10}
-              step={0.5}
+              min={GUIDANCE_MIN}
+              max={GUIDANCE_MAX}
+              step={GUIDANCE_STEP}
               value={guidance}
               onChange={(e) => setGuidance(Number(e.target.value))}
             />
@@ -579,8 +707,8 @@ export function VariationTimeline({
             value={sort}
             onChange={(e) => setSort(e.target.value as SortMode)}
           >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
             <option value="lockedFirst">Locked first</option>
           </select>
         </label>
@@ -604,58 +732,72 @@ export function VariationTimeline({
                 >
                   …
                 </div>
-                <span className="meta">…</span>
               </li>
             ))}
-            {visibleItems.map((item) => (
-              <li key={item.id} className="timeline-tile">
-                <img
-                  className="pixel-preview timeline-thumb"
-                  src={item.image}
-                  alt={item.freedom}
-                  width={thumbPx}
-                  height={thumbPx}
-                  onMouseEnter={(e) => showThumbPreview(e, item)}
-                  onMouseLeave={() => setHoverPreview(null)}
-                />
-                <div className="timeline-tile-meta">
-                  <span className="timeline-tag">{item.freedom}</span>
-                  <span className="meta">
-                    {item.elapsed_s}s · cfg{" "}
-                    {item.guidance != null ? item.guidance : "—"} · {item.seed}
-                  </span>
-                </div>
-                <div className="timeline-tile-actions">
+            {visibleItems.map((item) => {
+              const selected = selectedIds.has(item.id);
+              return (
+                <li
+                  key={item.id}
+                  className={`timeline-tile${selected ? " is-selected" : ""}`}
+                >
                   <button
                     type="button"
-                    className="timeline-micro-btn"
-                    title="Download PNG"
-                    onClick={() => void onDownload(item)}
+                    className="timeline-select-hit"
+                    aria-pressed={selected}
+                    title={selected ? "Deselect" : "Select for Remix"}
+                    onClick={() => toggleSelected(item.id)}
                   >
-                    Save
+                    <img
+                      className="pixel-preview timeline-thumb"
+                      src={item.image}
+                      alt={item.freedom}
+                      width={thumbPx}
+                      height={thumbPx}
+                      draggable={false}
+                      onMouseEnter={(e) => showThumbPreview(e, item)}
+                      onMouseLeave={() => setHoverPreview(null)}
+                    />
                   </button>
-                  <button
-                    type="button"
-                    className={`timeline-micro-btn${item.locked ? " is-locked" : ""}`}
-                    title={item.locked ? "Unlock" : "Lock"}
-                    onClick={() => void onLock(item.id, !item.locked)}
-                  >
-                    {item.locked ? "Unlock" : "Lock"}
-                  </button>
-                  <button
-                    type="button"
-                    className="timeline-micro-btn timeline-delete"
-                    disabled={item.locked}
-                    title={
-                      item.locked ? "Unlock before deleting" : "Delete from disk"
-                    }
-                    onClick={() => void onDelete(item.id)}
-                  >
-                    Del
-                  </button>
-                </div>
-              </li>
-            ))}
+                  <div className="timeline-tile-meta">
+                    <span className="timeline-tag">{item.freedom}</span>
+                    <span className="meta">
+                      {item.elapsed_s}s · cfg{" "}
+                      {item.guidance != null ? item.guidance : "—"}
+                    </span>
+                  </div>
+                  <div className="timeline-tile-actions">
+                    <button
+                      type="button"
+                      className="timeline-micro-btn"
+                      title="Download PNG"
+                      onClick={() => void onDownload(item)}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      className={`timeline-micro-btn${item.locked ? " is-locked" : ""}`}
+                      title={item.locked ? "Unlock" : "Lock"}
+                      onClick={() => void onLock(item.id, !item.locked)}
+                    >
+                      {item.locked ? "Unlock" : "Lock"}
+                    </button>
+                    <button
+                      type="button"
+                      className="timeline-micro-btn timeline-delete"
+                      disabled={item.locked}
+                      title={
+                        item.locked ? "Unlock before deleting" : "Delete from disk"
+                      }
+                      onClick={() => void onDelete(item.id)}
+                    >
+                      Del
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

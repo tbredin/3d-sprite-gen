@@ -7,6 +7,23 @@ export type PartColorSlot = {
   value: string;
 };
 
+/**
+ * Upper bound of colour slots a part can expose.
+ * Used to keep the swatch stack a constant width across rerolls.
+ */
+export function maxPartColorSlots(part: PartId): number {
+  switch (part) {
+    case "head":
+      return 4; // skin, hair, helmet, visor
+    case "torso":
+      return 6; // cloth, trim, hem, cape, pouch, back
+    case "arms":
+      return 4; // sleeve, hand, weapon, offhand
+    case "legs":
+      return 2; // pants, boots
+  }
+}
+
 /** Colour channels owned by a part (mirrors `rerollPartColors` coverage). */
 export function listPartColorSlots(
   spec: CharacterSpec,

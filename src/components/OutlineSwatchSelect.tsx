@@ -6,19 +6,24 @@ type Props = {
   value: string;
   onChange: (hex: string) => void;
   disabled?: boolean;
+  title?: string;
+  ariaLabel?: string;
 };
 
-/** Dropdown that picks an Endesga swatch for the baked 1px outline. */
+/** Clickable swatch — Endesga outline colour popover (bare hex). */
 export function OutlineSwatchSelect({
   colors,
   value,
   onChange,
   disabled = false,
+  title = "Outline colour",
+  ariaLabel,
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const selected = normalizePaletteHex(value);
+  const empty = disabled || colors.length === 0;
 
   useEffect(() => {
     if (disabled) setOpen(false);
@@ -41,54 +46,49 @@ export function OutlineSwatchSelect({
   }, [open]);
 
   return (
-    <div className="outline-swatch-select" ref={rootRef}>
+    <div className="color-control part-color-menu" ref={rootRef}>
       <button
         type="button"
-        className="outline-swatch-trigger"
+        className={`swatch color-control-swatch swatch-btn${empty ? " color-control-swatch-empty" : ""}`}
+        style={empty ? undefined : { background: `#${selected}` }}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
-        disabled={disabled}
+        disabled={disabled || colors.length === 0}
+        title={empty ? title : `${title} #${selected}`}
+        aria-label={ariaLabel ?? title}
         onClick={() => setOpen((v) => !v)}
-      >
-        <span
-          className="swatch"
-          style={{ background: `#${selected}` }}
-          aria-hidden
-        />
-        <span className="outline-swatch-hex">#{selected}</span>
-        <span className="outline-swatch-caret" aria-hidden>
-          ▾
-        </span>
-      </button>
-      {open && (
+      />
+      {open && colors.length > 0 ? (
         <div
           id={listId}
-          className="swatches outline-swatch-menu"
+          className="part-color-popover part-color-popover-swatches"
           role="listbox"
-          aria-label="Endesga outline colour"
+          aria-label={ariaLabel ?? title}
         >
-          {colors.map((c) => {
-            const hex = normalizePaletteHex(c);
-            const isSelected = hex === selected;
-            return (
-              <button
-                key={hex}
-                type="button"
-                role="option"
-                aria-selected={isSelected}
-                className={`swatch swatch-btn${isSelected ? " is-selected" : ""}`}
-                style={{ background: `#${hex}` }}
-                title={`#${hex}`}
-                onClick={() => {
-                  onChange(hex);
-                  setOpen(false);
-                }}
-              />
-            );
-          })}
+          <div className="swatches part-color-swatches">
+            {colors.map((c) => {
+              const hex = normalizePaletteHex(c);
+              const isSelected = hex === selected;
+              return (
+                <button
+                  key={hex}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  className={`swatch swatch-btn${isSelected ? " is-selected" : ""}`}
+                  style={{ background: `#${hex}` }}
+                  title={`#${hex}`}
+                  onClick={() => {
+                    onChange(hex);
+                    setOpen(false);
+                  }}
+                />
+              );
+            })}
+          </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

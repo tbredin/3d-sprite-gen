@@ -63,6 +63,21 @@ body {
   font: inherit;
 }
 
+.palette-lospec-link {
+  color: var(--focus);
+  text-decoration: none;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.palette-lospec-link:hover {
+  text-decoration: underline;
+}
+
+.palette-slug-row .meta {
+  margin: 0;
+}
+
 .ghost-btn {
   height: var(--control-h);
   padding: 0 0.65rem;
@@ -122,7 +137,7 @@ body {
 .layout {
   display: grid;
   gap: 0.85rem;
-  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(260px, 3fr) minmax(260px, 2fr);
   align-items: start;
 }
 
@@ -136,6 +151,11 @@ body {
   background: color-mix(in srgb, var(--panel) 88%, transparent);
   border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
   padding: 0.7rem 0.8rem 0.85rem;
+  flex: 3 3 auto;
+}
+
+.panel-bake {
+  flex: 2 2 auto;
 }
 
 .panel-title {
@@ -526,22 +546,13 @@ button.ghost {
   border-bottom: 1px solid #3a415c;
 }
 
-.panel label.light-fill-row {
-  grid-template-columns: 2rem minmax(0, 1fr) 1.7rem 0.9rem;
+.panel .light-fill-row {
+  grid-template-columns: 2rem minmax(0, 1fr) 1.7rem auto;
   gap: 0.12rem;
   min-width: 0;
 }
 
-.panel label.light-fill-row .light-inline-color {
-  width: 0.9rem;
-  height: 0.9rem;
-  padding: 0;
-  border: 1px solid #3a415c;
-  background: transparent;
-  cursor: pointer;
-}
-
-.panel label.light-fill-row input[type="range"] {
+.panel .light-fill-row input[type="range"] {
   min-width: 0;
 }
 
@@ -562,11 +573,10 @@ button.ghost {
   border-bottom: 1px solid #3a415c;
 }
 
-.panel label.light-color-field {
-  display: grid;
-  grid-template-columns: 2.5rem auto 1fr;
+.light-color-field {
+  display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.35rem;
   margin: 0;
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -574,23 +584,8 @@ button.ghost {
   color: var(--muted);
 }
 
-.panel label.light-color-field input[type="color"] {
-  width: 1.5rem;
-  height: 1.5rem;
-  padding: 0;
-  border: 1px solid #3a415c;
-  background: transparent;
-  cursor: pointer;
-}
-
-.light-color-hex {
-  font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.62rem;
-  text-transform: lowercase;
-  color: var(--text);
-  letter-spacing: normal;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.light-color-field .light-slider-label {
+  flex: 0 0 2.5rem;
 }
 
 .light-profiles {
@@ -647,37 +642,7 @@ button.ghost {
   line-height: 1;
 }
 
-.light-profile-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.12rem;
-}
-
-.light-profile-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.25rem;
-  min-height: 1.25rem;
-}
-
-.light-profile-label {
-  font-size: 0.6rem;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.light-profiles .hint {
-  margin: 0.1rem 0 0;
-  font-size: 0.62rem;
-}
-
-.panel label.light-slider {
+.panel .light-slider {
   display: grid;
   grid-template-columns: 2.5rem 1fr 1.85rem;
   grid-template-rows: auto;
@@ -696,7 +661,7 @@ button.ghost {
   text-overflow: ellipsis;
 }
 
-.panel label.light-slider input[type="range"] {
+.panel .light-slider input[type="range"] {
   grid-column: auto;
   width: 100%;
   height: 0.8rem;
@@ -705,12 +670,12 @@ button.ghost {
   accent-color: var(--ink);
 }
 
-.light-red input[type="range"] {
-  accent-color: #e83b3b;
+.light-left input[type="range"] {
+  accent-color: #c4a574;
 }
 
-.light-blue input[type="range"] {
-  accent-color: #6ec8ff;
+.light-right input[type="range"] {
+  accent-color: #7a9bb8;
 }
 
 .slider-val {
@@ -847,7 +812,8 @@ button.ghost {
 }
 
 .part-block.is-locked .part-actions .part-icon-btn:disabled,
-.part-block.is-locked .part-color-menu {
+.part-block.is-locked .part-color-menu,
+.part-block.is-locked .color-control {
   opacity: 0.35;
   pointer-events: none;
 }
@@ -933,6 +899,93 @@ button.ghost {
 
 .part-icon-btn.is-locked {
   opacity: 1;
+}
+
+.color-control {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex: 0 0 auto;
+  /* PartColorMenu pads to maxPartColorSlots; keep a floor for single-swatch controls */
+  min-width: 12px;
+  min-height: 12px;
+}
+
+.color-control:has(
+  .color-control-swatch:disabled,
+  .color-control-swatch-trigger:disabled
+) {
+  opacity: 0.35;
+}
+
+.color-control:has(
+    .color-control-swatch:disabled,
+    .color-control-swatch-trigger:disabled
+  )
+  .color-control-swatch:disabled,
+.color-control:has(.color-control-swatch-trigger:disabled)
+  .color-control-swatch-trigger:disabled {
+  opacity: 1;
+}
+
+button.color-control-swatch.swatch-btn {
+  cursor: pointer;
+}
+
+button.color-control-swatch.swatch-btn:disabled {
+  cursor: not-allowed;
+}
+
+.color-control-swatch-empty {
+  background: repeating-conic-gradient(#3a415c 0% 25%, #12141f 0% 50%) 50% /
+    6px 6px;
+}
+
+.color-control-swatch-trigger,
+.panel button.color-control-swatch-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0 !important;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  height: auto !important;
+  max-height: none;
+  min-width: 12px;
+  min-height: 12px;
+  color: inherit;
+}
+
+.color-control-swatch-trigger:disabled {
+  cursor: not-allowed;
+}
+
+.panel button.color-control-swatch.swatch-btn {
+  height: auto !important;
+  max-height: none;
+  min-height: 0;
+  padding: 0 !important;
+}
+
+.color-control-swatch-stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  pointer-events: none;
+}
+
+.color-control-native {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+  padding: 0;
 }
 
 .part-color-menu {
@@ -1053,25 +1106,6 @@ button.ghost {
 
 .panel label.part-lock:has(input:checked) {
   color: var(--focus);
-}
-
-.part-actions .outline-swatch-select {
-  width: 6.75rem;
-}
-
-.part-actions .outline-swatch-trigger {
-  height: 1.35rem;
-  padding: 0 0.3rem;
-}
-
-.part-actions .outline-swatch-hex {
-  font-size: 0.65rem;
-}
-
-.part-actions .outline-swatch-menu {
-  left: auto;
-  right: 0;
-  width: 10rem;
 }
 
 .part-actions button:not(.part-icon-btn) {
@@ -1202,43 +1236,6 @@ button.ghost {
   margin: 0;
 }
 
-.outline-swatch-select {
-  position: relative;
-  text-transform: none;
-  letter-spacing: normal;
-}
-
-.outline-swatch-trigger {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: 100%;
-  height: var(--control-h);
-  padding: 0 0.45rem;
-  font: inherit;
-  color: var(--text);
-  background: #12141f;
-  border: 1px solid #3a415c;
-  cursor: pointer;
-  text-align: left;
-}
-
-.outline-swatch-trigger:focus {
-  outline: 1px solid var(--focus);
-}
-
-.outline-swatch-hex {
-  flex: 1;
-  font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.75rem;
-  text-transform: lowercase;
-}
-
-.outline-swatch-caret {
-  color: var(--muted);
-  font-size: 0.65rem;
-}
-
 .swatches {
   display: flex;
   flex-wrap: wrap;
@@ -1248,15 +1245,6 @@ button.ghost {
   padding: 0.3rem;
   background: #0c0e16;
   border: 1px solid #3a415c;
-}
-
-.outline-swatch-menu {
-  position: absolute;
-  z-index: 5;
-  left: 0;
-  right: 0;
-  top: calc(100% + 2px);
-  max-height: 96px;
 }
 
 .swatch {
@@ -1307,7 +1295,7 @@ button.swatch-btn {
 }
 
 .panel-timeline {
-  min-height: 16rem;
+  min-height: 12rem;
 }
 
 .timeline-header {
@@ -1315,8 +1303,8 @@ button.swatch-btn {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.65rem;
+  gap: 0.35rem 0.5rem;
+  margin-bottom: 0.4rem;
 }
 
 .timeline-header .panel-title {
@@ -1327,17 +1315,18 @@ button.swatch-btn {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .timeline-status {
   margin: 0;
+  font-size: 0.68rem;
 }
 
 .timeline-play {
   height: var(--control-h);
-  min-width: 4.5rem;
-  padding: 0 0.85rem;
+  min-width: 3.75rem;
+  padding: 0 0.65rem;
   border: 1px solid var(--accent);
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent) 35%, #12141f);
@@ -1345,6 +1334,11 @@ button.swatch-btn {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+}
+
+.timeline-play:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .timeline-play.is-playing {
@@ -1355,9 +1349,9 @@ button.swatch-btn {
 .timeline-steer-block {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  margin: 0 0 0.65rem;
-  padding: 0.45rem 0.65rem 0.55rem;
+  gap: 0.25rem;
+  margin: 0 0 0.4rem;
+  padding: 0.35rem 0.5rem 0.4rem;
   border: 1px solid color-mix(in srgb, var(--ink) 28%, #3a415c);
   border-radius: 6px;
   background:
@@ -1368,10 +1362,17 @@ button.swatch-btn {
     );
 }
 
+.timeline-steer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .timeline-steer-label {
+  flex: 0 0 auto;
   margin: 0;
   font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink);
@@ -1380,19 +1381,20 @@ button.swatch-btn {
 .panel-timeline .timeline-steer-input,
 .panel-timeline textarea.timeline-steer-input {
   display: block;
+  flex: 1 1 auto;
   width: 100%;
   box-sizing: border-box;
   height: auto !important;
-  min-height: 2.5rem !important;
+  min-height: 1.7rem !important;
   margin: 0;
-  padding: 0.4rem 0.55rem !important;
+  padding: 0.25rem 0.45rem !important;
   border: 1px solid #3a415c;
   border-radius: 4px;
   background: #0c0e16;
   color: var(--text);
   font: inherit;
-  font-size: 0.85rem !important;
-  line-height: 1.35;
+  font-size: 0.8rem !important;
+  line-height: 1.3;
   resize: vertical;
 }
 
@@ -1407,29 +1409,29 @@ button.swatch-btn {
 
 .timeline-settings {
   display: grid;
-  grid-template-columns: minmax(8rem, 1fr) repeat(2, minmax(7rem, 1fr));
-  gap: 0.4rem 0.75rem;
-  margin-top: 0.1rem;
+  grid-template-columns: minmax(6.5rem, 1fr) repeat(2, minmax(5.5rem, 1fr));
+  gap: 0.25rem 0.55rem;
+  margin-top: 0;
 }
 
 .timeline-setting {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.1rem;
   margin: 0;
   font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .panel-timeline .timeline-setting select {
-  height: var(--control-h);
+  height: calc(var(--control-h) - 0.15rem);
   width: 100%;
   text-transform: none;
   letter-spacing: normal;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
 }
 
 .panel-timeline .timeline-setting input[type="range"] {
@@ -1441,15 +1443,20 @@ button.swatch-btn {
   .timeline-settings {
     grid-template-columns: 1fr;
   }
+
+  .timeline-steer-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .timeline-hint {
-  margin: 0.15rem 0 0;
-  font-size: 0.68rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.65rem;
 }
 
 .timeline-hint code {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   color: var(--ink);
 }
 
@@ -1458,32 +1465,32 @@ button.swatch-btn {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem 0.75rem;
-  margin: 0 0 0.65rem;
+  gap: 0.35rem 0.55rem;
+  margin: 0 0 0.4rem;
 }
 
 .timeline-visibility {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.3rem;
 }
 
 .timeline-sort {
   flex-direction: row;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   margin: 0;
 }
 
 .panel-timeline .timeline-sort select {
   width: auto;
-  min-width: 9.5rem;
+  min-width: 7.5rem;
 }
 
 .timeline-scroll {
-  max-height: min(42vh, 28rem);
+  max-height: min(38vh, 22rem);
   overflow: auto;
-  padding: 0.35rem;
+  padding: 0.25rem;
   border: 1px solid #2a3044;
   border-radius: 4px;
   background: #12141f;
@@ -1495,21 +1502,45 @@ button.swatch-btn {
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.3rem;
 }
 
 .timeline-tile {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  max-width: 6.5rem;
+  gap: 0.1rem;
+  max-width: 5.25rem;
+  padding: 0.12rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+}
+
+.timeline-tile.is-selected {
+  border-color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 14%, transparent);
+}
+
+.timeline-select-hit {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+  border-radius: 2px;
+}
+
+.timeline-select-hit:focus-visible {
+  outline: 1px solid var(--focus);
+  outline-offset: 1px;
 }
 
 .timeline-thumb {
   width: auto;
   height: auto;
-  max-width: 6rem;
-  cursor: zoom-in;
+  max-width: 4.75rem;
+  cursor: pointer;
 }
 
 .timeline-thumb-tooltip {
@@ -1531,17 +1562,17 @@ button.swatch-btn {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.2rem 0.3rem;
-  line-height: 1.15;
+  gap: 0.15rem 0.25rem;
+  line-height: 1.1;
 }
 
 .timeline-tile-meta .meta {
-  font-size: 0.58rem;
+  font-size: 0.52rem;
   margin: 0;
 }
 
 .timeline-tag {
-  font-size: 0.55rem;
+  font-size: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--focus);
@@ -1550,23 +1581,23 @@ button.swatch-btn {
 .timeline-tile-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem;
+  gap: 0.12rem;
 }
 
 /* Beat `.panel button` height (2rem) — match lighting micro density */
 .panel-timeline .timeline-micro-btn {
   box-sizing: border-box;
-  height: 1.15rem !important;
-  max-height: 1.15rem;
+  height: 1.05rem !important;
+  max-height: 1.05rem;
   min-height: 0;
-  padding: 0 0.28rem !important;
+  padding: 0 0.22rem !important;
   margin: 0;
   border: 1px solid #3a415c;
   border-radius: 3px;
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 0.58rem !important;
+  font-size: 0.52rem !important;
   line-height: 1;
   cursor: pointer;
 }
@@ -1592,9 +1623,9 @@ button.swatch-btn {
 }
 
 .timeline-phase {
-  margin: 0 0 0.55rem;
+  margin: 0 0 0.35rem;
   color: var(--focus);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
 }
 
 .timeline-tile.is-pending {
