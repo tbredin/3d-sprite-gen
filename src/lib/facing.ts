@@ -19,11 +19,23 @@ export type FacingPreset = {
   conceptHint: string;
 };
 
+/** Named 8-way facing (excludes free `custom`). */
+export type NamedFacingId = Exclude<FacingId, "custom">;
+
+export type FacingPadCell = {
+  id: NamedFacingId;
+  glyph: string;
+  title: string;
+  /** CSS grid cell 1-based */
+  row: number;
+  col: number;
+};
+
 /**
  * Camera is locked (Sea of Stars–style iso). Model +Z is “forward”.
  * Four diagonal presets sit on the screen corners; four cardinals sit on the
  * screen axes (up / right / down / left), 45° between the diagonals.
- * Default away-tr: facing away toward top-right of frame.
+ * Default toward-br: facing toward the camera at the bottom-right of frame.
  */
 export const FACING_PRESETS: FacingPreset[] = [
   {
@@ -35,7 +47,7 @@ export const FACING_PRESETS: FacingPreset[] = [
   },
   {
     id: "away-tr",
-    label: "Away · top-right (default)",
+    label: "Away · top-right",
     rotationY: Math.PI,
     conceptHint:
       "isometric low-top-down view, character facing away from camera toward the top-right of the frame, back three-quarter, Sea of Stars / SNES JRPG angle",
@@ -49,7 +61,7 @@ export const FACING_PRESETS: FacingPreset[] = [
   },
   {
     id: "toward-br",
-    label: "Toward · bottom-right",
+    label: "Toward · bottom-right (default)",
     rotationY: Math.PI / 2,
     conceptHint:
       "isometric low-top-down view, character facing toward the camera at the bottom-right of the frame, front three-quarter, Sea of Stars / SNES JRPG angle",
@@ -84,6 +96,24 @@ export const FACING_PRESETS: FacingPreset[] = [
   },
 ];
 
+/** Pad layout matches screen directions (N at top). */
+export const FACING_PAD: FacingPadCell[] = [
+  { id: "away-tl", glyph: "↖", title: "Away · top-left", row: 1, col: 1 },
+  { id: "up", glyph: "↑", title: "Up", row: 1, col: 2 },
+  { id: "away-tr", glyph: "↗", title: "Away · top-right", row: 1, col: 3 },
+  { id: "left", glyph: "←", title: "Left", row: 2, col: 1 },
+  { id: "right", glyph: "→", title: "Right", row: 2, col: 3 },
+  { id: "toward-bl", glyph: "↙", title: "Toward · bottom-left", row: 3, col: 1 },
+  { id: "down", glyph: "↓", title: "Down", row: 3, col: 2 },
+  {
+    id: "toward-br",
+    glyph: "↘",
+    title: "Toward · bottom-right (default)",
+    row: 3,
+    col: 3,
+  },
+];
+
 /** Radians per second for continuous / hold-to-rotate turntable. */
 export const ROTATE_FACING_SPEED = (Math.PI * 2) / 6;
 
@@ -98,7 +128,7 @@ export const CUSTOM_FACING: FacingPreset = {
     "isometric low-top-down view, custom free rotation, Sea of Stars / SNES JRPG angle",
 };
 
-export const DEFAULT_FACING: FacingId = "away-tr";
+export const DEFAULT_FACING: FacingId = "toward-br";
 
 const FACING_STORAGE_KEY = "3d-sprite-gen:iso-facing-v1";
 

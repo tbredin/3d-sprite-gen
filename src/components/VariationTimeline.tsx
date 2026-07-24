@@ -24,6 +24,8 @@ const DEFAULT_GUIDANCE = 7;
 
 type StreamMode = "stopped" | "playing" | "playRandom" | "idleReroll";
 type FreedomChoice = "auto" | VariationFreedom;
+type VisibilityFilter = "all" | "locked" | "unlocked";
+type SortMode = "newest" | "oldest" | "lockedFirst";
 
 type HoverPreview = {
   src: string;
@@ -31,6 +33,32 @@ type HoverPreview = {
   left: number;
   top: number;
 };
+
+function filterAndSortItems(
+  items: VariationMeta[],
+  visibility: VisibilityFilter,
+  sort: SortMode,
+): VariationMeta[] {
+  const filtered =
+    visibility === "all"
+      ? items
+      : visibility === "locked"
+        ? items.filter((item) => item.locked)
+        : items.filter((item) => !item.locked);
+
+  const sorted = [...filtered];
+  if (sort === "newest") {
+    sorted.sort((a, b) => b.created_at - a.created_at);
+  } else if (sort === "oldest") {
+    sorted.sort((a, b) => a.created_at - b.created_at);
+  } else {
+    sorted.sort((a, b) => {
+      if (a.locked !== b.locked) return a.locked ? -1 : 1;
+      return b.created_at - a.created_at;
+    });
+  }
+  return sorted;
+}
 
 type Props = {
   sourceDataUrl: string | null;
@@ -67,6 +95,8 @@ export function VariationTimeline({
   const [warming, setWarming] = useState(false);
   const [phase, setPhase] = useState<string | null>(null);
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
+  const [visibility, setVisibility] = useState<VisibilityFilter>("all");
+  const [sort, setSort] = useState<SortMode>("newest");
 
   const modeRef = useRef<StreamMode>("stopped");
   const sourceRef = useRef(sourceDataUrl);
@@ -357,6 +387,8 @@ export function VariationTimeline({
   const idleRerolling = mode === "idleReroll";
   const maxConcurrency = playingRandom ? 1 : CONCURRENCY;
   const lockedCount = items.filter((item) => item.locked).length;
+  const unlockedCount = items.length - lockedCount;
+  const visibleItems = filterAndSortItems(items, visibility, sort);
   const idleRemainingMs = getIdleRemainingMs();
   const idleRemainingMinutes =
     idleRemainingMs === null ? null : Math.ceil(idleRemainingMs / 60000);
@@ -458,23 +490,18 @@ export function VariationTimeline({
       </div>
 
       <div className="timeline-steer-block">
-        <div className="timeline-steer-head">
-          <label className="timeline-steer-label" htmlFor="timeline-steer">
-            Steer prompt
-          </label>
-          <span className="meta timeline-steer-hint">
-            Appended to house style + facing + character parts (camera/lights
-            come from the bake)
-          </span>
-        </div>
+        <label className="timeline-steer-label" htmlFor="timeline-steer">
+          Steer prompt
+        </label>
         <textarea
           id="timeline-steer"
           className="timeline-steer-input"
           value={steer}
-          rows={3}
+          rows={2}
           spellCheck={false}
           onChange={(e) => setSteer(e.target.value)}
-          placeholder="e.g. cuter eyes, mage robes with a gold trim, soft cheek blush…"
+          placeholder="e.g. cuter eyes, mage robes with a gold trim…"
+          title="Appended to house style + facing + character parts (camera/lights come from the bake)"
         />
         <div className="timeline-settings">
           <label className="timeline-setting" htmlFor="timeline-freedom">
@@ -526,12 +553,47 @@ export function VariationTimeline({
       {phase ? <p className="timeline-phase">{phase}</p> : null}
       {error ? <p className="error">{error}</p> : null}
 
+      <div className="timeline-browse">
+        <div className="timeline-visibility" role="group" aria-label="Visibility">
+          {(
+            [
+              ["all", `All (${items.length})`],
+              ["locked", `Locked (${lockedCount})`],
+              ["unlocked", `Unlocked (${unlockedCount})`],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={`ghost-btn${visibility === value ? " is-active" : ""}`}
+              onClick={() => setVisibility(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <label className="timeline-setting timeline-sort" htmlFor="timeline-sort">
+          <span>Sort</span>
+          <select
+            id="timeline-sort"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortMode)}
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="lockedFirst">Locked first</option>
+          </select>
+        </label>
+      </div>
+
       <div
         className="timeline-scroll"
         onScroll={() => setHoverPreview(null)}
       >
         {items.length === 0 && pendingSlots === 0 ? (
           <p className="meta">No generations yet — hit Play.</p>
+        ) : visibleItems.length === 0 && pendingSlots === 0 ? (
+          <p className="meta">No generations match this filter.</p>
         ) : (
           <ul className="timeline-grid">
             {Array.from({ length: pendingSlots }, (_, i) => (
@@ -545,7 +607,7 @@ export function VariationTimeline({
                 <span className="meta">…</span>
               </li>
             ))}
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <li key={item.id} className="timeline-tile">
                 <img
                   className="pixel-preview timeline-thumb"

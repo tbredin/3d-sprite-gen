@@ -47,7 +47,8 @@ import { CaptionRefsPanel } from "./components/CaptionRefsPanel";
 import { fetchStatus, type StatusResponse } from "./api";
 import { buildVariationPrompt } from "./lib/variationPrompt";
 import {
-  FACING_PRESETS,
+  DEFAULT_FACING,
+  FACING_PAD,
   getFacing,
   loadFacingPersist,
   saveFacingPersist,
@@ -854,20 +855,47 @@ export default function App() {
             </div>
 
             <div className="preview-side">
-              <label className="field">
-                Iso facing
-                <select
-                  value={facing}
-                  onChange={(e) => applyFacing(e.target.value as FacingId)}
+              <div className="iso-facing">
+                <span className="iso-facing-label" id="iso-facing-label">
+                  Iso facing
+                </span>
+                <div
+                  className="iso-facing-pad"
+                  role="group"
+                  aria-labelledby="iso-facing-label"
                 >
-                  {FACING_PRESETS.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.label}
-                    </option>
+                  {FACING_PAD.map((cell) => (
+                    <button
+                      key={cell.id}
+                      type="button"
+                      className={`iso-facing-btn${
+                        facing === cell.id ? " is-active" : ""
+                      }`}
+                      style={{ gridRow: cell.row, gridColumn: cell.col }}
+                      title={cell.title}
+                      aria-label={cell.title}
+                      aria-pressed={facing === cell.id}
+                      onClick={() => applyFacing(cell.id)}
+                    >
+                      {cell.glyph}
+                    </button>
                   ))}
-                  <option value="custom">Custom</option>
-                </select>
-              </label>
+                  <button
+                    type="button"
+                    className={`iso-facing-btn iso-facing-center${
+                      facing === "custom" ? " is-custom" : ""
+                    }`}
+                    title="Reset to default facing (toward · bottom-right)"
+                    aria-label="Reset to default facing"
+                    onClick={() => applyFacing(DEFAULT_FACING)}
+                  >
+                    {facing === "custom" ? "·" : "⌂"}
+                  </button>
+                </div>
+                {facing === "custom" ? (
+                  <span className="meta iso-facing-status">Custom</span>
+                ) : null}
+              </div>
               <div className="field">
                 <div className="field-heading">
                   <span>Sprite size</span>
