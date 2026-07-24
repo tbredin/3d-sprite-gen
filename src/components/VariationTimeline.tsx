@@ -617,21 +617,19 @@ export function VariationTimeline({
 
       <div className="timeline-steer-block">
         <div className="timeline-steer-row">
-          <label className="timeline-steer-label" htmlFor="timeline-steer">
-            Steer
+          <label className="timeline-setting timeline-steer-field" htmlFor="timeline-steer">
+            <span>Steer</span>
+            <textarea
+              id="timeline-steer"
+              className="timeline-steer-input"
+              value={steer}
+              rows={1}
+              spellCheck={false}
+              onChange={(e) => setSteer(e.target.value)}
+              placeholder="e.g. cuter eyes, mage robes with a gold trim…"
+              title="Appended to house style + facing + character parts (camera/lights come from the bake)"
+            />
           </label>
-          <textarea
-            id="timeline-steer"
-            className="timeline-steer-input"
-            value={steer}
-            rows={1}
-            spellCheck={false}
-            onChange={(e) => setSteer(e.target.value)}
-            placeholder="e.g. cuter eyes, mage robes with a gold trim…"
-            title="Appended to house style + facing + character parts (camera/lights come from the bake)"
-          />
-        </div>
-        <div className="timeline-settings">
           <label className="timeline-setting" htmlFor="timeline-freedom">
             <span>Freedom</span>
             <select
