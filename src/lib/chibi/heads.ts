@@ -757,8 +757,10 @@ export function generateFace(opts: {
   const headScale = opts.headScale ?? 1;
   const shape = opts.shape ?? DEFAULT_HEAD_SHAPE;
   const baseEyeW = 0.33 * (2 / 5);
+  const baseEyeH = baseEyeW * (EYE_TEX_H / EYE_TEX_W);
+  // Width tracks size 1:1; height only moves ⅓ as far from the baseline.
   const eyeW = baseEyeW * faceScale;
-  const eyeH = eyeW * (EYE_TEX_H / EYE_TEX_W);
+  const eyeH = baseEyeH * (1 + (faceScale - 1) / 3);
   // Separation uses unscaled base width so size + distance stay independent.
   const halfSep = baseEyeW * EYE_SEP_SCALE * spacing;
   const eyeColor = opts.eyeColor ?? "#1a1c2c";
