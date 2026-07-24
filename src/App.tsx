@@ -1063,7 +1063,10 @@ export default function App() {
               {PART_IDS.map((part) => {
                 const locked = locks[part];
                 return (
-                  <div key={part} className="part-block">
+                  <div
+                    key={part}
+                    className={`part-block${locked ? " is-locked" : ""}`}
+                  >
                     <div className="part-row">
                       <span className="part-name">{part}</span>
 

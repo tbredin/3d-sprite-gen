@@ -792,6 +792,39 @@ button.ghost {
   background: #12141f;
 }
 
+.part-block.is-locked {
+  border-color: #2a3048;
+  background: #0d0f18;
+}
+
+.part-block.is-locked .part-name {
+  color: var(--muted);
+}
+
+.part-block.is-locked .part-inline-controls {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.part-block.is-locked .part-inline-select,
+.panel .part-block.is-locked .part-inline-select {
+  color: var(--muted);
+  border-color: #2a3048;
+  background: #0a0c14;
+}
+
+.part-block.is-locked .part-actions .part-icon-btn:disabled,
+.part-block.is-locked .part-color-menu {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.part-block.is-locked .part-actions .part-icon-btn.is-locked {
+  opacity: 1;
+  pointer-events: auto;
+  filter: none;
+}
+
 .part-row {
   display: flex;
   align-items: center;
