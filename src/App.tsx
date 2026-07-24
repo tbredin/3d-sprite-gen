@@ -286,9 +286,7 @@ export default function App() {
   const [offhandVariant, setOffhandVariantState] = useState<string>(
     () => OFFHAND_VARIANT_IDS[getOffhandVariant()],
   );
-  const [bodyOpen, setBodyOpen] = useState(true);
-  const [presetsOpen, setPresetsOpen] = useState(true);
-  const [partsOpen, setPartsOpen] = useState(true);
+  const [characterOpen, setCharacterOpen] = useState(true);
   const [lightsOpen, setLightsOpen] = useState(true);
   const [outlinesOpen, setOutlinesOpen] = useState(true);
   const dragRef = useRef<{
@@ -906,36 +904,29 @@ export default function App() {
           </div>
 
           <CollapseSection
-            title="Body"
-            open={bodyOpen}
-            onToggle={() => setBodyOpen((v) => !v)}
-          >
-            <label className="field">
-              Profile
-              <select
-                value={bodyProfileId}
-                onChange={(e) =>
-                  onBodyProfileChange(e.target.value as BodyProfileId)
-                }
-                title="Smaller torso/legs — hands & feet stay fixed for pixel legibility"
-              >
-                {BODY_PROFILE_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {BODY_PROFILES[id].label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </CollapseSection>
-
-          <CollapseSection
-            title="Presets"
-            open={presetsOpen}
-            onToggle={() => setPresetsOpen((v) => !v)}
+            title="Character"
+            open={characterOpen}
+            onToggle={() => setCharacterOpen((v) => !v)}
           >
             <div className="char-picker">
               <label className="field">
-                Character
+                Body
+                <select
+                  value={bodyProfileId}
+                  onChange={(e) =>
+                    onBodyProfileChange(e.target.value as BodyProfileId)
+                  }
+                  title="Smaller torso/legs — hands & feet stay fixed for pixel legibility"
+                >
+                  {BODY_PROFILE_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {BODY_PROFILES[id].label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                Preset
                 <select
                   value={presetId === "random" ? "" : presetId}
                   onChange={(e) => applyPreset(e.target.value as PresetId)}
@@ -960,13 +951,8 @@ export default function App() {
                 Random
               </button>
             </div>
-          </CollapseSection>
 
-          <CollapseSection
-            title="Parts"
-            open={partsOpen}
-            onToggle={() => setPartsOpen((v) => !v)}
-          >
+            <p className="light-subhead">Parts</p>
             <div className="part-grid">
               <div className="part-row">
                 <span className="part-name">mirror</span>
