@@ -40,6 +40,7 @@ import {
 import { normalizeEdgeOutlineSettings } from "./lib/edgeOutline";
 import { CollapseSection } from "./components/CollapseSection";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
+import { PartColorMenu } from "./components/PartColorMenu";
 import { VariationTimeline } from "./components/VariationTimeline";
 import { CaptionRefsPanel } from "./components/CaptionRefsPanel";
 import { fetchStatus, type StatusResponse } from "./api";
@@ -202,29 +203,35 @@ function humanize(s: string): string {
   return s.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
 }
 
-/** Labeled select for a single named sub-part in the debug Parts panel. */
-function PartSelect<T extends string>({
-  label,
+/** Compact unlabeled select for inline part rows. */
+function CompactSelect<T extends string>({
   value,
   options,
   onPick,
+  disabled,
+  title,
 }: {
-  label: string;
   value: T;
   options: readonly T[];
   onPick: (v: T) => void;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
-    <label className="part-select">
-      <span className="part-select-label">{label}</span>
-      <select value={value} onChange={(e) => onPick(e.target.value as T)}>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {humanize(o)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <select
+      className="part-inline-select"
+      value={value}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      onChange={(e) => onPick(e.target.value as T)}
+    >
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {humanize(o)}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -287,6 +294,7 @@ export default function App() {
     () => OFFHAND_VARIANT_IDS[getOffhandVariant()],
   );
   const [characterOpen, setCharacterOpen] = useState(true);
+  const [openPart, setOpenPart] = useState<PartId | null>(null);
   const [lightsOpen, setLightsOpen] = useState(true);
   const [lightingProfileId, setLightingProfileId] = useState("");
   const [outlinesOpen, setOutlinesOpen] = useState(true);
@@ -957,184 +965,248 @@ export default function App() {
               </button>
             </div>
 
-            <p className="light-subhead">Parts</p>
+            <div className="part-toggles">
+              <label className="part-chip">
+                <input
+                  type="checkbox"
+                  checked={mirror}
+                  onChange={() => setMirror((v) => !v)}
+                  title="Swap lead side (L↔R weapon / stance), same facing"
+                />
+                Mirror
+              </label>
+              <label className="part-chip">
+                <input
+                  type="checkbox"
+                  checked={showEyes}
+                  onChange={() => setShowEyes((v) => !v)}
+                  title="Toggle cartoon eyes"
+                />
+                Eyes
+              </label>
+            </div>
+
             <div className="part-grid">
-              <div className="part-row">
-                <span className="part-name">mirror</span>
-                <div className="part-actions">
-                  <label className="part-lock">
-                    <input
-                      type="checkbox"
-                      checked={mirror}
-                      onChange={() => setMirror((v) => !v)}
-                      title="Swap lead side (L↔R weapon / stance), same facing"
-                    />
-                    Mirror
-                  </label>
-                  <label className="part-lock">
-                    <input
-                      type="checkbox"
-                      checked={showEyes}
-                      onChange={() => setShowEyes((v) => !v)}
-                      title="Toggle cartoon eyes"
-                    />
-                    Show eyes
-                  </label>
-                </div>
-              </div>
-              {PART_IDS.map((part) => (
-                <div key={part} className="part-block">
-                  <div className="part-row">
-                    <span className="part-name">{part}</span>
-                    <div className="part-actions">
-                      <label className="part-lock">
-                        <input
-                          type="checkbox"
-                          checked={locks[part]}
-                          onChange={() => toggleLock(part)}
-                        />
-                        Lock
-                      </label>
+              {PART_IDS.map((part) => {
+                const locked = locks[part];
+                const expanded = openPart === part;
+                const hasExtra =
+                  part === "head" ||
+                  part === "torso" ||
+                  part === "arms";
+                return (
+                  <div
+                    key={part}
+                    className={`part-block${expanded ? " is-open" : ""}`}
+                  >
+                    <div className="part-row">
                       <button
                         type="button"
-                        className="ghost"
-                        onClick={() => applyRerollPart(part)}
-                        disabled={locks[part]}
+                        className="part-name-toggle"
+                        aria-expanded={hasExtra ? expanded : undefined}
+                        disabled={!hasExtra}
+                        onClick={() =>
+                          setOpenPart((cur) => (cur === part ? null : part))
+                        }
                         title={
-                          locks[part]
-                            ? "Unlock to reroll this part"
-                            : "Reroll this part"
+                          hasExtra
+                            ? expanded
+                              ? "Hide extra controls"
+                              : "Show extra controls"
+                            : undefined
                         }
                       >
-                        Reroll
+                        <span className="part-name">{part}</span>
+                        {hasExtra ? (
+                          <span className="part-caret" aria-hidden>
+                            {expanded ? "▾" : "▸"}
+                          </span>
+                        ) : null}
                       </button>
-                      <button
-                        type="button"
-                        className="ghost"
-                        onClick={() => applyRerollColors(part)}
-                      >
-                        Colors
-                      </button>
-                    </div>
-                  </div>
 
-                  {part === "head" ? (
-                    <div className="part-subgrid">
-                      <PartSelect<HeadShape>
-                        label="shape"
-                        value={spec.head?.shape ?? "lozenge"}
-                        options={HEAD_SHAPES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setHeadShape(s, v))
-                        }
-                      />
-                      <PartSelect<HairStyle>
-                        label="hair"
-                        value={spec.hair?.style ?? "bald"}
-                        options={HAIR_STYLES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setHairStyle(s, v))
-                        }
-                      />
-                      <PartSelect<HelmetStyle>
-                        label="helmet"
-                        value={spec.helmet?.style ?? "none"}
-                        options={HELMET_STYLES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setHelmetStyle(s, v))
-                        }
-                      />
-                    </div>
-                  ) : null}
+                      <div className="part-inline-controls">
+                        {part === "head" ? (
+                          <>
+                            <CompactSelect<HeadShape>
+                              title="shape"
+                              value={spec.head?.shape ?? "lozenge"}
+                              options={HEAD_SHAPES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setHeadShape(s, v))
+                              }
+                            />
+                            <CompactSelect<HairStyle>
+                              title="hair"
+                              value={spec.hair?.style ?? "bald"}
+                              options={HAIR_STYLES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setHairStyle(s, v))
+                              }
+                            />
+                          </>
+                        ) : null}
+                        {part === "torso" ? (
+                          <>
+                            <CompactSelect<TorsoStyle>
+                              title="style"
+                              value={spec.torso.style}
+                              options={TORSO_STYLES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setTorsoStyle(s, v))
+                              }
+                            />
+                            <CompactSelect<HemStyle>
+                              title="hem"
+                              value={spec.accessories?.hem ?? "none"}
+                              options={HEM_STYLES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setHemStyle(s, v))
+                              }
+                            />
+                          </>
+                        ) : null}
+                        {part === "arms" ? (
+                          <>
+                            <CompactSelect<ArmPose>
+                              title="pose"
+                              value={spec.arms.pose}
+                              options={ARM_POSES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setArmPose(s, v))
+                              }
+                            />
+                            <CompactSelect<WeaponType>
+                              title="weapon"
+                              value={spec.weapon?.type ?? "none"}
+                              options={WEAPON_TYPES}
+                              disabled={locked}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setWeaponType(s, v))
+                              }
+                            />
+                          </>
+                        ) : null}
+                        {part === "legs" ? (
+                          <CompactSelect<LegPose>
+                            title="pose"
+                            value={spec.legs.pose}
+                            options={LEG_POSES}
+                            disabled={locked}
+                            onPick={(v) =>
+                              applyPartEdit((s) => setLegPose(s, v))
+                            }
+                          />
+                        ) : null}
+                      </div>
 
-                  {part === "torso" ? (
-                    <div className="part-subgrid">
-                      <PartSelect<TorsoStyle>
-                        label="style"
-                        value={spec.torso.style}
-                        options={TORSO_STYLES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setTorsoStyle(s, v))
-                        }
-                      />
-                      <PartSelect<HemStyle>
-                        label="hem"
-                        value={spec.accessories?.hem ?? "none"}
-                        options={HEM_STYLES}
-                        onPick={(v) => applyPartEdit((s) => setHemStyle(s, v))}
-                      />
-                      <PartSelect<"off" | "on">
-                        label="cape"
-                        value={spec.accessories?.cape ? "on" : "off"}
-                        options={["off", "on"]}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setCape(s, v === "on"))
-                        }
-                      />
-                      <PartSelect<BackLoadout>
-                        label="back"
-                        value={spec.accessories?.backLoadout ?? "none"}
-                        options={BACK_LOADOUTS}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setBackLoadout(s, v))
-                        }
-                      />
-                    </div>
-                  ) : null}
-
-                  {part === "arms" ? (
-                    <div className="part-subgrid">
-                      <PartSelect<ArmPose>
-                        label="pose"
-                        value={spec.arms.pose}
-                        options={ARM_POSES}
-                        onPick={(v) => applyPartEdit((s) => setArmPose(s, v))}
-                      />
-                      <PartSelect<WeaponType>
-                        label="weapon"
-                        value={spec.weapon?.type ?? "none"}
-                        options={WEAPON_TYPES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setWeaponType(s, v))
-                        }
-                      />
-                      <PartSelect<WeaponType>
-                        label="offhand"
-                        value={spec.offhand?.type ?? "none"}
-                        options={OFFHAND_TYPES}
-                        onPick={(v) =>
-                          applyPartEdit((s) => setOffhandType(s, v))
-                        }
-                      />
-                      {spec.offhand &&
-                      spec.offhand.type !== "none" &&
-                      spec.offhand.type !== "shield" ? (
-                        <PartSelect<string>
-                          label="offhand angle"
-                          value={offhandVariant}
-                          options={OFFHAND_VARIANT_IDS}
-                          onPick={(v) => {
-                            setOffhandVariant(OFFHAND_VARIANT_IDS.indexOf(v));
-                            setOffhandVariantState(v);
-                            applyPartEdit((s) => s);
-                          }}
+                      <div className="part-actions">
+                        <button
+                          type="button"
+                          className="part-icon-btn"
+                          onClick={() => applyRerollPart(part)}
+                          disabled={locked}
+                          title={
+                            locked ? "Unlock to reroll this part" : "Reroll part"
+                          }
+                          aria-label={`Reroll ${part}`}
+                        >
+                          🎲
+                        </button>
+                        <button
+                          type="button"
+                          className={`part-icon-btn${locked ? " is-locked" : ""}`}
+                          onClick={() => toggleLock(part)}
+                          title={locked ? "Unlock" : "Lock"}
+                          aria-label={
+                            locked ? `Unlock ${part}` : `Lock ${part}`
+                          }
+                          aria-pressed={locked}
+                        >
+                          {locked ? "🔒" : "🔓"}
+                        </button>
+                        <PartColorMenu
+                          part={part}
+                          spec={spec}
+                          paletteColors={palette?.colors ?? []}
+                          onEdit={applyPartEdit}
+                          onReroll={() => applyRerollColors(part)}
                         />
-                      ) : null}
+                      </div>
                     </div>
-                  ) : null}
 
-                  {part === "legs" ? (
-                    <div className="part-subgrid">
-                      <PartSelect<LegPose>
-                        label="pose"
-                        value={spec.legs.pose}
-                        options={LEG_POSES}
-                        onPick={(v) => applyPartEdit((s) => setLegPose(s, v))}
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              ))}
+                    {expanded && part === "head" ? (
+                      <div className="part-extra">
+                        <CompactSelect<HelmetStyle>
+                          title="helmet"
+                          value={spec.helmet?.style ?? "none"}
+                          options={HELMET_STYLES}
+                          disabled={locked}
+                          onPick={(v) =>
+                            applyPartEdit((s) => setHelmetStyle(s, v))
+                          }
+                        />
+                      </div>
+                    ) : null}
+
+                    {expanded && part === "torso" ? (
+                      <div className="part-extra">
+                        <CompactSelect<"off" | "on">
+                          title="cape"
+                          value={spec.accessories?.cape ? "on" : "off"}
+                          options={["off", "on"]}
+                          disabled={locked}
+                          onPick={(v) =>
+                            applyPartEdit((s) => setCape(s, v === "on"))
+                          }
+                        />
+                        <CompactSelect<BackLoadout>
+                          title="back"
+                          value={spec.accessories?.backLoadout ?? "none"}
+                          options={BACK_LOADOUTS}
+                          disabled={locked}
+                          onPick={(v) =>
+                            applyPartEdit((s) => setBackLoadout(s, v))
+                          }
+                        />
+                      </div>
+                    ) : null}
+
+                    {expanded && part === "arms" ? (
+                      <div className="part-extra">
+                        <CompactSelect<WeaponType>
+                          title="offhand"
+                          value={spec.offhand?.type ?? "none"}
+                          options={OFFHAND_TYPES}
+                          disabled={locked}
+                          onPick={(v) =>
+                            applyPartEdit((s) => setOffhandType(s, v))
+                          }
+                        />
+                        {spec.offhand &&
+                        spec.offhand.type !== "none" &&
+                        spec.offhand.type !== "shield" ? (
+                          <CompactSelect<string>
+                            title="offhand angle"
+                            value={offhandVariant}
+                            options={OFFHAND_VARIANT_IDS}
+                            disabled={locked}
+                            onPick={(v) => {
+                              setOffhandVariant(OFFHAND_VARIANT_IDS.indexOf(v));
+                              setOffhandVariantState(v);
+                              applyPartEdit((s) => s);
+                            }}
+                          />
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </CollapseSection>
 
