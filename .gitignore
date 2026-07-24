@@ -6,6 +6,7 @@ models/*
 !models/.gitkeep
 generations
 refs/palette-cache
+refs/own
 .DS_Store
 *.pyc
 __pycache__

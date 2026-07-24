@@ -41,6 +41,7 @@ import { normalizeEdgeOutlineSettings } from "./lib/edgeOutline";
 import { CollapseSection } from "./components/CollapseSection";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
 import { VariationTimeline } from "./components/VariationTimeline";
+import { CaptionRefsPanel } from "./components/CaptionRefsPanel";
 import { fetchStatus, type StatusResponse } from "./api";
 import { buildVariationPrompt } from "./lib/variationPrompt";
 import {
@@ -103,6 +104,7 @@ import {
   type RimLightSettings,
 } from "./lib/rimLights";
 import {
+  BUILTIN_LIGHTING_PRESETS,
   loadLightingProfiles,
   saveLightingProfiles,
   snapshotCurrentLighting,
@@ -453,8 +455,12 @@ export default function App() {
     setProfileName("");
   };
 
+  const findLightingProfile = (id: string): LightingProfile | undefined =>
+    BUILTIN_LIGHTING_PRESETS.find((p) => p.id === id) ??
+    lightingProfiles.find((p) => p.id === id);
+
   const loadLightingProfile = (id: string) => {
-    const profile = lightingProfiles.find((p) => p.id === id);
+    const profile = findLightingProfile(id);
     if (!profile) return;
     const next = normalizeRimLightSettings(profile.settings);
     saveRimLightSettings(next);
@@ -462,6 +468,7 @@ export default function App() {
   };
 
   const deleteLightingProfile = (id: string) => {
+    if (id.startsWith("builtin-")) return;
     persistProfiles(lightingProfiles.filter((p) => p.id !== id));
   };
 
@@ -931,7 +938,26 @@ export default function App() {
             }
           >
             <div className="light-profiles">
-              <p className="light-subhead">Profiles</p>
+              <p className="light-subhead">Presets</p>
+              <ul className="light-profile-list light-preset-list">
+                {BUILTIN_LIGHTING_PRESETS.map((profile) => (
+                  <li key={profile.id} className="light-profile-row">
+                    <span className="light-profile-label" title={profile.name}>
+                      {profile.name}
+                    </span>
+                    <div className="part-actions">
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() => loadLightingProfile(profile.id)}
+                      >
+                        Load
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="light-subhead">Saved</p>
               <div className="light-profile-save">
                 <input
                   type="text"
@@ -1555,6 +1581,8 @@ export default function App() {
           })
         }
       />
+
+      <CaptionRefsPanel />
       </main>
     </div>
   );

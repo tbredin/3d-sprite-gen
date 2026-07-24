@@ -521,6 +521,349 @@ export function generateHair(opts: {
     g.add(back);
   }
 
+  if (opts.style === "hime") {
+    // Straight brow fringe + long cheek curtains, trimmed at jaw.
+    addHairFrame(g, mat, hi, { shellR: 0.44, bangs: false, coverForehead: true });
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, -0.1, cy + 0.3, 0.34));
+    g.add(mesh(new SphereGeometry(0.15, 10, 8), mat, 0.02, cy + 0.32, 0.36));
+    g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, 0.12, cy + 0.3, 0.34));
+    g.add(mesh(new SphereGeometry(0.08, 6, 5), hi, 0, cy + 0.34, 0.35));
+    for (const s of [-1, 1] as const) {
+      const lock = new Mesh(new CapsuleGeometry(0.12, 0.42, 4, 8), mat);
+      lock.position.set(s * 0.4, cy - 0.08, 0.12);
+      lock.rotation.z = s * 0.08;
+      g.add(lock);
+    }
+    const back = new Mesh(new CapsuleGeometry(0.18, 0.38, 4, 8), mat);
+    back.position.set(0, cy - 0.18, -0.4);
+    back.rotation.x = 0.35;
+    g.add(back);
+  }
+
+  if (opts.style === "odango") {
+    // Twin buns on the crown (Sailor Moon / odango).
+    addHairFrame(g, mat, hi, { shellR: 0.42 });
+    for (const s of [-1, 1] as const) {
+      g.add(mesh(new SphereGeometry(0.2, 10, 8), mat, s * 0.32, top + 0.1, -0.04));
+      g.add(mesh(new SphereGeometry(0.1, 8, 6), hi, s * 0.34, top + 0.2, 0));
+      const hang = new Mesh(new CapsuleGeometry(0.08, 0.36, 4, 8), mat);
+      hang.position.set(s * 0.42, cy - 0.06, -0.08);
+      hang.rotation.z = s * 0.35;
+      g.add(hang);
+    }
+  }
+
+  if (opts.style === "halfUp") {
+    // Crown gathered, length left free.
+    addHairFrame(g, mat, hi, { shellR: 0.45 });
+    g.add(mesh(new SphereGeometry(0.18, 10, 8), mat, 0, top + 0.06, -0.06));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), hi, 0, top + 0.14, -0.02));
+    for (const s of [-1, 1] as const) {
+      const lock = new Mesh(new CapsuleGeometry(0.13, 0.48, 4, 8), mat);
+      lock.position.set(s * 0.38, cy - 0.22, 0.04);
+      lock.rotation.z = s * 0.14;
+      g.add(lock);
+    }
+    const back = new Mesh(new CapsuleGeometry(0.16, 0.42, 4, 8), mat);
+    back.position.set(0, cy - 0.24, -0.42);
+    back.rotation.x = 0.4;
+    g.add(back);
+  }
+
+  if (opts.style === "layered") {
+    // Face-framing tiers of length.
+    addHairFrame(g, mat, hi, { shellR: 0.46, bangs: true });
+    for (const s of [-1, 1] as const) {
+      for (let i = 0; i < 3; i++) {
+        const lock = new Mesh(
+          new CapsuleGeometry(0.1 - i * 0.01, 0.28 + i * 0.12, 4, 8),
+          i % 2 === 0 ? mat : hi,
+        );
+        lock.position.set(s * (0.34 + i * 0.04), cy - 0.06 - i * 0.12, 0.1 - i * 0.06);
+        lock.rotation.z = s * (0.12 + i * 0.06);
+        g.add(lock);
+      }
+    }
+    const back = new Mesh(new CapsuleGeometry(0.18, 0.5, 4, 8), mat);
+    back.position.set(0, cy - 0.28, -0.4);
+    back.rotation.x = 0.42;
+    g.add(back);
+  }
+
+  if (opts.style === "curtain") {
+    // Center-parted soft curtains over the brow.
+    addHairFrame(g, mat, hi, { shellR: 0.44, bangs: false, coverForehead: false });
+    for (const s of [-1, 1] as const) {
+      g.add(mesh(new SphereGeometry(0.14, 10, 8), mat, s * 0.16, cy + 0.28, 0.3));
+      const curtain = new Mesh(new CapsuleGeometry(0.11, 0.34, 4, 8), mat);
+      curtain.position.set(s * 0.28, cy + 0.02, 0.22);
+      curtain.rotation.z = s * 0.35;
+      curtain.rotation.x = 0.2;
+      g.add(curtain);
+      g.add(mesh(new SphereGeometry(0.08, 6, 5), hi, s * 0.2, cy + 0.32, 0.32));
+    }
+    const back = new Mesh(new CapsuleGeometry(0.16, 0.4, 4, 8), mat);
+    back.position.set(0, cy - 0.2, -0.4);
+    back.rotation.x = 0.38;
+    g.add(back);
+  }
+
+  if (opts.style === "lob") {
+    // Long bob — collarbone length, soft side mass.
+    addHairFrame(g, mat, hi, { shellR: 0.45 });
+    g.add(mesh(new SphereGeometry(0.22, 10, 8), mat, -0.36, cy - 0.06, 0.02));
+    g.add(mesh(new SphereGeometry(0.22, 10, 8), mat, 0.36, cy - 0.06, 0.02));
+    g.add(mesh(new SphereGeometry(0.26, 10, 8), mat, 0, cy - 0.1, -0.34));
+    for (const s of [-1, 1] as const) {
+      const tip = new Mesh(new CapsuleGeometry(0.12, 0.28, 4, 8), mat);
+      tip.position.set(s * 0.36, cy - 0.22, 0.04);
+      tip.rotation.z = s * 0.1;
+      g.add(tip);
+    }
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), hi, -0.28, cy + 0.14, 0.18));
+  }
+
+  if (opts.style === "spaceBuns") {
+    // High side buns, short fringe.
+    addHairFrame(g, mat, hi, { shellR: 0.42, bangs: true });
+    for (const s of [-1, 1] as const) {
+      g.add(mesh(new SphereGeometry(0.18, 10, 8), mat, s * 0.38, top + 0.04, -0.02));
+      g.add(mesh(new SphereGeometry(0.09, 8, 6), hi, s * 0.4, top + 0.14, 0.02));
+    }
+  }
+
+  if (opts.style === "sidePonytail") {
+    // Asymmetric high pony over one shoulder.
+    addHairFrame(g, mat, hi, { shellR: 0.44 });
+    g.add(mesh(new SphereGeometry(0.16, 8, 6), mat, 0.42, cy + 0.18, -0.1));
+    const tail = new Mesh(new CapsuleGeometry(0.12, 0.52, 4, 8), mat);
+    tail.position.set(0.48, cy - 0.16, -0.18);
+    tail.rotation.z = 0.45;
+    tail.rotation.x = 0.25;
+    g.add(tail);
+    g.add(mesh(new SphereGeometry(0.09, 6, 5), hi, 0.52, cy - 0.32, -0.16));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, -0.34, cy + 0.08, 0.08));
+  }
+
+  if (opts.style === "pigtails") {
+    // Short jaunty pigtails (vs longer twinTails).
+    addHairFrame(g, mat, hi, { shellR: 0.42, bangs: true });
+    for (const s of [-1, 1] as const) {
+      g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, s * 0.44, cy + 0.2, -0.02));
+      const t = new Mesh(new CapsuleGeometry(0.09, 0.28, 4, 8), mat);
+      t.position.set(s * 0.46, cy + 0.02, -0.04);
+      t.rotation.z = s * 0.55;
+      g.add(t);
+      g.add(mesh(new SphereGeometry(0.07, 6, 5), hi, s * 0.5, cy - 0.1, -0.02));
+    }
+  }
+
+  if (opts.style === "bubblePonytail") {
+    // Segmented “bubble” pony down the back.
+    addHairFrame(g, mat, hi, { shellR: 0.44 });
+    g.add(mesh(new SphereGeometry(0.14, 8, 6), mat, 0, cy + 0.08, -0.46));
+    for (let i = 0; i < 4; i++) {
+      g.add(
+        mesh(
+          new SphereGeometry(0.14 - i * 0.012, 10, 8),
+          i % 2 === 0 ? mat : hi,
+          0,
+          cy - 0.02 - i * 0.16,
+          -0.52 - i * 0.02,
+        ),
+      );
+    }
+  }
+
+  if (opts.style === "crownBraid") {
+    // Halo braid ringing the crown.
+    addHairFrame(g, mat, hi, { shellR: 0.43, bangs: true });
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      g.add(
+        mesh(
+          new SphereGeometry(0.1, 8, 6),
+          i % 2 === 0 ? mat : hi,
+          Math.cos(a) * 0.36,
+          top - 0.02 + Math.sin(a) * 0.04,
+          Math.sin(a) * 0.28 - 0.06,
+        ),
+      );
+    }
+    const hang = new Mesh(new CapsuleGeometry(0.1, 0.36, 4, 8), mat);
+    hang.position.set(0.2, cy - 0.16, -0.42);
+    hang.rotation.x = 0.4;
+    g.add(hang);
+  }
+
+  if (opts.style === "softWaves") {
+    // Soft shoulder-length romantic waves.
+    addHairFrame(g, mat, hi, { shellR: 0.46, bangs: true });
+    for (const s of [-1, 1] as const) {
+      for (let i = 0; i < 3; i++) {
+        const wave = new Mesh(new CapsuleGeometry(0.12, 0.26, 4, 8), mat);
+        wave.position.set(
+          s * (0.32 + i * 0.05),
+          cy - 0.04 - i * 0.12,
+          0.06 - i * 0.05,
+        );
+        wave.rotation.z = s * (0.25 + (i % 2) * 0.15);
+        wave.rotation.x = 0.1;
+        g.add(wave);
+      }
+    }
+    g.add(mesh(new SphereGeometry(0.2, 10, 8), mat, 0, cy - 0.14, -0.36));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), hi, -0.2, cy + 0.18, 0.2));
+  }
+
+  if (opts.style === "bluntBangs") {
+    // Heavy straight bangs + long length behind.
+    addHairFrame(g, mat, hi, { shellR: 0.45, bangs: false, coverForehead: true });
+    g.add(mesh(new SphereGeometry(0.16, 10, 8), mat, -0.14, cy + 0.28, 0.34));
+    g.add(mesh(new SphereGeometry(0.17, 10, 8), mat, 0, cy + 0.3, 0.36));
+    g.add(mesh(new SphereGeometry(0.16, 10, 8), mat, 0.14, cy + 0.28, 0.34));
+    g.add(mesh(new SphereGeometry(0.08, 6, 5), hi, 0, cy + 0.34, 0.34));
+    for (const s of [-1, 1] as const) {
+      const lock = new Mesh(new CapsuleGeometry(0.14, 0.52, 4, 8), mat);
+      lock.position.set(s * 0.4, cy - 0.24, 0.02);
+      lock.rotation.z = s * 0.1;
+      g.add(lock);
+    }
+    const back = new Mesh(new CapsuleGeometry(0.18, 0.48, 4, 8), mat);
+    back.position.set(0, cy - 0.26, -0.42);
+    back.rotation.x = 0.4;
+    g.add(back);
+  }
+
+  if (opts.style === "wolfCut") {
+    // Shaggy layers + choppy fringe + volume at crown.
+    addHairFrame(g, mat, hi, { shellR: 0.46, bangs: true });
+    for (let i = 0; i < n + 2; i++) {
+      const t = (i / Math.max(n + 1, 1)) * 2 - 1;
+      addSpikeTuft(
+        g,
+        mat,
+        hi,
+        t * 0.24,
+        top - 0.02,
+        -0.04 + (i % 3) * 0.08,
+        0.2 + (i % 3) * 0.05,
+        t * 0.3,
+        0.25,
+      );
+    }
+    for (const s of [-1, 1] as const) {
+      const flap = new Mesh(new CapsuleGeometry(0.11, 0.34, 4, 8), mat);
+      flap.position.set(s * 0.36, cy - 0.14, -0.08);
+      flap.rotation.z = s * 0.2;
+      g.add(flap);
+    }
+    const nape = new Mesh(new CapsuleGeometry(0.14, 0.36, 4, 8), mat);
+    nape.position.set(0, cy - 0.22, -0.4);
+    nape.rotation.x = 0.45;
+    g.add(nape);
+  }
+
+  if (opts.style === "highPony") {
+    // Ponytail rooted on the crown, not the nape.
+    addHairFrame(g, mat, hi, { shellR: 0.43, bangs: true });
+    g.add(mesh(new SphereGeometry(0.14, 8, 6), mat, 0, top + 0.06, -0.08));
+    const tail = new Mesh(new CapsuleGeometry(0.11, 0.5, 4, 8), mat);
+    tail.position.set(0, top - 0.18, -0.28);
+    tail.rotation.x = 0.85;
+    g.add(tail);
+    g.add(mesh(new SphereGeometry(0.09, 6, 5), hi, 0, top - 0.36, -0.4));
+  }
+
+  if (opts.style === "lowBun") {
+    // Nape chignon / low bun.
+    addHairFrame(g, mat, hi, { shellR: 0.43, bangs: true });
+    g.add(mesh(new SphereGeometry(0.22, 10, 8), mat, 0, cy - 0.18, -0.42));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), hi, 0, cy - 0.1, -0.48));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, -0.12, cy - 0.22, -0.38));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), mat, 0.12, cy - 0.22, -0.38));
+  }
+
+  if (opts.style === "ribbonTails") {
+    // Twin tails with big bow-like root volume.
+    addHairFrame(g, mat, hi, { shellR: 0.43, bangs: true });
+    for (const s of [-1, 1] as const) {
+      g.add(mesh(new SphereGeometry(0.16, 10, 8), mat, s * 0.46, cy + 0.18, -0.06));
+      g.add(mesh(new SphereGeometry(0.1, 8, 6), hi, s * 0.5, cy + 0.26, 0));
+      // Soft “ribbon” loops
+      g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, s * 0.52, cy + 0.12, 0.08));
+      g.add(mesh(new SphereGeometry(0.12, 8, 6), mat, s * 0.52, cy + 0.12, -0.16));
+      const t = new Mesh(new CapsuleGeometry(0.09, 0.44, 4, 8), mat);
+      t.position.set(s * 0.48, cy - 0.14, -0.1);
+      t.rotation.z = s * 0.38;
+      g.add(t);
+    }
+  }
+
+  if (opts.style === "asymmetrical") {
+    // One side cropped, one side long.
+    addHairFrame(g, mat, hi, { shellR: 0.44, bangs: true });
+    g.add(mesh(new SphereGeometry(0.14, 8, 6), mat, -0.36, cy + 0.1, 0.06));
+    const long = new Mesh(new CapsuleGeometry(0.14, 0.55, 4, 8), mat);
+    long.position.set(0.4, cy - 0.22, 0.04);
+    long.rotation.z = 0.18;
+    g.add(long);
+    g.add(mesh(new SphereGeometry(0.18, 10, 8), mat, 0.34, cy + 0.06, -0.08));
+    g.add(mesh(new SphereGeometry(0.1, 8, 6), hi, 0.42, cy - 0.36, 0.02));
+    const back = new Mesh(new CapsuleGeometry(0.14, 0.36, 4, 8), mat);
+    back.position.set(0.1, cy - 0.18, -0.4);
+    back.rotation.x = 0.4;
+    g.add(back);
+  }
+
+  if (opts.style === "ringlets") {
+    // Long hanging corkscrew curls.
+    addHairFrame(g, mat, hi, { shellR: 0.44, bangs: true });
+    for (const s of [-1, 1] as const) {
+      for (let i = 0; i < 4; i++) {
+        g.add(
+          mesh(
+            new SphereGeometry(0.1 - i * 0.008, 8, 6),
+            i % 2 === 0 ? mat : hi,
+            s * (0.38 + (i % 2) * 0.04),
+            cy + 0.08 - i * 0.14,
+            0.06 - i * 0.04,
+          ),
+        );
+      }
+    }
+    for (let i = 0; i < 3; i++) {
+      g.add(
+        mesh(
+          new SphereGeometry(0.11, 8, 6),
+          mat,
+          (i - 1) * 0.12,
+          cy - 0.08 - i * 0.1,
+          -0.42 - i * 0.03,
+        ),
+      );
+    }
+  }
+
+  if (opts.style === "goddess") {
+    // Long flowing volume — big silhouette, soft crown.
+    addHairFrame(g, mat, hi, { shellR: 0.5, bangs: true });
+    for (const s of [-1, 1] as const) {
+      for (let i = 0; i < 3; i++) {
+        const lock = new Mesh(new CapsuleGeometry(0.14, 0.5 + i * 0.04, 4, 8), mat);
+        lock.position.set(s * (0.42 + i * 0.03), cy - 0.3 - i * 0.04, 0.02 - i * 0.06);
+        lock.rotation.z = s * (0.08 + i * 0.04);
+        g.add(lock);
+      }
+    }
+    const cape = new Mesh(new CapsuleGeometry(0.22, 0.55, 4, 8), mat);
+    cape.position.set(0, cy - 0.34, -0.44);
+    cape.rotation.x = 0.38;
+    g.add(cape);
+    g.add(mesh(new SphereGeometry(0.14, 8, 6), hi, -0.16, cy + 0.36, 0.08));
+    g.add(mesh(new SphereGeometry(0.12, 8, 6), hi, 0.14, cy + 0.34, -0.04));
+  }
+
   return g;
 }
 

@@ -111,7 +111,9 @@ type BakeProps = {
   bayerDither?: BayerDitherSettings;
   onCaptured: (dataUrl: string) => void;
   /**
-   * Pre-quantize / pre-outline bake (RGBA data URL) for AI conditioning.
+   * Pre-outline bake (RGBA data URL) for AI conditioning — 3D hull silhouette
+   * shells are hidden for this capture. Palette crush + 2D rim are applied
+   * only on the final bake / after AI generation.
    * See docs/SPIKE-ai-sprite-variations.md.
    */
   onSourceCaptured?: (dataUrl: string) => void;
@@ -252,16 +254,41 @@ function BakeCapture({
           }
 
           if (onSourceCapturedRef.current) {
-            const source = document.createElement("canvas");
-            source.width = size;
-            source.height = size;
-            const sctx = source.getContext("2d")!;
-            sctx.putImageData(
-              new ImageData(new Uint8ClampedArray(flipped), size, size),
-              0,
-              0,
-            );
-            onSourceCapturedRef.current(source.toDataURL("image/png"));
+            // AI conditioning must not include silhouette shells — those are
+            // re-applied as a 1px 2D rim after generation. Hide hull outlines
+            // for this capture only (same trick as the depth/normal edge pass).
+            const hiddenHulls: Object3D[] = [];
+            scene.traverse((obj) => {
+              if (obj.userData.isOutline && obj.visible) {
+                hiddenHulls.push(obj);
+                obj.visible = false;
+              }
+            });
+            try {
+              const prevRt = gl.getRenderTarget();
+              gl.setRenderTarget(target);
+              gl.setClearColor(0x000000, 0);
+              gl.clear(true, true, true);
+              gl.render(scene, bakeCam);
+              gl.setRenderTarget(prevRt);
+
+              const srcBuf = new Uint8Array(size * size * 4);
+              gl.readRenderTargetPixels(target, 0, 0, size, size, srcBuf);
+              const srcFlipped = flipRowsRGBA(srcBuf, size);
+
+              const source = document.createElement("canvas");
+              source.width = size;
+              source.height = size;
+              const sctx = source.getContext("2d")!;
+              sctx.putImageData(
+                new ImageData(new Uint8ClampedArray(srcFlipped), size, size),
+                0,
+                0,
+              );
+              onSourceCapturedRef.current(source.toDataURL("image/png"));
+            } finally {
+              for (const obj of hiddenHulls) obj.visible = true;
+            }
           }
 
           const imageData = new ImageData(new Uint8ClampedArray(flipped), size, size);

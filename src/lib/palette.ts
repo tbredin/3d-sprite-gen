@@ -67,14 +67,14 @@ export const BAYER_BIAS_SCALE = 40;
 
 export const DEFAULT_BAYER_DITHER: BayerDitherSettings = {
   enabled: true,
-  strength: 0.35,
+  strength: 0.175,
 };
 
 export const BAYER_STRENGTH_MIN = 0;
 export const BAYER_STRENGTH_MAX = 1;
-export const BAYER_STRENGTH_STEP = 0.05;
+export const BAYER_STRENGTH_STEP = 0.025;
 
-const BAYER_STORAGE_KEY = "3d-sprite-gen:bayer-dither-v1";
+const BAYER_STORAGE_KEY = "3d-sprite-gen:bayer-dither-v2";
 
 export function loadBayerDitherSettings(): BayerDitherSettings {
   try {

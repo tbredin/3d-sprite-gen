@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from . import image_prep, palette_util, sprite_variations, sprite_volume
+from . import house_lora, image_prep, palette_util, refs_catalog, sprite_variations, sprite_volume
 
 ROOT = Path(__file__).resolve().parents[2]
 SERVER = Path(__file__).resolve().parents[1]
@@ -94,6 +94,76 @@ def variations_status() -> dict:
     return sprite_variations.status()
 
 
+@app.get("/api/lora/status")
+def lora_status() -> dict:
+    return house_lora.refresh_status()
+
+
+@app.post("/api/lora/rebuild")
+async def lora_rebuild(max_steps: int = 500) -> dict:
+    """Train / rebuild the SDXL house LoRA on curated-iso (background)."""
+    steps = max(50, min(2000, int(max_steps)))
+    try:
+        return house_lora.start_rebuild(max_steps=steps)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+class CaptionBody(BaseModel):
+    caption: str = ""
+
+
+@app.get("/api/refs")
+def refs_list() -> dict:
+    """Training frames + captions under curated-iso / HOUSE_LORA_REFS."""
+    return refs_catalog.list_refs()
+
+
+@app.get("/api/refs/{name}/image")
+def refs_image(name: str) -> FileResponse:
+    try:
+        path = refs_catalog.image_path(name)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"unknown ref {name}") from exc
+    media = "image/webp" if path.suffix.lower() == ".webp" else "image/png"
+    return FileResponse(path, media_type=media, filename=path.name)
+
+
+@app.get("/api/refs/{name}")
+def refs_get(name: str) -> dict:
+    try:
+        return refs_catalog.get_ref(name)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"unknown ref {name}") from exc
+
+
+@app.put("/api/refs/{name}/caption")
+def refs_save_caption(name: str, body: CaptionBody) -> dict:
+    try:
+        return refs_catalog.save_caption(name, body.caption)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"unknown ref {name}") from exc
+
+
+@app.delete("/api/refs/{name}/caption")
+def refs_clear_caption(name: str) -> dict:
+    try:
+        return refs_catalog.clear_caption(name)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"unknown ref {name}") from exc
+
+
+@app.delete("/api/refs/{name}")
+def refs_delete(name: str) -> dict:
+    """Permanently delete a training image (+ caption sidecar) from disk."""
+    try:
+        return refs_catalog.delete_ref(name)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"unknown ref {name}") from exc
+
+
 @app.post("/api/variations/warmup")
 async def variations_warmup() -> dict:
     """Download/load SDXL weights into memory. Slow the first time."""
@@ -119,7 +189,8 @@ async def variations_generate(
     outline_hex: str = Form("1a1932"),
     freedom: Optional[str] = Form(None),
     seed: Optional[int] = Form(None),
-    steps: int = Form(24),
+    steps: int = Form(sprite_variations.DEFAULT_STEPS),
+    guidance_scale: float = Form(sprite_variations.DEFAULT_GUIDANCE),
 ) -> dict:
     raw = await file.read()
     if not raw:
@@ -146,6 +217,7 @@ async def variations_generate(
             freedom=mode,
             seed=seed,
             steps=steps,
+            guidance_scale=guidance_scale,
         )
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc

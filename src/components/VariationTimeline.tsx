@@ -8,6 +8,7 @@ import {
   listVariations,
   setVariationLocked,
   warmupVariations,
+  type VariationFreedom,
   type VariationMeta,
   type VariationStatus,
 } from "../api";
@@ -18,7 +19,11 @@ const PREVIEW_GAP = 8;
 const IDLE_REROLL_MS = 60 * 60 * 1000;
 const IDLE_REROLL_TICK_MS = 30 * 1000;
 
+const DEFAULT_STEPS = 30;
+const DEFAULT_GUIDANCE = 7;
+
 type StreamMode = "stopped" | "playing" | "idleReroll";
+type FreedomChoice = "auto" | VariationFreedom;
 
 type HoverPreview = {
   src: string;
@@ -48,6 +53,9 @@ export function VariationTimeline({
   const [status, setStatus] = useState<VariationStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [steer, setSteer] = useState("");
+  const [freedom, setFreedom] = useState<FreedomChoice>("auto");
+  const [steps, setSteps] = useState(DEFAULT_STEPS);
+  const [guidance, setGuidance] = useState(DEFAULT_GUIDANCE);
   const [inflight, setInflight] = useState(0);
   const [warming, setWarming] = useState(false);
   const [phase, setPhase] = useState<string | null>(null);
@@ -57,6 +65,9 @@ export function VariationTimeline({
   const sourceRef = useRef(sourceDataUrl);
   const itemsRef = useRef(items);
   const steerRef = useRef(steer);
+  const freedomRef = useRef(freedom);
+  const stepsRef = useRef(steps);
+  const guidanceRef = useRef(guidance);
   const buildPromptRef = useRef(buildPrompt);
   const workersRef = useRef(0);
   const runJobRef = useRef<() => void>(() => {});
@@ -66,6 +77,9 @@ export function VariationTimeline({
   sourceRef.current = sourceDataUrl;
   itemsRef.current = items;
   steerRef.current = steer;
+  freedomRef.current = freedom;
+  stepsRef.current = steps;
+  guidanceRef.current = guidance;
   buildPromptRef.current = buildPrompt;
   modeRef.current = mode;
 
@@ -74,7 +88,13 @@ export function VariationTimeline({
       .then(setItems)
       .catch(() => setItems([]));
     void fetchVariationStatus()
-      .then(setStatus)
+      .then((s) => {
+        setStatus(s);
+        if (typeof s.default_steps === "number") setSteps(s.default_steps);
+        if (typeof s.default_guidance === "number") {
+          setGuidance(s.default_guidance);
+        }
+      })
       .catch(() =>
         setStatus({
           ready: false,
@@ -177,6 +197,9 @@ export function VariationTimeline({
         paletteSlug,
         prompt,
         outlineHex,
+        freedom: freedomRef.current,
+        steps: stepsRef.current,
+        guidanceScale: guidanceRef.current,
       });
       setItems((prev) => [meta, ...prev.filter((x) => x.id !== meta.id)]);
       refreshStatus();
@@ -372,6 +395,45 @@ export function VariationTimeline({
           onChange={(e) => setSteer(e.target.value)}
           placeholder="e.g. cuter eyes, mage robes with a gold trim, soft cheek blush…"
         />
+        <div className="timeline-settings">
+          <label className="timeline-setting" htmlFor="timeline-freedom">
+            <span>Freedom</span>
+            <select
+              id="timeline-freedom"
+              value={freedom}
+              onChange={(e) => setFreedom(e.target.value as FreedomChoice)}
+            >
+              <option value="auto">Auto (weighted)</option>
+              <option value="polish">Polish</option>
+              <option value="costume">Costume</option>
+              <option value="soft">Soft</option>
+            </select>
+          </label>
+          <label className="timeline-setting" htmlFor="timeline-steps">
+            <span>Steps {steps}</span>
+            <input
+              id="timeline-steps"
+              type="range"
+              min={16}
+              max={40}
+              step={1}
+              value={steps}
+              onChange={(e) => setSteps(Number(e.target.value))}
+            />
+          </label>
+          <label className="timeline-setting" htmlFor="timeline-guidance">
+            <span>CFG {guidance.toFixed(1)}</span>
+            <input
+              id="timeline-guidance"
+              type="range"
+              min={4}
+              max={10}
+              step={0.5}
+              value={guidance}
+              onChange={(e) => setGuidance(Number(e.target.value))}
+            />
+          </label>
+        </div>
         {status && !status.ready ? (
           <p className="meta timeline-hint">
             {status.message} See{" "}
@@ -416,7 +478,8 @@ export function VariationTimeline({
                 <div className="timeline-tile-meta">
                   <span className="timeline-tag">{item.freedom}</span>
                   <span className="meta">
-                    {item.elapsed_s}s · {item.seed}
+                    {item.elapsed_s}s · cfg{" "}
+                    {item.guidance != null ? item.guidance : "—"} · {item.seed}
                   </span>
                 </div>
                 <div className="timeline-tile-actions">

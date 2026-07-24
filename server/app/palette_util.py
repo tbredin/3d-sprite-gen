@@ -49,13 +49,43 @@ async def load_palette(slug: str) -> dict:
         return data
 
 
-def quantize_to_palette(img: Image.Image, colors: list[str]) -> Image.Image:
+# Classic 4×4 Bayer (0…15) — matches src/lib/palette.ts / docs/SPIKE-bayer-dither.md.
+BAYER_4 = np.array(
+    [
+        [0, 8, 2, 10],
+        [12, 4, 14, 6],
+        [3, 11, 1, 9],
+        [15, 7, 13, 5],
+    ],
+    dtype=np.float32,
+)
+BAYER_BIAS_SCALE = 40.0
+DEFAULT_BAYER_STRENGTH = 0.175
+
+
+def quantize_to_palette(
+    img: Image.Image,
+    colors: list[str],
+    *,
+    bayer_strength: float = 0.0,
+) -> Image.Image:
+    """Nearest-colour palette lock. Optional Bayer bias before the lock."""
     palette = np.array([hex_to_rgb(c) for c in colors], dtype=np.float32)
     arr = np.array(img.convert("RGBA"), dtype=np.uint8)
     rgb = arr[:, :, :3].astype(np.float32)
     alpha = arr[:, :, 3]
     hard = alpha >= 8
     h, w, _ = rgb.shape
+
+    strength = float(bayer_strength)
+    if strength > 0:
+        amp = strength * BAYER_BIAS_SCALE
+        ys = np.arange(h, dtype=np.int32)[:, None]
+        xs = np.arange(w, dtype=np.int32)[None, :]
+        t = (BAYER_4[ys & 3, xs & 3] + 0.5) / 16.0 - 0.5
+        bias = (t * 2.0 * amp).astype(np.float32)
+        rgb = np.clip(rgb + bias[:, :, None], 0, 255)
+
     flat = rgb.reshape(-1, 3)
     dists = ((flat[:, None, :] - palette[None, :, :]) ** 2).sum(axis=2)
     nearest = palette[dists.argmin(axis=1)].astype(np.uint8)

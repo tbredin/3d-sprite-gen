@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "cd server && ../.venv/bin/uvicorn app.main:app --reload --host 127.0.0.1 --port 8788",
+    "dev:server": "bash scripts/dev-server.sh",
+    "train:house-lora": "bash scripts/train-house-lora.sh",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
   },

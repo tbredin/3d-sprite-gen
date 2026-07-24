@@ -3,23 +3,28 @@
 import type { CharacterSpec } from "./chibi";
 import { FACING_PRESETS, type FacingId } from "./facing";
 
-/** House style — always on. Keep “pixel” light (pixel-art-xl tip). */
-const STYLE_GUIDELINES = [
-  "isometric low-top-down chibi character sprite",
-  "SNES-era JRPG look",
-  "Sea of Stars / Lufia II / Breath of Fire DNA",
-  "readable silhouette",
-  "charming hand-authored pixel details",
-  "single isolated character",
-  "plain backdrop",
-].join(", ");
+/** Trigger token for the local SDXL house LoRA (see server/app/house_lora.py). */
+export const HOUSE_LORA_TRIGGER = "thenvpixel";
+
+/**
+ * House style for SDXL — natural language, not SD1.5 tag salad.
+ * Keep “pixel” light (pixel-art-xl tip). Lead with the house trigger so the
+ * curated-iso LoRA fires when loaded.
+ */
+const STYLE_GUIDELINES =
+  `${HOUSE_LORA_TRIGGER}, a charming isometric low-top-down chibi character ` +
+  "sprite in the spirit of SNES-era JRPGs such as Sea of Stars, Lufia II, " +
+  "and Breath of Fire. Readable silhouette, hand-authored pixel details, " +
+  "single isolated character on a plain backdrop";
 
 function facingHint(facing?: FacingId): string | null {
   if (!facing || facing === "custom") {
-    return "isometric low-top-down view, fixed game camera";
+    return "Viewed from a fixed isometric low-top-down game camera";
   }
   const preset = FACING_PRESETS.find((p) => p.id === facing);
-  return preset?.conceptHint ?? null;
+  const raw = preset?.conceptHint?.trim();
+  if (!raw) return null;
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
 }
 
 function humanizeToken(raw: string): string {
@@ -38,13 +43,13 @@ function characterBits(spec: CharacterSpec): string[] {
   }
 
   if (spec.helmet?.style && spec.helmet.style !== "none") {
-    bits.push(`${humanizeToken(spec.helmet.style)} helmet`);
+    bits.push(`a ${humanizeToken(spec.helmet.style)} helmet`);
   } else if (spec.hair?.style) {
     bits.push(`${humanizeToken(spec.hair.style)} hair`);
   }
 
   if (spec.torso?.style) {
-    bits.push(`${humanizeToken(spec.torso.style)} outfit`);
+    bits.push(`a ${humanizeToken(spec.torso.style)} outfit`);
   }
 
   const hem = spec.accessories?.hem;
@@ -52,7 +57,7 @@ function characterBits(spec: CharacterSpec): string[] {
     bits.push(humanizeToken(hem));
   }
   if (spec.accessories?.cape) {
-    bits.push("cape");
+    bits.push("a cape");
   }
 
   if (spec.arms?.pose) {
@@ -67,7 +72,7 @@ function characterBits(spec: CharacterSpec): string[] {
   }
 
   if (spec.face?.eyeColor) {
-    bits.push("tiny 2x2 pixel eyes, no mouth, no nose");
+    bits.push("tiny 2x2 pixel eyes with no mouth or nose");
   }
 
   return bits;
@@ -83,8 +88,16 @@ export type VariationPromptOpts = {
   steer?: string;
 };
 
+function joinSentences(parts: string[]): string {
+  const cleaned = parts
+    .map((p) => p.trim().replace(/[.]+$/, ""))
+    .filter(Boolean);
+  if (!cleaned.length) return "";
+  return `${cleaned.join(". ")}.`;
+}
+
 /**
- * Final SD prompt = house guidelines + camera/facing language + character
+ * Final SDXL prompt = house guidelines + camera/facing language + character
  * settings + optional user steer.
  *
  * Camera height / lights stay out of the text — they are already in the
@@ -94,31 +107,26 @@ export function buildVariationPrompt(
   spec: CharacterSpec,
   opts: VariationPromptOpts,
 ): string {
-  const layers: string[] = [STYLE_GUIDELINES];
+  const sentences: string[] = [STYLE_GUIDELINES];
 
   const view = facingHint(opts.facing);
-  if (view) layers.push(view);
+  if (view) sentences.push(view);
 
-  const settings: string[] = [
-    `${opts.size}×${opts.size} sprite cell`,
-    "crisp limited palette after render",
-  ];
-  if (opts.paletteName?.trim()) {
-    settings.push(`${opts.paletteName.trim()} colours`);
-  } else if (opts.paletteSlug?.trim()) {
-    settings.push(`${opts.paletteSlug.trim()} palette`);
-  }
-  layers.push(settings.join(", "));
+  const paletteLabel = opts.paletteName?.trim() || opts.paletteSlug?.trim();
+  const cell =
+    `Rendered as a crisp ${opts.size}×${opts.size} sprite cell` +
+    (paletteLabel ? ` with ${paletteLabel} colours` : " with a limited palette");
+  sentences.push(cell);
 
   const character = characterBits(spec);
   if (character.length) {
-    layers.push(character.join(", "));
+    sentences.push(`The character has ${character.join(", ")}`);
   }
 
   const steer = opts.steer?.trim();
   if (steer) {
-    layers.push(steer);
+    sentences.push(steer);
   }
 
-  return layers.join(". ");
+  return joinSentences(sentences);
 }

@@ -26,7 +26,27 @@ export type HairStyle =
   | "pompadour"
   | "sidePart"
   | "wavy"
-  | "anime";
+  | "anime"
+  | "hime"
+  | "odango"
+  | "halfUp"
+  | "layered"
+  | "curtain"
+  | "lob"
+  | "spaceBuns"
+  | "sidePonytail"
+  | "pigtails"
+  | "bubblePonytail"
+  | "crownBraid"
+  | "softWaves"
+  | "bluntBangs"
+  | "wolfCut"
+  | "highPony"
+  | "lowBun"
+  | "ribbonTails"
+  | "asymmetrical"
+  | "ringlets"
+  | "goddess";
 
 export type HelmetStyle =
   | "none"

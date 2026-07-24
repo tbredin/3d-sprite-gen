@@ -18,10 +18,15 @@ from typing import Any, Literal, Optional
 import numpy as np
 from PIL import Image, ImageFilter
 
-from . import palette_util
+from . import house_lora, palette_util
 
 ROOT = Path(__file__).resolve().parents[2]
 VARIATIONS_DIR = ROOT / "generations" / "variations"
+
+# pixel-art-xl + house (when present). House is lighter so it steers style
+# without overpowering the public pixel adapter.
+PIXEL_ADAPTER_WEIGHT = 1.2
+HOUSE_ADAPTER_WEIGHT = 0.85
 
 FreedomMode = Literal["polish", "costume", "soft"]
 
@@ -32,18 +37,23 @@ FREEDOM_WEIGHTS: list[tuple[FreedomMode, float]] = [
     ("soft", 0.20),
 ]
 
+# Tighter structure than the original costume/soft presets — high denoise was
+# hallucinating away from the bake silhouette (≈5% lock rate on 1500 gens).
 FREEDOM_PARAMS: dict[FreedomMode, dict[str, float]] = {
-    # Slightly looser ControlNet + higher denoise so charm can appear
-    # (was locking so hard that MPS black frames looked identical).
-    "polish": {"controlnet": 0.75, "denoise": 0.42},
-    "costume": {"controlnet": 0.58, "denoise": 0.55},
-    "soft": {"controlnet": 0.40, "denoise": 0.68},
+    "polish": {"controlnet": 0.78, "denoise": 0.38},
+    "costume": {"controlnet": 0.68, "denoise": 0.48},
+    "soft": {"controlnet": 0.50, "denoise": 0.58},
 }
 
 GEN_SIZE = 512
+DEFAULT_STEPS = 30
+DEFAULT_GUIDANCE = 7.0
 NEGATIVE = (
-    "photorealistic, 3d render, blender, smooth shading, blurry, lowres, "
-    "noisy, jpeg artifacts, text, watermark, deformed, extra limbs"
+    "muddy color blobs, indistinct silhouette, illegible limbs, washed-out "
+    "details, soft blurry edges, halo fringe around the character, smeared "
+    "pixels, merged body parts, noisy dither, photorealistic, 3d render, "
+    "blender, smooth shading, jpeg artifacts, text, watermark, deformed, "
+    "extra limbs"
 )
 
 _pipe_lock = threading.Lock()
@@ -96,6 +106,11 @@ def device_name() -> str:
 def status() -> dict[str, Any]:
     ok, msg = dependencies_available()
     loaded = _pipe is not None
+    house = house_lora.refresh_status()
+    house_path = house_lora.house_lora_path()
+    loras = ["nerijs/pixel-art-xl"]
+    if house_path is not None and house.get("state") == "ready":
+        loras.append(str(house_path))
     return {
         "ready": ok,
         "loaded": loaded,
@@ -108,8 +123,13 @@ def status() -> dict[str, Any]:
             else "Deps OK — first generate loads SDXL weights."
         ),
         "gen_size": GEN_SIZE,
+        "default_steps": DEFAULT_STEPS,
+        "default_guidance": DEFAULT_GUIDANCE,
         "model": "stabilityai/stable-diffusion-xl-base-1.0",
         "lora": "nerijs/pixel-art-xl",
+        "loras": loras,
+        "house_lora": house,
+        "trigger": house_lora.TRIGGER,
         "controlnet": "diffusers/controlnet-canny-sdxl-1.0",
     }
 
@@ -118,6 +138,27 @@ def warmup() -> dict[str, Any]:
     """Load SDXL + ControlNet + LoRA into memory (first call is slow)."""
     _load_pipeline()
     return status()
+
+
+def unload_pipeline() -> None:
+    """Free SDXL weights (e.g. before house LoRA training)."""
+    global _pipe, _pipe_error
+    with _pipe_lock:
+        if _pipe is None:
+            return
+        try:
+            import torch
+
+            del _pipe
+            _pipe = None
+            _pipe_error = None
+            if torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:  # noqa: BLE001
+            _pipe = None
+            _pipe_error = None
 
 
 def _canny_image(img: Image.Image) -> Image.Image:
@@ -184,7 +225,23 @@ def _load_pipeline() -> Any:
                 variant=variant,
             )
             pipe.load_lora_weights("nerijs/pixel-art-xl", adapter_name="pixel")
-            pipe.set_adapters(["pixel"], adapter_weights=[1.2])
+            adapters = ["pixel"]
+            weights = [PIXEL_ADAPTER_WEIGHT]
+            house_path = house_lora.house_lora_path()
+            house_status = house_lora.refresh_status()
+            if house_path is not None and house_status.get("state") in (
+                "ready",
+                "dirty",
+            ):
+                # Load even when dirty so an existing adapter still applies
+                # until rebuild finishes; training unloads this pipeline first.
+                pipe.load_lora_weights(
+                    str(house_path),
+                    adapter_name="house",
+                )
+                adapters.append("house")
+                weights.append(HOUSE_ADAPTER_WEIGHT)
+            pipe.set_adapters(adapters, adapter_weights=weights)
             pipe.to(_device)
             # Attention slicing helps unified memory on Apple Silicon.
             try:
@@ -340,6 +397,42 @@ def _scrub_matte_fringe(img: Image.Image, bg_rgb: tuple[int, int, int] = _INIT_B
     return Image.fromarray(out, mode="RGBA")
 
 
+def _strip_silhouette_outline(
+    img: Image.Image,
+    outline_hex: str,
+    *,
+    rgb_tol: int = 18,
+) -> Image.Image:
+    """Remove a 1px outer rim matching the silhouette colour.
+
+    Live bakes should already arrive without hull/2D outlines; this also cleans
+    locked timeline rerolls that were saved with the post silhouette applied.
+    """
+    arr = np.array(img.convert("RGBA"), dtype=np.uint8)
+    opaque = arr[:, :, 3] >= 8
+    if not opaque.any():
+        return img
+
+    edge = _edge_touching_transparent(opaque)
+    if not edge.any():
+        return img
+
+    or_, og, ob = palette_util.hex_to_rgb(outline_hex)
+    rgb = arr[:, :, :3].astype(np.int16)
+    near_outline = (
+        (np.abs(rgb[:, :, 0] - or_) <= rgb_tol)
+        & (np.abs(rgb[:, :, 1] - og) <= rgb_tol)
+        & (np.abs(rgb[:, :, 2] - ob) <= rgb_tol)
+    )
+    kill = edge & near_outline
+    if not kill.any():
+        return img
+
+    out = arr.copy()
+    out[kill] = 0
+    return Image.fromarray(out, mode="RGBA")
+
+
 def generate_variation(
     source_png: bytes,
     *,
@@ -350,7 +443,8 @@ def generate_variation(
     outline_hex: str = "1a1932",
     freedom: Optional[FreedomMode] = None,
     seed: Optional[int] = None,
-    steps: int = 24,
+    steps: int = DEFAULT_STEPS,
+    guidance_scale: float = DEFAULT_GUIDANCE,
 ) -> GenerateResult:
     ensure_dirs()
     if size not in (8, 16, 24, 32, 40, 48, 56, 64):
@@ -361,9 +455,14 @@ def generate_variation(
     mode = freedom or pick_freedom()
     params = FREEDOM_PARAMS[mode]
     seed = int(seed if seed is not None else random.randint(0, 2**31 - 1))
+    steps = max(8, min(60, int(steps)))
+    guidance = max(1.0, min(15.0, float(guidance_scale)))
     slug = (palette_slug or "endesga-64").strip().lower()
+    outline = outline_hex.lstrip("#").lower() or "1a1932"
 
     src = Image.open(io.BytesIO(source_png)).convert("RGBA")
+    # Condition on the fill only — silhouette is a post step after diffusion.
+    src = _strip_silhouette_outline(src, outline)
     init_rgb, alpha = _prepare_init(src, GEN_SIZE)
     canny = _canny_image(init_rgb)
 
@@ -381,8 +480,8 @@ def generate_variation(
             control_image=canny,
             strength=float(params["denoise"]),
             controlnet_conditioning_scale=float(params["controlnet"]),
-            num_inference_steps=int(steps),
-            guidance_scale=5.0,
+            num_inference_steps=steps,
+            guidance_scale=guidance,
             generator=generator,
             width=GEN_SIZE,
             height=GEN_SIZE,
@@ -407,7 +506,7 @@ def generate_variation(
     down = _scrub_matte_fringe(down)
     quantized = palette_util.quantize_to_palette(down, palette_colors)
     quantized = _scrub_matte_fringe(quantized)
-    final = palette_util.apply_silhouette_outline(quantized, outline_hex)
+    final = palette_util.apply_silhouette_outline(quantized, outline)
 
     job_id = uuid.uuid4().hex[:12]
     img_path = VARIATIONS_DIR / f"{job_id}.png"
@@ -421,11 +520,12 @@ def generate_variation(
         "seed": seed,
         "size": size,
         "palette": slug,
-        "outline": outline_hex.lstrip("#").lower(),
+        "outline": outline,
         "prompt": prompt,
         "controlnet": params["controlnet"],
         "denoise": params["denoise"],
         "steps": steps,
+        "guidance": guidance,
         "elapsed_s": round(elapsed, 2),
         "created_at": time.time(),
         "image": f"/api/variations/{job_id}/image",
