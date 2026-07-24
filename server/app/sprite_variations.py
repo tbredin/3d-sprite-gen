@@ -30,11 +30,11 @@ HOUSE_ADAPTER_WEIGHT = 0.85
 
 FreedomMode = Literal["polish", "costume", "soft"]
 
-# Weighted toward Costume (grill decision).
+# Weighted from locked-timeline preferences (~12% polish / 58% costume / 30% soft).
 FREEDOM_WEIGHTS: list[tuple[FreedomMode, float]] = [
-    ("polish", 0.20),
-    ("costume", 0.60),
-    ("soft", 0.20),
+    ("polish", 0.12),
+    ("costume", 0.58),
+    ("soft", 0.30),
 ]
 
 # Tighter structure than the original costume/soft presets — high denoise was
