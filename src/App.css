@@ -737,6 +737,11 @@ button.ghost {
   opacity: 0.4;
 }
 
+.part-color-popover-swatches {
+  width: 9.5rem;
+  padding: 0.25rem;
+}
+
 .part-grid {
   display: flex;
   flex-direction: column;
