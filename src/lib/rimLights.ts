@@ -35,29 +35,29 @@ export type RimLightSettings = {
 };
 
 /**
- * Harsh cel defaults: tiny ambience, faint camera key, strong directionals
- * parked well behind the character so they skim the silhouette only.
+ * Ember rim defaults (from saved hot / hotbright): near-black fill so a
+ * pocket of the subject stays in shadow; thin fiery left skim + soft cool
+ * wrap on the right (blue sits closer / lower behind than red).
  */
 export const DEFAULT_RIM_LIGHTS: RimLightSettings = {
-  ambientBrightness: 0.05,
-  keyBrightness: 0.14,
-  redBrightness: 3.6,
-  blueBrightness: 2.8,
-  redBehind: 4.4,
-  blueBehind: 4.4,
-  redSide: 1.15,
-  blueSide: 1.15,
-  // ~previous Y-offset look: atan2(0.75|0.35, rim radius) in degrees.
-  redHeight: 9,
+  ambientBrightness: 0.02,
+  keyBrightness: 0.04,
+  redBrightness: 6.4,
+  blueBrightness: 2.7,
+  redBehind: 5.8,
+  blueBehind: 0.55,
+  redSide: 1.25,
+  blueSide: 2.5,
+  redHeight: -14,
   blueHeight: 4,
   keyColor: "#e8eef6",
-  ambientColor: "#5a6070",
-  redColor: "#ff1e1e",
-  blueColor: "#4a9ce0",
+  ambientColor: "#3a4050",
+  redColor: "#ff1a00",
+  blueColor: "#d8ecff",
 };
 
 /** Bump when defaults / semantics change so old washed-out settings don't stick. */
-const STORAGE_KEY = "3d-sprite-gen:rim-lights-v7";
+const STORAGE_KEY = "3d-sprite-gen:rim-lights-v8";
 
 export function normalizeLightHex(hex: string, fallback: string): string {
   const h = hex.trim().replace(/^#/, "").toLowerCase();
