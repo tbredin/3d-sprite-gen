@@ -206,6 +206,11 @@ export type CharacterSpec = {
      * Independent of `head.scale` so hair can stay fixed (scientist).
      */
     scale?: number;
+    /**
+     * Horizontal spacing between eyes (default 1).
+     * Multiplies the art-directed baseline separation; independent of `scale`.
+     */
+    spacing?: number;
   };
   torso: {
     style: TorsoStyle;

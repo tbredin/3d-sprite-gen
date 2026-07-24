@@ -41,6 +41,7 @@ import { normalizeEdgeOutlineSettings } from "./lib/edgeOutline";
 import { CollapseSection } from "./components/CollapseSection";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
 import { PartColorMenu } from "./components/PartColorMenu";
+import { PaletteColorButton } from "./components/PaletteColorButton";
 import { VariationTimeline } from "./components/VariationTimeline";
 import { CaptionRefsPanel } from "./components/CaptionRefsPanel";
 import { fetchStatus, type StatusResponse } from "./api";
@@ -974,18 +975,91 @@ export default function App() {
                 />
                 Mirror
               </label>
-              <label className="part-chip">
-                <input
-                  type="checkbox"
-                  checked={showEyes}
-                  onChange={() => setShowEyes((v) => !v)}
-                  title="Toggle cartoon eyes"
-                />
-                Eyes
-              </label>
             </div>
 
             <div className="part-grid">
+              <div className="part-block">
+                <div className="part-row part-row-eyes">
+                  <span className="part-name">eyes</span>
+                  <label className="part-chip part-chip-inline">
+                    <input
+                      type="checkbox"
+                      checked={showEyes}
+                      onChange={() => setShowEyes((v) => !v)}
+                      title="Toggle cartoon eyes"
+                    />
+                    Show
+                  </label>
+                  <label
+                    className={`part-inline-slider${showEyes ? "" : " is-disabled"}`}
+                  >
+                    <span className="part-inline-slider-label" title="Distance between eyes">
+                      Dist
+                    </span>
+                    <input
+                      type="range"
+                      min={0.55}
+                      max={1.55}
+                      step={0.05}
+                      value={spec.face?.spacing ?? 1}
+                      disabled={!showEyes}
+                      onChange={(e) => {
+                        const spacing = Number(e.target.value);
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, spacing },
+                        }));
+                      }}
+                      title="Distance between eyes"
+                    />
+                    <span className="part-inline-slider-val">
+                      {(spec.face?.spacing ?? 1).toFixed(2)}
+                    </span>
+                  </label>
+                  <label
+                    className={`part-inline-slider${showEyes ? "" : " is-disabled"}`}
+                  >
+                    <span className="part-inline-slider-label" title="Eye size">
+                      Size
+                    </span>
+                    <input
+                      type="range"
+                      min={0.55}
+                      max={1.65}
+                      step={0.05}
+                      value={spec.face?.scale ?? 1}
+                      disabled={!showEyes}
+                      onChange={(e) => {
+                        const scale = Number(e.target.value);
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, scale },
+                        }));
+                      }}
+                      title="Eye size"
+                    />
+                    <span className="part-inline-slider-val">
+                      {(spec.face?.scale ?? 1).toFixed(2)}
+                    </span>
+                  </label>
+                  <div className="part-actions">
+                    <PaletteColorButton
+                      value={spec.face?.eyeColor ?? "#1a1c2c"}
+                      paletteColors={palette?.colors ?? []}
+                      title="Eye colour"
+                      ariaLabel="Eye colour"
+                      disabled={!showEyes}
+                      onChange={(hex) =>
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, eyeColor: hex },
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
               {PART_IDS.map((part) => {
                 const locked = locks[part];
                 return (

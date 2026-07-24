@@ -19,9 +19,6 @@ export function listPartColorSlots(
     if (spec.hair) {
       slots.push({ id: "hair", label: "Hair", value: spec.hair.color });
     }
-    if (spec.face?.eyeColor) {
-      slots.push({ id: "eyes", label: "Eyes", value: spec.face.eyeColor });
-    }
     if (spec.helmet && spec.helmet.style !== "none") {
       slots.push({ id: "helmet", label: "Helmet", value: spec.helmet.color });
       if (spec.helmet.visor) {
