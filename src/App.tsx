@@ -66,11 +66,44 @@ import {
   BODY_PROFILES,
   loadBodyProfile,
   saveBodyProfile,
+  HEAD_SHAPES,
+  HAIR_STYLES,
+  HELMET_STYLES,
+  TORSO_STYLES,
+  HEM_STYLES,
+  WEAPON_TYPES,
+  OFFHAND_TYPES,
+  OFFHAND_VARIANT_IDS,
+  setOffhandVariant,
+  getOffhandVariant,
+  BACK_LOADOUTS,
+  ARM_POSES,
+  LEG_POSES,
+  setHeadShape,
+  setHairStyle,
+  setHelmetStyle,
+  setTorsoStyle,
+  setHemStyle,
+  setCape,
+  setBackLoadout,
+  setArmPose,
+  setWeaponType,
+  setOffhandType,
+  setLegPose,
   type BodyProfileId,
   type CharacterSpec,
   type PartId,
   type PartLocks,
   type PresetId,
+  type HeadShape,
+  type HairStyle,
+  type HelmetStyle,
+  type TorsoStyle,
+  type HemStyle,
+  type BackLoadout,
+  type ArmPose,
+  type LegPose,
+  type WeaponType,
 } from "./lib/chibi";
 import {
   BAYER_STRENGTH_MAX,
@@ -164,6 +197,37 @@ function clampPitch(rad: number) {
   return Math.max(-PITCH_LIMIT, Math.min(PITCH_LIMIT, rad));
 }
 
+/** "knightBarbute" → "knight barbute" for readable dropdown labels. */
+function humanize(s: string): string {
+  return s.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
+}
+
+/** Labeled select for a single named sub-part in the debug Parts panel. */
+function PartSelect<T extends string>({
+  label,
+  value,
+  options,
+  onPick,
+}: {
+  label: string;
+  value: T;
+  options: readonly T[];
+  onPick: (v: T) => void;
+}) {
+  return (
+    <label className="part-select">
+      <span className="part-select-label">{label}</span>
+      <select value={value} onChange={(e) => onPick(e.target.value as T)}>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {humanize(o)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 export default function App() {
   const [facingPersist] = useState(() => loadFacingPersist());
   const [facing, setFacing] = useState<FacingId>(facingPersist.facing);
@@ -219,6 +283,9 @@ export default function App() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [specOpen, setSpecOpen] = useState(true);
+  const [offhandVariant, setOffhandVariantState] = useState<string>(
+    () => OFFHAND_VARIANT_IDS[getOffhandVariant()],
+  );
   const [lightsOpen, setLightsOpen] = useState(true);
   const [outlinesOpen, setOutlinesOpen] = useState(true);
   const dragRef = useRef<{
@@ -342,6 +409,18 @@ export default function App() {
     setPresetId("random");
     setSpec((prev) => {
       const next = rerollPartColors(prev, part);
+      setSpecText(JSON.stringify(next, null, 2));
+      setSpecParseError(null);
+      return next;
+    });
+    setCharKey((k) => k + 1);
+  };
+
+  /** Apply a direct sub-part edit from a debug dropdown (keeps colours). */
+  const applyPartEdit = (fn: (s: CharacterSpec) => CharacterSpec) => {
+    setPresetId("random");
+    setSpec((prev) => {
+      const next = fn(prev);
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -890,38 +969,156 @@ export default function App() {
                 </div>
               </div>
               {PART_IDS.map((part) => (
-                <div key={part} className="part-row">
-                  <span className="part-name">{part}</span>
-                  <div className="part-actions">
-                    <label className="part-lock">
-                      <input
-                        type="checkbox"
-                        checked={locks[part]}
-                        onChange={() => toggleLock(part)}
-                      />
-                      Lock
-                    </label>
-                    <button
-                      type="button"
-                      className="ghost"
-                      onClick={() => applyRerollPart(part)}
-                      disabled={locks[part]}
-                      title={
-                        locks[part]
-                          ? "Unlock to reroll this part"
-                          : "Reroll this part"
-                      }
-                    >
-                      Reroll
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost"
-                      onClick={() => applyRerollColors(part)}
-                    >
-                      Colors
-                    </button>
+                <div key={part} className="part-block">
+                  <div className="part-row">
+                    <span className="part-name">{part}</span>
+                    <div className="part-actions">
+                      <label className="part-lock">
+                        <input
+                          type="checkbox"
+                          checked={locks[part]}
+                          onChange={() => toggleLock(part)}
+                        />
+                        Lock
+                      </label>
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() => applyRerollPart(part)}
+                        disabled={locks[part]}
+                        title={
+                          locks[part]
+                            ? "Unlock to reroll this part"
+                            : "Reroll this part"
+                        }
+                      >
+                        Reroll
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost"
+                        onClick={() => applyRerollColors(part)}
+                      >
+                        Colors
+                      </button>
+                    </div>
                   </div>
+
+                  {part === "head" ? (
+                    <div className="part-subgrid">
+                      <PartSelect<HeadShape>
+                        label="shape"
+                        value={spec.head?.shape ?? "lozenge"}
+                        options={HEAD_SHAPES}
+                        onPick={(v) =>
+                          applyPartEdit((s) => setHeadShape(s, v))
+                        }
+                      />
+                      <PartSelect<HairStyle>
+                        label="hair"
+                        value={spec.hair?.style ?? "bald"}
+                        options={HAIR_STYLES}
+                        onPick={(v) =>
+                          applyPartEdit((s) => setHairStyle(s, v))
+                        }
+                      />
+                      <PartSelect<HelmetStyle>
+                        label="helmet"
+                        value={spec.helmet?.style ?? "none"}
+                        options={HELMET_STYLES}
+                        onPick={(v) =>
+                          applyPartEdit((s) => setHelmetStyle(s, v))
+                        }
+                      />
+                    </div>
+                  ) : null}
+
+                  {part === "torso" ? (
+                    <div className="part-subgrid">
+                      <PartSelect<TorsoStyle>
+                        label="style"
+                        value={spec.torso.style}
+                        options={TORSO_STYLES}
+                        onPick={(v) =>
+                          applyPartEdit((s) => setTorsoStyle(s, v))
+                        }
+                      />
+                      <PartSelect<HemStyle>
+                        label="hem"
+                        value={spec.accessories?.hem ?? "none"}
+                        options={HEM_STYLES}
+                        onPick={(v) => applyPartEdit((s) => setHemStyle(s, v))}
+                      />
+                      <PartSelect<"off" | "on">
+                        label="cape"
+                        value={spec.accessories?.cape ? "on" : "off"}
+                        options={["off", "on"]}
+                        onPick={(v) =>
+                          applyPartEdit((s) => setCape(s, v === "on"))
+                        }
+                      />
+                      <PartSelect<BackLoadout>
+                        label="back"
+                        value={spec.accessories?.backLoadout ?? "none"}
+                        options={BACK_LOADOUTS}
+                        onPick={(v) =>
+                          applyPartEdit((s) => setBackLoadout(s, v))
+                        }
+                      />
+                    </div>
+                  ) : null}
+
+                  {part === "arms" ? (
+                    <div className="part-subgrid">
+                      <PartSelect<ArmPose>
+                        label="pose"
+                        value={spec.arms.pose}
+                        options={ARM_POSES}
+                        onPick={(v) => applyPartEdit((s) => setArmPose(s, v))}
+                      />
+                      <PartSelect<WeaponType>
+                        label="weapon"
+                        value={spec.weapon?.type ?? "none"}
+                        options={WEAPON_TYPES}
+                        onPick={(v) =>
+                          applyPartEdit((s) => setWeaponType(s, v))
+                        }
+                      />
+                      <PartSelect<WeaponType>
+                        label="offhand"
+                        value={spec.offhand?.type ?? "none"}
+                        options={OFFHAND_TYPES}
+                        onPick={(v) =>
+                          applyPartEdit((s) => setOffhandType(s, v))
+                        }
+                      />
+                      {spec.offhand &&
+                      spec.offhand.type !== "none" &&
+                      spec.offhand.type !== "shield" ? (
+                        <PartSelect<string>
+                          label="offhand angle"
+                          value={offhandVariant}
+                          options={OFFHAND_VARIANT_IDS}
+                          onPick={(v) => {
+                            setOffhandVariant(OFFHAND_VARIANT_IDS.indexOf(v));
+                            setOffhandVariantState(v);
+                            applyPartEdit((s) => s);
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  {part === "legs" ? (
+                    <div className="part-subgrid">
+                      <PartSelect<LegPose>
+                        label="pose"
+                        value={spec.legs.pose}
+                        options={LEG_POSES}
+                        onPick={(v) => applyPartEdit((s) => setLegPose(s, v))}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               ))}
             </div>

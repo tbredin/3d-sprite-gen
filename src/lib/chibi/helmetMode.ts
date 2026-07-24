@@ -97,12 +97,68 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     notes:
       "Sallet + bevor (×1.2) — swept rear tail, single eye slit, pointed chin cup.",
   },
+  knightBarbute: {
+    style: "knightBarbute",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Italian barbute (×1.2) — rounded skull + Y/T face opening; strong dark cut-out.",
+  },
+  knightBascinet: {
+    style: "knightBascinet",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Pointed bascinet / houndskull (×1.2) — conical apex, hinged snout visor.",
+  },
   sciFi: {
     style: "sciFi",
     mount: "replace",
     showFace: false,
     notes:
       "Sealed infantry helm (×1.3 radius boost) — brow plate + cheek cups + thin visor.",
+  },
+  visor: {
+    style: "visor",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Sci-fi wrap visor helm (×1.3) — smooth shell + full-width angled visor band.",
+  },
+  goggles: {
+    style: "goggles",
+    mount: "overlay",
+    showFace: true,
+    notes:
+      "Glasses / goggles overlay — keeps face + hair; twin lenses on a bridge.",
+  },
+  astronautBubble: {
+    style: "astronautBubble",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Round bubble EVA helmet (×1.3) — big sphere + wide gold visor + neck ring.",
+  },
+  astronautFlat: {
+    style: "astronautFlat",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Flat-visor space helmet (×1.3) — squared shell + rectangular visor + antenna.",
+  },
+  astronautVintage: {
+    style: "astronautVintage",
+    mount: "replace",
+    showFace: false,
+    notes:
+      "Vintage Mercury-style helmet (×1.3) — ribbed dome + round porthole visor.",
+  },
+  scouter: {
+    style: "scouter",
+    mount: "overlay",
+    showFace: true,
+    notes:
+      "DBZ scouter overlay — keeps face + hair; single lens over one eye + earpiece.",
   },
   pilot: {
     style: "pilot",
@@ -124,12 +180,6 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     showFace: false,
     notes:
       "Nasal helm (×1.3) — rounded dome, nose guard, cheek flaps, outward horns.",
-  },
-  hood: {
-    style: "hood",
-    mount: "replace",
-    showFace: true,
-    notes: "Head-sized cowl replaces skull; face stays in the window.",
   },
   pharaoh: {
     style: "pharaoh",

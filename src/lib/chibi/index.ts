@@ -101,6 +101,9 @@ export {
   assembleCharacter,
   getPreset,
   PRESETS,
+  OFFHAND_VARIANT_IDS,
+  setOffhandVariant,
+  getOffhandVariant,
 } from "./assemble";
 export type { AssembleOptions } from "./assemble";
 export { applySpriteFaceCheat } from "./faceCheat";
@@ -134,7 +137,37 @@ export type {
   BackLoadout,
   HeadShape,
 } from "./types";
-export { PRESET_IDS, PRESET_LABELS, HEAD_SHAPES } from "./types";
+export {
+  PRESET_IDS,
+  PRESET_LABELS,
+  HEAD_SHAPES,
+  HAIR_STYLES,
+  HELMET_STYLES,
+  TORSO_STYLES,
+  HEM_STYLES,
+  WEAPON_TYPES,
+  OFFHAND_TYPES,
+  BACK_LOADOUTS,
+} from "./types";
+export type {
+  HairStyle,
+  HelmetStyle,
+  TorsoStyle,
+  WeaponType,
+} from "./types";
+export {
+  setHeadShape,
+  setHairStyle,
+  setHelmetStyle,
+  setTorsoStyle,
+  setHemStyle,
+  setCape,
+  setBackLoadout,
+  setArmPose,
+  setWeaponType,
+  setOffhandType,
+  setLegPose,
+} from "./random";
 export {
   applyBodyProfile,
   BODY_PROFILE_IDS,

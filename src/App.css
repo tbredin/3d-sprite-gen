@@ -697,17 +697,59 @@ button.ghost {
 .part-grid {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.25rem;
+}
+
+.part-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .part-row {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  min-height: 1.55rem;
-  padding: 0.1rem 0.35rem;
+  min-height: 1.4rem;
+  padding: 0.08rem 0.35rem;
   background: #12141f;
   border: 1px solid #3a415c;
+}
+
+/* Named sub-part dropdowns beneath each part's action row (debug picker). */
+.part-subgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.15rem 0.3rem;
+  padding: 0.15rem 0.35rem;
+  background: #0d0f18;
+  border: 1px solid #2a3048;
+  border-top: none;
+}
+
+.panel label.part-select {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.part-select-label {
+  flex: 0 0 2.6rem;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--muted, #9aa4b0);
+}
+
+.part-select select {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 1.3rem;
+  padding: 0 0.2rem;
+  font-size: 0.64rem;
 }
 
 .panel label.part-lock {
