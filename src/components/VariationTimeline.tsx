@@ -22,7 +22,7 @@ const IDLE_REROLL_TICK_MS = 30 * 1000;
 const DEFAULT_STEPS = 30;
 const DEFAULT_GUIDANCE = 7;
 
-type StreamMode = "stopped" | "playing" | "idleReroll";
+type StreamMode = "stopped" | "playing" | "playRandom" | "idleReroll";
 type FreedomChoice = "auto" | VariationFreedom;
 
 type HoverPreview = {
@@ -39,6 +39,12 @@ type Props = {
   outlineHex: string;
   /** Receives current steer text from the timeline field. */
   buildPrompt: (steer: string) => string;
+  /**
+   * "Play random" hook: rolls a fresh random character and resolves with its
+   * new pre-quantize bake source once the 3D preview has re-baked. Returns null
+   * if no source could be produced. See docs/SPIKE-ai-sprite-variations.md.
+   */
+  onRequestRandomSource?: () => Promise<string | null>;
 };
 
 export function VariationTimeline({
@@ -47,6 +53,7 @@ export function VariationTimeline({
   paletteSlug,
   outlineHex,
   buildPrompt,
+  onRequestRandomSource,
 }: Props) {
   const [mode, setMode] = useState<StreamMode>("stopped");
   const [items, setItems] = useState<VariationMeta[]>([]);
@@ -69,6 +76,7 @@ export function VariationTimeline({
   const stepsRef = useRef(steps);
   const guidanceRef = useRef(guidance);
   const buildPromptRef = useRef(buildPrompt);
+  const onRequestRandomSourceRef = useRef(onRequestRandomSource);
   const workersRef = useRef(0);
   const runJobRef = useRef<() => void>(() => {});
   const warmupPromiseRef = useRef<Promise<void> | null>(null);
@@ -81,6 +89,7 @@ export function VariationTimeline({
   stepsRef.current = steps;
   guidanceRef.current = guidance;
   buildPromptRef.current = buildPrompt;
+  onRequestRandomSourceRef.current = onRequestRandomSource;
   modeRef.current = mode;
 
   useEffect(() => {
@@ -177,10 +186,34 @@ export function VariationTimeline({
     return lockedItems[Math.floor(Math.random() * lockedItems.length)].image;
   };
 
+  // Read via a function call so TS doesn't narrow modeRef.current across the
+  // awaits in runJob — the mode can flip to "stopped" mid-flight.
+  const isStopped = () => modeRef.current === "stopped";
+
+  // "Play random" rolls a brand-new character before each queued variation.
+  // Serialize to one worker so every generation maps to one distinct roll.
+  const effectiveConcurrency = () =>
+    modeRef.current === "playRandom" ? 1 : CONCURRENCY;
+
+  const requestRandomSource = async (): Promise<string | null> => {
+    const req = onRequestRandomSourceRef.current;
+    if (!req) return sourceRef.current;
+    try {
+      const next = await req();
+      return next || sourceRef.current;
+    } catch {
+      return sourceRef.current;
+    }
+  };
+
   const runJob = async () => {
-    const src = resolveSource();
-    if (!src) return;
-    if (workersRef.current >= CONCURRENCY) return;
+    if (isStopped()) return;
+    if (workersRef.current >= effectiveConcurrency()) return;
+
+    // Non-random modes resolve their source up front; bail if none is ready.
+    const presetSrc =
+      modeRef.current === "playRandom" ? null : resolveSource();
+    if (modeRef.current !== "playRandom" && !presetSrc) return;
 
     workersRef.current += 1;
     setInflight(workersRef.current);
@@ -188,8 +221,19 @@ export function VariationTimeline({
 
     try {
       await ensureWarm();
-      if (modeRef.current === "stopped") return;
+      if (isStopped()) return;
       setPhase(null);
+
+      // Roll a fresh random character now that a slot is free to queue.
+      let src = presetSrc;
+      if (modeRef.current === "playRandom") {
+        setPhase("Rolling a random character…");
+        src = await requestRandomSource();
+        if (isStopped()) return;
+        setPhase(null);
+      }
+      if (!src) return;
+
       const prompt = buildPromptRef.current(steerRef.current);
       const meta = await generateVariation({
         sourceDataUrl: src,
@@ -213,7 +257,7 @@ export function VariationTimeline({
     } finally {
       workersRef.current = Math.max(0, workersRef.current - 1);
       setInflight(workersRef.current);
-      if (modeRef.current !== "stopped") {
+      if (!isStopped()) {
         queueMicrotask(() => runJobRef.current());
       }
     }
@@ -225,7 +269,8 @@ export function VariationTimeline({
 
   useEffect(() => {
     if (mode === "stopped") return;
-    for (let i = workersRef.current; i < CONCURRENCY; i++) {
+    const target = mode === "playRandom" ? 1 : CONCURRENCY;
+    for (let i = workersRef.current; i < target; i++) {
       void runJob();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mode edge only
@@ -254,6 +299,18 @@ export function VariationTimeline({
     idleDeadlineRef.current = null;
     modeRef.current = "playing";
     setMode("playing");
+  };
+
+  const onPlayRandom = () => {
+    if (mode === "playRandom") {
+      stopStream();
+      return;
+    }
+    setError(null);
+    setPhase(null);
+    idleDeadlineRef.current = null;
+    modeRef.current = "playRandom";
+    setMode("playRandom");
   };
 
   const onClear = async () => {
@@ -296,7 +353,9 @@ export function VariationTimeline({
   const previewPx = thumbPx * 2;
   const pendingSlots = Math.max(0, inflight);
   const playing = mode === "playing";
+  const playingRandom = mode === "playRandom";
   const idleRerolling = mode === "idleReroll";
+  const maxConcurrency = playingRandom ? 1 : CONCURRENCY;
   const lockedCount = items.filter((item) => item.locked).length;
   const idleRemainingMs = getIdleRemainingMs();
   const idleRemainingMinutes =
@@ -331,7 +390,7 @@ export function VariationTimeline({
         <div className="timeline-controls">
           <button
             type="button"
-            className={`timeline-play${mode !== "stopped" ? " is-playing" : ""}`}
+            className={`timeline-play${playing || idleRerolling ? " is-playing" : ""}`}
             onClick={onPlayPause}
             title={
               playing
@@ -345,14 +404,36 @@ export function VariationTimeline({
           </button>
           <button
             type="button"
+            className={`timeline-play${playingRandom ? " is-playing" : ""}`}
+            onClick={onPlayRandom}
+            title={
+              playingRandom
+                ? "Stop rolling random characters"
+                : "Roll a new random character for every queued variation"
+            }
+          >
+            Play random
+          </button>
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={() => stopStream()}
+            disabled={mode === "stopped"}
+            title="Stop queuing new generations (in-flight jobs still finish)"
+          >
+            Stop all
+          </button>
+          <button
+            type="button"
             className="ghost-btn"
             onClick={() => void onClear()}
           >
             Clear unlocked
           </button>
           <span className="meta timeline-status">
-            {inflight}/{CONCURRENCY} in flight
+            {inflight}/{maxConcurrency} in flight
             {playing ? " · 3D source" : ""}
+            {playingRandom ? " · random characters" : ""}
             {idleRerolling
               ? ` · idle reroll from ${lockedCount} lock${
                   lockedCount === 1 ? "" : "s"

@@ -323,6 +323,38 @@ export default function App() {
     setCharKey((k) => k + 1);
   };
 
+  // Bridges the AI variation "Play random" stream to the character randomizer:
+  // resolvers registered here are settled by the next pre-quantize bake capture.
+  const pendingSourceResolversRef = useRef<Array<(src: string) => void>>([]);
+
+  const handleSourceCaptured = (src: string) => {
+    setSourcePreview(src);
+    const resolvers = pendingSourceResolversRef.current;
+    if (resolvers.length > 0) {
+      pendingSourceResolversRef.current = [];
+      for (const resolve of resolvers) resolve(src);
+    }
+  };
+
+  const requestRandomVariationSource = () =>
+    new Promise<string>((resolve) => {
+      let settled = false;
+      const done = (src: string) => {
+        if (settled) return;
+        settled = true;
+        resolve(src);
+      };
+      pendingSourceResolversRef.current.push(done);
+      applyRandom();
+      // Safety net: if no bake fires (e.g. palette not loaded), don't hang the
+      // stream — fall back so the timeline can reuse its last known source.
+      window.setTimeout(() => {
+        pendingSourceResolversRef.current =
+          pendingSourceResolversRef.current.filter((r) => r !== done);
+        done("");
+      }, 8000);
+    });
+
   const toggleLock = (part: PartId) => {
     setLocks((prev) => ({ ...prev, [part]: !prev[part] }));
   };
@@ -711,7 +743,7 @@ export default function App() {
                     bayerDither={bayerDither}
                     displayPx={spritePx}
                     onCaptured={setPreview}
-                    onSourceCaptured={setSourcePreview}
+                    onSourceCaptured={handleSourceCaptured}
                   />
                 </div>
               ) : (
@@ -1580,6 +1612,7 @@ export default function App() {
             steer,
           })
         }
+        onRequestRandomSource={requestRandomVariationSource}
       />
 
       <CaptionRefsPanel />
