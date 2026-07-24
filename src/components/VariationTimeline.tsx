@@ -40,11 +40,11 @@ type Props = {
   /** Receives current steer text from the timeline field. */
   buildPrompt: (steer: string) => string;
   /**
-   * "Play random" hook: rolls a fresh random character and resolves with its
-   * new pre-quantize bake source once the 3D preview has re-baked. Returns null
-   * if no source could be produced. See docs/SPIKE-ai-sprite-variations.md.
+   * "Play random" hook: fired as soon as a generation starts (current bake
+   * already snapped for the AI). Rolls the next character so lights/outlines
+   * can be tweaked while the in-flight job runs.
    */
-  onRequestRandomSource?: () => Promise<string | null>;
+  onRollRandom?: () => void;
 };
 
 export function VariationTimeline({
@@ -53,7 +53,7 @@ export function VariationTimeline({
   paletteSlug,
   outlineHex,
   buildPrompt,
-  onRequestRandomSource,
+  onRollRandom,
 }: Props) {
   const [mode, setMode] = useState<StreamMode>("stopped");
   const [items, setItems] = useState<VariationMeta[]>([]);
@@ -76,7 +76,7 @@ export function VariationTimeline({
   const stepsRef = useRef(steps);
   const guidanceRef = useRef(guidance);
   const buildPromptRef = useRef(buildPrompt);
-  const onRequestRandomSourceRef = useRef(onRequestRandomSource);
+  const onRollRandomRef = useRef(onRollRandom);
   const workersRef = useRef(0);
   const runJobRef = useRef<() => void>(() => {});
   const warmupPromiseRef = useRef<Promise<void> | null>(null);
@@ -89,7 +89,7 @@ export function VariationTimeline({
   stepsRef.current = steps;
   guidanceRef.current = guidance;
   buildPromptRef.current = buildPrompt;
-  onRequestRandomSourceRef.current = onRequestRandomSource;
+  onRollRandomRef.current = onRollRandom;
   modeRef.current = mode;
 
   useEffect(() => {
@@ -173,7 +173,12 @@ export function VariationTimeline({
   };
 
   const resolveSource = () => {
-    if (modeRef.current === "playing") return sourceRef.current;
+    if (
+      modeRef.current === "playing" ||
+      modeRef.current === "playRandom"
+    ) {
+      return sourceRef.current;
+    }
     if (modeRef.current !== "idleReroll") return null;
     if (stopExpiredIdleReroll()) return null;
 
@@ -190,30 +195,17 @@ export function VariationTimeline({
   // awaits in runJob — the mode can flip to "stopped" mid-flight.
   const isStopped = () => modeRef.current === "stopped";
 
-  // "Play random" rolls a brand-new character before each queued variation.
-  // Serialize to one worker so every generation maps to one distinct roll.
+  // "Play random" snaps the current bake, then rolls the next character so the
+  // user can tweak lights/outlines while the AI job runs. Serialize to one
+  // worker so each generation maps to one on-screen character.
   const effectiveConcurrency = () =>
     modeRef.current === "playRandom" ? 1 : CONCURRENCY;
-
-  const requestRandomSource = async (): Promise<string | null> => {
-    const req = onRequestRandomSourceRef.current;
-    if (!req) return sourceRef.current;
-    try {
-      const next = await req();
-      return next || sourceRef.current;
-    } catch {
-      return sourceRef.current;
-    }
-  };
 
   const runJob = async () => {
     if (isStopped()) return;
     if (workersRef.current >= effectiveConcurrency()) return;
-
-    // Non-random modes resolve their source up front; bail if none is ready.
-    const presetSrc =
-      modeRef.current === "playRandom" ? null : resolveSource();
-    if (modeRef.current !== "playRandom" && !presetSrc) return;
+    // Bail early if no source is available yet (live bake or idle-reroll).
+    if (!resolveSource()) return;
 
     workersRef.current += 1;
     setInflight(workersRef.current);
@@ -224,18 +216,14 @@ export function VariationTimeline({
       if (isStopped()) return;
       setPhase(null);
 
-      // Roll a fresh random character now that a slot is free to queue.
-      let src = presetSrc;
-      if (modeRef.current === "playRandom") {
-        setPhase("Rolling a random character…");
-        src = await requestRandomSource();
-        if (isStopped()) return;
-        setPhase(null);
-      }
+      // Re-read the bake now so any light/outline tweaks during warmup land
+      // in the snapshot we send.
+      const src = resolveSource();
       if (!src) return;
 
+      // Capture prompt against the character whose bake we are sending.
       const prompt = buildPromptRef.current(steerRef.current);
-      const meta = await generateVariation({
+      const genPromise = generateVariation({
         sourceDataUrl: src,
         size,
         paletteSlug,
@@ -245,6 +233,14 @@ export function VariationTimeline({
         steps: stepsRef.current,
         guidanceScale: guidanceRef.current,
       });
+
+      // Roll the next character immediately so lights/outlines can be tweaked
+      // while this snapshot is in flight.
+      if (modeRef.current === "playRandom") {
+        onRollRandomRef.current?.();
+      }
+
+      const meta = await genPromise;
       setItems((prev) => [meta, ...prev.filter((x) => x.id !== meta.id)]);
       refreshStatus();
     } catch (err) {
@@ -304,6 +300,10 @@ export function VariationTimeline({
   const onPlayRandom = () => {
     if (mode === "playRandom") {
       stopStream();
+      return;
+    }
+    if (!sourceDataUrl) {
+      setError("Waiting for pre-quantize bake…");
       return;
     }
     setError(null);
@@ -409,7 +409,7 @@ export function VariationTimeline({
             title={
               playingRandom
                 ? "Stop rolling random characters"
-                : "Roll a new random character for every queued variation"
+                : "Snap current bake, then roll a new character to tweak while AI runs"
             }
           >
             Play random
