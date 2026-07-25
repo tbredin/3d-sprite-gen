@@ -16,17 +16,60 @@ import { downloadDataUrl } from "../lib/capture";
 
 const CONCURRENCY = 3;
 const PREVIEW_GAP = 8;
-const IDLE_REROLL_MS = 60 * 60 * 1000;
 const IDLE_REROLL_TICK_MS = 30 * 1000;
-const REMIX_MAX_MS = 4 * 60 * 60 * 1000;
+const SELECTED_IDS_STORAGE_KEY = "3d-sprite-gen:variation-selected-ids-v1";
 
 const DEFAULT_STEPS = 30;
 const DEFAULT_GUIDANCE = 7;
+/** Default auto-stop for idle reroll / Remix (hours). */
+const DEFAULT_MAX_HOURS = 4;
+const MIN_MAX_HOURS = 0.25;
+const MAX_MAX_HOURS = 24;
 /** UI slider max — Remix always uses this. */
 const MAX_STEPS = 40;
 const GUIDANCE_MIN = 4;
 const GUIDANCE_MAX = 10;
 const GUIDANCE_STEP = 0.5;
+
+function loadSelectedIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SELECTED_IDS_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(
+      parsed.filter((id): id is string => typeof id === "string"),
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function saveSelectedIds(ids: Set<string>) {
+  try {
+    localStorage.setItem(
+      SELECTED_IDS_STORAGE_KEY,
+      JSON.stringify([...ids]),
+    );
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function clampMaxHours(value: number): number {
+  if (!Number.isFinite(value)) return DEFAULT_MAX_HOURS;
+  return Math.min(MAX_MAX_HOURS, Math.max(MIN_MAX_HOURS, value));
+}
+
+function formatHoursLabel(hours: number): string {
+  if (hours === 1) return "1 hour";
+  if (Number.isInteger(hours)) return `${hours} hours`;
+  return `${hours} hours`;
+}
+
+function hoursToMs(hours: number): number {
+  return clampMaxHours(hours) * 60 * 60 * 1000;
+}
 
 type StreamMode =
   | "stopped"
@@ -113,7 +156,8 @@ export function VariationTimeline({
   const [hoverPreview, setHoverPreview] = useState<HoverPreview | null>(null);
   const [visibility, setVisibility] = useState<VisibilityFilter>("all");
   const [sort, setSort] = useState<SortMode>("newest");
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(loadSelectedIds);
+  const [maxHours, setMaxHours] = useState(DEFAULT_MAX_HOURS);
 
   const modeRef = useRef<StreamMode>("stopped");
   const sourceRef = useRef(sourceDataUrl);
@@ -123,6 +167,8 @@ export function VariationTimeline({
   const freedomRef = useRef(freedom);
   const stepsRef = useRef(steps);
   const guidanceRef = useRef(guidance);
+  const maxHoursRef = useRef(maxHours);
+  const runMaxHoursRef = useRef(DEFAULT_MAX_HOURS);
   const buildPromptRef = useRef(buildPrompt);
   const onRollRandomRef = useRef(onRollRandom);
   const workersRef = useRef(0);
@@ -130,6 +176,10 @@ export function VariationTimeline({
   const warmupPromiseRef = useRef<Promise<void> | null>(null);
   const idleDeadlineRef = useRef<number | null>(null);
   const remixCursorRef = useRef(0);
+  /** Next action for "Random remix": alternates Remix ↔ Play random. */
+  const [randomRemixNext, setRandomRemixNext] = useState<"remix" | "playRandom">(
+    "remix",
+  );
 
   sourceRef.current = sourceDataUrl;
   itemsRef.current = items;
@@ -138,13 +188,26 @@ export function VariationTimeline({
   freedomRef.current = freedom;
   stepsRef.current = steps;
   guidanceRef.current = guidance;
+  maxHoursRef.current = maxHours;
   buildPromptRef.current = buildPrompt;
   onRollRandomRef.current = onRollRandom;
   modeRef.current = mode;
 
   useEffect(() => {
     void listVariations()
-      .then(setItems)
+      .then((next) => {
+        setItems(next);
+        const keep = new Set(next.map((item) => item.id));
+        setSelectedIds((prev) => {
+          let changed = false;
+          const pruned = new Set<string>();
+          for (const id of prev) {
+            if (keep.has(id)) pruned.add(id);
+            else changed = true;
+          }
+          return changed ? pruned : prev;
+        });
+      })
       .catch(() => setItems([]));
     void fetchVariationStatus()
       .then((s) => {
@@ -162,6 +225,10 @@ export function VariationTimeline({
         }),
       );
   }, []);
+
+  useEffect(() => {
+    saveSelectedIds(selectedIds);
+  }, [selectedIds]);
 
   const refreshStatus = () => {
     void fetchVariationStatus()
@@ -197,17 +264,23 @@ export function VariationTimeline({
     if (message) setPhase(message);
   };
 
+  const beginTimedRun = (nextMode: "idleReroll" | "remixing") => {
+    const hours = clampMaxHours(maxHoursRef.current);
+    runMaxHoursRef.current = hours;
+    idleDeadlineRef.current = Date.now() + hoursToMs(hours);
+    modeRef.current = nextMode;
+    setMode(nextMode);
+    setError(null);
+    setPhase(null);
+  };
+
   const startIdleReroll = () => {
     const lockedCount = itemsRef.current.filter((item) => item.locked).length;
     if (lockedCount === 0) {
       stopStream("Paused — lock at least one timeline image to idle-reroll.");
       return;
     }
-    idleDeadlineRef.current = Date.now() + IDLE_REROLL_MS;
-    modeRef.current = "idleReroll";
-    setMode("idleReroll");
-    setError(null);
-    setPhase(null);
+    beginTimedRun("idleReroll");
   };
 
   const getDeadlineRemainingMs = (modes: StreamMode[]) => {
@@ -221,13 +294,17 @@ export function VariationTimeline({
     if (modeRef.current === "idleReroll") {
       const remaining = getDeadlineRemainingMs(["idleReroll"]);
       if (remaining === null || remaining > 0) return false;
-      stopStream("Idle reroll stopped after 60 minutes.");
+      stopStream(
+        `Idle reroll stopped after ${formatHoursLabel(runMaxHoursRef.current)}.`,
+      );
       return true;
     }
     if (modeRef.current === "remixing") {
       const remaining = getDeadlineRemainingMs(["remixing"]);
       if (remaining === null || remaining > 0) return false;
-      stopStream("Remix stopped after 4 hours.");
+      stopStream(
+        `Remix stopped after ${formatHoursLabel(runMaxHoursRef.current)}.`,
+      );
       return true;
     }
     return false;
@@ -403,12 +480,14 @@ export function VariationTimeline({
       setError("Select at least one variation to remix.");
       return;
     }
-    setError(null);
-    setPhase(null);
     remixCursorRef.current = 0;
-    idleDeadlineRef.current = Date.now() + REMIX_MAX_MS;
-    modeRef.current = "remixing";
-    setMode("remixing");
+    beginTimedRun("remixing");
+  };
+
+  const onRandomRemix = () => {
+    if (randomRemixNext === "remix") onRemix();
+    else onPlayRandom();
+    setRandomRemixNext((prev) => (prev === "remix" ? "playRandom" : "remix"));
   };
 
   const toggleSelected = (id: string) => {
@@ -418,6 +497,10 @@ export function VariationTimeline({
       else next.add(id);
       return next;
     });
+  };
+
+  const deselectAll = () => {
+    setSelectedIds(new Set());
   };
 
   const pruneSelection = (ids: Iterable<string>) => {
@@ -534,7 +617,7 @@ export function VariationTimeline({
                 ? "Stop remixing selected variations"
                 : selectedCount === 0
                   ? "Select variations to remix"
-                  : `Remix ${selectedCount} selected (max steps, random CFG, up to 4h)`
+                  : `Remix ${selectedCount} selected (max steps, random CFG, up to ${formatHoursLabel(maxHours)})`
             }
           >
             Remix{selectedCount > 0 ? ` (${selectedCount})` : ""}
@@ -545,7 +628,7 @@ export function VariationTimeline({
             onClick={onPlayPause}
             title={
               playing
-                ? "Pause to idle-reroll from locked timeline images"
+                ? `Pause to idle-reroll from locked timeline images (up to ${formatHoursLabel(maxHours)})`
                 : idleRerolling
                   ? "Resume stream from 3D bake"
                   : "Play stream"
@@ -564,6 +647,22 @@ export function VariationTimeline({
             }
           >
             Play random
+          </button>
+          <button
+            type="button"
+            className={`timeline-play${
+              remixing || playingRandom ? " is-playing" : ""
+            }`}
+            onClick={onRandomRemix}
+            title={
+              randomRemixNext === "remix"
+                ? `Next: Remix${
+                    selectedCount > 0 ? ` (${selectedCount})` : ""
+                  } — then Play random`
+                : "Next: Play random — then Remix"
+            }
+          >
+            Random remix
           </button>
           <button
             type="button"
@@ -667,6 +766,23 @@ export function VariationTimeline({
               onChange={(e) => setGuidance(Number(e.target.value))}
             />
           </label>
+          <label
+            className="timeline-setting timeline-hours"
+            htmlFor="timeline-max-hours"
+            title="Auto-stop for idle reroll and Remix"
+          >
+            <span>Max hours</span>
+            <input
+              id="timeline-max-hours"
+              type="number"
+              min={MIN_MAX_HOURS}
+              max={MAX_MAX_HOURS}
+              step={0.25}
+              value={maxHours}
+              onChange={(e) => setMaxHours(Number(e.target.value))}
+              onBlur={() => setMaxHours((h) => clampMaxHours(h))}
+            />
+          </label>
         </div>
         {status && !status.ready ? (
           <p className="meta timeline-hint">
@@ -697,6 +813,15 @@ export function VariationTimeline({
               {label}
             </button>
           ))}
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={deselectAll}
+            disabled={selectedCount === 0}
+            title="Clear remix selection"
+          >
+            Deselect all{selectedCount > 0 ? ` (${selectedCount})` : ""}
+          </button>
         </div>
         <label className="timeline-setting timeline-sort" htmlFor="timeline-sort">
           <span>Sort</span>
