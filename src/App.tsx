@@ -259,6 +259,8 @@ export default function App() {
   const specFileRef = useRef<HTMLInputElement>(null);
   const [charKey, setCharKey] = useState(0);
   const [locks, setLocks] = useState<PartLocks>({ ...EMPTY_LOCKS });
+  /** Body scale is app-level (not part of the spec), so it locks on its own. */
+  const [bodyScaleLocked, setBodyScaleLocked] = useState(false);
   const [mirror, setMirror] = useState(false);
   const [showEyes, setShowEyes] = useState(true);
   /** Session preference: closed helms in random rolls. Hats/crowns stay allowed. */
@@ -404,7 +406,7 @@ export default function App() {
     setCharKey((k) => k + 1);
   };
 
-  const toggleLock = (part: PartId | "eyes") => {
+  const toggleLock = (part: keyof PartLocks) => {
     setLocks((prev) => ({ ...prev, [part]: !prev[part] }));
   };
 
@@ -1368,90 +1370,133 @@ export default function App() {
                       </div>
                     </div>
                     {part === "head" ? (
-                      <div
-                        className={`light-grid part-head-sliders${locked ? " is-disabled" : ""}`}
-                      >
-                        <label className="light-slider">
-                          <span
-                            className="light-slider-label"
-                            title="Overall head size (pivots from neck)"
-                          >
-                            Size
-                          </span>
-                          <input
-                            type="range"
-                            min={0.5}
-                            max={2}
-                            step={0.05}
-                            value={spec.head?.size ?? 1}
-                            disabled={locked}
-                            onChange={(e) => {
-                              const size = Number(e.target.value);
-                              applyPartEdit((s) => ({
-                                ...s,
-                                head: { ...s.head, size },
-                              }));
-                            }}
-                            title="Overall head size"
-                          />
-                          <span className="slider-val">
-                            {(spec.head?.size ?? 1).toFixed(2)}
-                          </span>
-                        </label>
-                        <label className="light-slider">
-                          <span
-                            className="light-slider-label"
-                            title="Vertical head stretch (pivots from neck)"
-                          >
-                            Height
-                          </span>
-                          <input
-                            type="range"
-                            min={0.75}
-                            max={1.5}
-                            step={0.05}
-                            value={spec.head?.yScale ?? 1}
-                            disabled={locked}
-                            onChange={(e) => {
-                              const yScale = Number(e.target.value);
-                              applyPartEdit((s) => ({
-                                ...s,
-                                head: { ...s.head, yScale },
-                              }));
-                            }}
-                            title="Vertical head scale"
-                          />
-                          <span className="slider-val">
-                            {(spec.head?.yScale ?? 1).toFixed(2)}
-                          </span>
-                        </label>
+                      <div className="part-sliders-lockable">
+                        <div
+                          className={`light-grid part-head-sliders${locks.headSize ? " is-disabled" : ""}`}
+                        >
+                          <label className="light-slider">
+                            <span
+                              className="light-slider-label"
+                              title="Overall head size (pivots from neck)"
+                            >
+                              Size
+                            </span>
+                            <input
+                              type="range"
+                              min={0.5}
+                              max={2}
+                              step={0.05}
+                              value={spec.head?.size ?? 1}
+                              disabled={locks.headSize}
+                              onChange={(e) => {
+                                const size = Number(e.target.value);
+                                applyPartEdit((s) => ({
+                                  ...s,
+                                  head: { ...s.head, size },
+                                }));
+                              }}
+                              title="Overall head size"
+                            />
+                            <span className="slider-val">
+                              {(spec.head?.size ?? 1).toFixed(2)}
+                            </span>
+                          </label>
+                          <label className="light-slider">
+                            <span
+                              className="light-slider-label"
+                              title="Vertical head stretch (pivots from neck)"
+                            >
+                              Height
+                            </span>
+                            <input
+                              type="range"
+                              min={0.75}
+                              max={1.5}
+                              step={0.05}
+                              value={spec.head?.yScale ?? 1}
+                              disabled={locks.headSize}
+                              onChange={(e) => {
+                                const yScale = Number(e.target.value);
+                                applyPartEdit((s) => ({
+                                  ...s,
+                                  head: { ...s.head, yScale },
+                                }));
+                              }}
+                              title="Vertical head scale"
+                            />
+                            <span className="slider-val">
+                              {(spec.head?.yScale ?? 1).toFixed(2)}
+                            </span>
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          className={`part-icon-btn${locks.headSize ? " is-locked" : ""}`}
+                          onClick={() => toggleLock("headSize")}
+                          title={
+                            locks.headSize
+                              ? "Unlock head size & height"
+                              : "Lock head size & height (kept when the head rerolls)"
+                          }
+                          aria-label={
+                            locks.headSize
+                              ? "Unlock head size and height"
+                              : "Lock head size and height"
+                          }
+                          aria-pressed={locks.headSize}
+                        >
+                          {locks.headSize ? "🔒" : "🔓"}
+                        </button>
                       </div>
                     ) : null}
                     {part === "torso" ? (
-                      <div className="light-grid part-torso-sliders">
-                        <label className="light-slider">
-                          <span
-                            className="light-slider-label"
-                            title="Torso/legs scale from the neck — head, hands & feet stay fixed"
-                          >
-                            Size
-                          </span>
-                          <input
-                            type="range"
-                            min={BODY_SCALE_MIN}
-                            max={BODY_SCALE_MAX}
-                            step={0.05}
-                            value={bodyScale}
-                            onChange={(e) =>
-                              onBodyScaleChange(Number(e.target.value))
-                            }
-                            title="Body scale"
-                            aria-label="Body scale"
-                          />
-                          <span className="slider-val">
-                            {bodyScale.toFixed(2)}
-                          </span>
-                        </label>
+                      <div className="part-sliders-lockable">
+                        <div
+                          className={`light-grid part-torso-sliders${bodyScaleLocked ? " is-disabled" : ""}`}
+                        >
+                          <label className="light-slider">
+                            <span
+                              className="light-slider-label"
+                              title="Torso/legs scale from the neck — head, hands & feet stay fixed"
+                            >
+                              Size
+                            </span>
+                            <input
+                              type="range"
+                              min={BODY_SCALE_MIN}
+                              max={BODY_SCALE_MAX}
+                              step={0.05}
+                              value={bodyScale}
+                              disabled={bodyScaleLocked}
+                              onChange={(e) =>
+                                onBodyScaleChange(Number(e.target.value))
+                              }
+                              title="Body scale"
+                              aria-label="Body scale"
+                            />
+                            <span className="slider-val">
+                              {bodyScale.toFixed(2)}
+                            </span>
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          className={`part-icon-btn${bodyScaleLocked ? " is-locked" : ""}`}
+                          onClick={() => setBodyScaleLocked((v) => !v)}
+                          title={
+                            bodyScaleLocked
+                              ? "Unlock body scale"
+                              : "Lock body scale"
+                          }
+                          aria-label={
+                            bodyScaleLocked
+                              ? "Unlock body scale"
+                              : "Lock body scale"
+                          }
+                          aria-pressed={bodyScaleLocked}
+                        >
+                          {bodyScaleLocked ? "🔒" : "🔓"}
+                        </button>
                       </div>
                     ) : null}
                   </div>

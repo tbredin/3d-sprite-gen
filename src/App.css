@@ -816,6 +816,24 @@ button.ghost {
   grid-template-columns: 1fr;
 }
 
+/* Slider band with its own lock button beside the sliders. */
+.part-sliders-lockable {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.12rem 0.3rem 0.18rem;
+  border-top: 1px solid #2a3048;
+  background: #0d0f18;
+}
+
+.part-sliders-lockable > .light-grid {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border-top: 0;
+  background: none;
+}
+
 .part-color-popover-swatches {
   width: 9.5rem;
   padding: 0.25rem;

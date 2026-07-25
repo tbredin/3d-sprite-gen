@@ -21,8 +21,14 @@ export type PartId = "head" | "torso" | "arms" | "legs";
 
 export const PART_IDS: PartId[] = ["head", "torso", "arms", "legs"];
 
-/** Per-part locks; `eyes` is independent of `head` so face can stay pinned. */
-export type PartLocks = Record<PartId, boolean> & { eyes: boolean };
+/**
+ * Per-part locks; `eyes` and `headSize` are independent of `head` so the face
+ * and head proportions can stay pinned while the skull itself rerolls.
+ */
+export type PartLocks = Record<PartId, boolean> & {
+  eyes: boolean;
+  headSize: boolean;
+};
 
 export const EMPTY_LOCKS: PartLocks = {
   head: false,
@@ -30,6 +36,7 @@ export const EMPTY_LOCKS: PartLocks = {
   arms: false,
   legs: false,
   eyes: false,
+  headSize: false,
 };
 
 /** Weighted toward readable silhouette styles — bald only under helmets. */
@@ -326,6 +333,17 @@ function randomFace(): NonNullable<CharacterSpec["face"]> {
   };
 }
 
+/** Match the Size / Height slider ranges in App. */
+function randomHeadProportions(): Pick<
+  NonNullable<CharacterSpec["head"]>,
+  "size" | "yScale"
+> {
+  return {
+    size: snap05(0.5 + Math.random() * 1.5),
+    yScale: snap05(0.75 + Math.random() * 0.75),
+  };
+}
+
 function randomHead(skinHint?: string, allowHelmets = true): HeadBits {
   const skin = skinHint ?? pick(SKINS);
   // When helmets are off, keep overlay hats (cap, crowns, wizard…) but skip
@@ -350,8 +368,7 @@ function randomHead(skinHint?: string, allowHelmets = true): HeadBits {
     head: {
       shape: pick(HEAD_SHAPES),
       scale: 0.94 + Math.random() * 0.08,
-      size: snap05(0.5 + Math.random() * 1.5),
-      yScale: snap05(0.75 + Math.random() * 0.75),
+      ...randomHeadProportions(),
     },
     hair,
     face: randomFace(),
@@ -501,6 +518,18 @@ export function randomCharacter(
     head.face = randomFace();
   }
 
+  // Head-size lock overrides proportions whether or not the head was kept.
+  if (keep.headSize && prev?.head) {
+    head.head = {
+      ...head.head,
+      size: prev.head.size,
+      yScale: prev.head.yScale,
+    };
+  } else if (keep.head && !keep.headSize) {
+    // Head pinned but proportions free — resize the same skull.
+    head.head = { ...head.head, ...randomHeadProportions() };
+  }
+
   const torso = keep.torso && prev
     ? { torso: prev.torso, accessories: prev.accessories }
     : randomTorso(head.helmet?.style);
@@ -551,6 +580,14 @@ export function rerollPart(
     // Eyes lock keeps face even when the head dice is pressed.
     if (locks?.eyes && spec.face) {
       head.face = spec.face;
+    }
+    // Head-size lock keeps proportions even when the head dice is pressed.
+    if (locks?.headSize) {
+      head.head = {
+        ...head.head,
+        size: spec.head?.size,
+        yScale: spec.head?.yScale,
+      };
     }
     return { ...spec, ...head };
   }
