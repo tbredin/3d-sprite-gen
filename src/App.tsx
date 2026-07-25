@@ -987,21 +987,6 @@ export default function App() {
             onToggle={() => setCharacterOpen((v) => !v)}
           >
             <div className="char-picker">
-              <label className="field" title="Torso/legs scale — head, hands & feet stay fixed">
-                <span className="field-heading">
-                  Body
-                  <span className="field-value">{bodyScale.toFixed(2)}×</span>
-                </span>
-                <input
-                  type="range"
-                  min={BODY_SCALE_MIN}
-                  max={BODY_SCALE_MAX}
-                  step={0.05}
-                  value={bodyScale}
-                  onChange={(e) => onBodyScaleChange(Number(e.target.value))}
-                  aria-label="Body scale"
-                />
-              </label>
               <label className="field">
                 Preset
                 <select
@@ -1436,6 +1421,33 @@ export default function App() {
                           />
                           <span className="slider-val">
                             {(spec.head?.yScale ?? 1).toFixed(2)}
+                          </span>
+                        </label>
+                      </div>
+                    ) : null}
+                    {part === "torso" ? (
+                      <div className="light-grid part-torso-sliders">
+                        <label className="light-slider">
+                          <span
+                            className="light-slider-label"
+                            title="Torso/legs scale from the neck — head, hands & feet stay fixed"
+                          >
+                            Body
+                          </span>
+                          <input
+                            type="range"
+                            min={BODY_SCALE_MIN}
+                            max={BODY_SCALE_MAX}
+                            step={0.05}
+                            value={bodyScale}
+                            onChange={(e) =>
+                              onBodyScaleChange(Number(e.target.value))
+                            }
+                            title="Body scale"
+                            aria-label="Body scale"
+                          />
+                          <span className="slider-val">
+                            {bodyScale.toFixed(2)}
                           </span>
                         </label>
                       </div>
