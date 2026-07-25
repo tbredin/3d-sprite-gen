@@ -95,6 +95,7 @@ import {
   setWeaponType,
   setOffhandType,
   setLegPose,
+  isHeadReplacement,
   type BodyProfileId,
   type CharacterSpec,
   type PartId,
@@ -263,6 +264,8 @@ export default function App() {
   const [locks, setLocks] = useState<PartLocks>({ ...EMPTY_LOCKS });
   const [mirror, setMirror] = useState(false);
   const [showEyes, setShowEyes] = useState(true);
+  /** Session preference: closed helms in random rolls. Hats/crowns stay allowed. */
+  const [allowHelmets, setAllowHelmets] = useState(true);
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
   );
@@ -396,7 +399,7 @@ export default function App() {
   const applyRandom = () => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = randomCharacter(locks, prev);
+      const next = randomCharacter(locks, prev, { allowHelmets });
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -411,7 +414,7 @@ export default function App() {
   const applyRerollPart = (part: PartId) => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollPart(prev, part, locks);
+      const next = rerollPart(prev, part, locks, { allowHelmets });
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -1042,6 +1045,23 @@ export default function App() {
                 />
                 Mirror
               </label>
+              <label className="part-chip">
+                <input
+                  type="checkbox"
+                  checked={allowHelmets}
+                  onChange={() => {
+                    const next = !allowHelmets;
+                    setAllowHelmets(next);
+                    // Drop a closed helm immediately when turning off so the
+                    // live character matches the preference before the next roll.
+                    if (!next && isHeadReplacement(spec.helmet?.style)) {
+                      applyPartEdit((s) => setHelmetStyle(s, "none"));
+                    }
+                  }}
+                  title="Allow closed / face-covering helmets in random rolls. Hats, crowns, caps, and goggles stay available either way."
+                />
+                Helmets
+              </label>
             </div>
 
             <div className="part-grid">
@@ -1215,7 +1235,13 @@ export default function App() {
                             <CompactSelect<HelmetStyle>
                               title="helmet"
                               value={spec.helmet?.style ?? "none"}
-                              options={HELMET_STYLES}
+                              options={
+                                allowHelmets
+                                  ? HELMET_STYLES
+                                  : HELMET_STYLES.filter(
+                                      (h) => h === "none" || !isHeadReplacement(h),
+                                    )
+                              }
                               disabled={locked}
                               onPick={(v) =>
                                 applyPartEdit((s) => setHelmetStyle(s, v))

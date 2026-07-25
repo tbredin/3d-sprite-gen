@@ -326,9 +326,14 @@ function randomFace(): NonNullable<CharacterSpec["face"]> {
   };
 }
 
-function randomHead(skinHint?: string): HeadBits {
+function randomHead(skinHint?: string, allowHelmets = true): HeadBits {
   const skin = skinHint ?? pick(SKINS);
-  const helmetStyle = pick(HELMET);
+  // When helmets are off, keep overlay hats (cap, crowns, wizard…) but skip
+  // closed / face-covering replacements (knight, samurai, sciFi…).
+  const helmetPool = allowHelmets
+    ? HELMET
+    : HELMET.filter((h) => h === "none" || !isHeadReplacement(h));
+  const helmetStyle = pick(helmetPool);
   const hairColor = pick(HAIR_COLORS);
   // Overlay helmets (goggles, scouter, cap, crowns…) keep the hair; only
   // full head-replacement helms bald the skull.
@@ -460,10 +465,23 @@ function randomLegs(poseHint?: LegPose): LegsBits {
  *
  * `eyes` lock is independent of `head`: locked eyes keep colour / spacing /
  * scale / y through full-character rolls (Play random).
+ *
+ * `allowHelmets` (default true) is a session preference, not a lock: when
+ * false, closed / face-covering helms are skipped but overlay hats remain.
  */
-export function randomCharacter(locks?: PartLocks, base?: CharacterSpec): CharacterSpec {
+export type RandomOptions = {
+  /** Include closed/replacement helms. Default true. */
+  allowHelmets?: boolean;
+};
+
+export function randomCharacter(
+  locks?: PartLocks,
+  base?: CharacterSpec,
+  opts?: RandomOptions,
+): CharacterSpec {
   const keep = locks ?? EMPTY_LOCKS;
   const prev = base;
+  const allowHelmets = opts?.allowHelmets ?? true;
 
   const head = keep.head && prev ? {
     skin: prev.skin,
@@ -471,7 +489,7 @@ export function randomCharacter(locks?: PartLocks, base?: CharacterSpec): Charac
     hair: prev.hair,
     face: prev.face,
     helmet: prev.helmet,
-  } : randomHead(keep.head ? prev?.skin : undefined);
+  } : randomHead(keep.head ? prev?.skin : undefined, allowHelmets);
 
   // Eyes lock overrides face whether or not the head was kept.
   if (keep.eyes && prev?.face) {
@@ -524,9 +542,10 @@ export function rerollPart(
   spec: CharacterSpec,
   part: PartId,
   locks?: PartLocks,
+  opts?: RandomOptions,
 ): CharacterSpec {
   if (part === "head") {
-    const head = randomHead(spec.skin);
+    const head = randomHead(spec.skin, opts?.allowHelmets ?? true);
     // Eyes lock keeps face even when the head dice is pressed.
     if (locks?.eyes && spec.face) {
       head.face = spec.face;
