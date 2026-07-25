@@ -760,15 +760,21 @@ button.ghost {
   flex: 0 0 auto;
 }
 
-.part-eye-sliders {
+.part-eye-sliders,
+.part-head-sliders {
   margin: 0;
   padding: 0.12rem 0.3rem 0.18rem;
   border-top: 1px solid #2a3048;
   background: #0d0f18;
 }
 
-.part-eye-sliders.is-disabled {
+.part-eye-sliders.is-disabled,
+.part-head-sliders.is-disabled {
   opacity: 0.4;
+}
+
+.part-head-sliders {
+  grid-template-columns: 1fr;
 }
 
 .part-color-popover-swatches {

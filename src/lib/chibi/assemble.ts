@@ -18,6 +18,7 @@ import {
   generateWeapon,
 } from "./parts";
 import { legsYawForLead, resolveLeadSide, torsoYawForLead } from "./stance";
+import { LAYOUT } from "./units";
 
 /**
  * Assemble a full chibi from a declarative spec.
@@ -245,6 +246,7 @@ export function assembleCharacter(
   const replaceHead = helmetMode.mount === "replace";
   const showFace = (!replaceHead || helmetMode.showFace) && showEyes;
   const headScale = spec.head?.scale ?? 1;
+  const headYScale = spec.head?.yScale ?? 1;
   const headShape = spec.head?.shape;
 
   // Head, face, hair and helmet share one pivot so dynamic head rotation can
@@ -252,6 +254,9 @@ export function assembleCharacter(
   // about its own vertical axis). See headStick.ts / ChibiCharacter.
   const headPivot = new Group();
   headPivot.name = "headPivot";
+  // Stretch around the head centre so the neck attachment stays stable.
+  headPivot.scale.y = headYScale;
+  headPivot.position.y = LAYOUT.headCenterY * (1 - headYScale);
   root.add(headPivot);
 
   if (!replaceHead) {

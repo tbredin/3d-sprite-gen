@@ -1384,6 +1384,39 @@ export default function App() {
                         />
                       </div>
                     </div>
+                    {part === "head" ? (
+                      <div
+                        className={`light-grid part-head-sliders${locked ? " is-disabled" : ""}`}
+                      >
+                        <label className="light-slider">
+                          <span
+                            className="light-slider-label"
+                            title="Vertical head scale"
+                          >
+                            Height
+                          </span>
+                          <input
+                            type="range"
+                            min={0.75}
+                            max={2}
+                            step={0.05}
+                            value={spec.head?.yScale ?? 1}
+                            disabled={locked}
+                            onChange={(e) => {
+                              const yScale = Number(e.target.value);
+                              applyPartEdit((s) => ({
+                                ...s,
+                                head: { ...s.head, yScale },
+                              }));
+                            }}
+                            title="Vertical head scale"
+                          />
+                          <span className="slider-val">
+                            {(spec.head?.yScale ?? 1).toFixed(2)}
+                          </span>
+                        </label>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}

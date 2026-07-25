@@ -350,6 +350,7 @@ function randomHead(skinHint?: string, allowHelmets = true): HeadBits {
     head: {
       shape: pick(HEAD_SHAPES),
       scale: 0.94 + Math.random() * 0.08,
+      yScale: snap05(0.75 + Math.random() * 1.25),
     },
     hair,
     face: randomFace(),
