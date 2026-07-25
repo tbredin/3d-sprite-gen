@@ -182,6 +182,16 @@ export type CharacterSpec = {
     shape?: HeadShape;
     /** Overall head scale (hair stays world-sized). */
     scale?: number;
+    /**
+     * Uniform scale of the complete head assembly (default 1).
+     * Includes skull, face, hair, hats, and helmets. Pivots from the neck.
+     */
+    size?: number;
+    /**
+     * Extra vertical stretch on top of `size` (default 1).
+     * Also pivots from the neck.
+     */
+    yScale?: number;
   };
   hair?: {
     style: HairStyle;
@@ -211,6 +221,12 @@ export type CharacterSpec = {
      * Multiplies the art-directed baseline separation; independent of `scale`.
      */
     spacing?: number;
+    /**
+     * Vertical offset in face-pad height fractions (default 0).
+     * Positive raises the eye row; negative lowers it. Added to the
+     * art-directed baseline (`EYE_V_FRAC`).
+     */
+    y?: number;
   };
   torso: {
     style: TorsoStyle;

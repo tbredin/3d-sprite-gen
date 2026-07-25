@@ -65,11 +65,12 @@ import {
   randomCharacter,
   rerollPart,
   rerollPartColors,
-  applyBodyProfile as setChibiBodyProfile,
-  BODY_PROFILE_IDS,
-  BODY_PROFILES,
-  loadBodyProfile,
-  saveBodyProfile,
+  rerollEyeColor,
+  applyBodyScale as setChibiBodyScale,
+  BODY_SCALE_MIN,
+  BODY_SCALE_MAX,
+  loadBodyScale,
+  saveBodyScale,
   HEAD_SHAPES,
   HAIR_STYLES,
   HELMET_STYLES,
@@ -94,7 +95,7 @@ import {
   setWeaponType,
   setOffhandType,
   setLegPose,
-  type BodyProfileId,
+  isHeadReplacement,
   type CharacterSpec,
   type PartId,
   type PartLocks,
@@ -249,9 +250,7 @@ export default function App() {
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
   const [presetId, setPresetId] = useState<PresetId | "random">("mage");
-  const [bodyProfileId, setBodyProfileId] = useState<BodyProfileId>(() =>
-    loadBodyProfile(),
-  );
+  const [bodyScale, setBodyScale] = useState(() => loadBodyScale());
   const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
   const [specText, setSpecText] = useState(() =>
     JSON.stringify(getPreset("mage"), null, 2),
@@ -262,6 +261,8 @@ export default function App() {
   const [locks, setLocks] = useState<PartLocks>({ ...EMPTY_LOCKS });
   const [mirror, setMirror] = useState(false);
   const [showEyes, setShowEyes] = useState(true);
+  /** Session preference: closed helms in random rolls. Hats/crowns stay allowed. */
+  const [allowHelmets, setAllowHelmets] = useState(true);
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
   );
@@ -385,17 +386,17 @@ export default function App() {
     setCharKey((k) => k + 1);
   };
 
-  const onBodyProfileChange = (id: BodyProfileId) => {
-    setBodyProfileId(id);
-    setChibiBodyProfile(id);
-    saveBodyProfile(id);
+  const onBodyScaleChange = (scale: number) => {
+    setBodyScale(scale);
+    setChibiBodyScale(scale);
+    saveBodyScale(scale);
     setCharKey((k) => k + 1);
   };
 
   const applyRandom = () => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = randomCharacter(locks, prev);
+      const next = randomCharacter(locks, prev, { allowHelmets });
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -403,14 +404,14 @@ export default function App() {
     setCharKey((k) => k + 1);
   };
 
-  const toggleLock = (part: PartId) => {
+  const toggleLock = (part: PartId | "eyes") => {
     setLocks((prev) => ({ ...prev, [part]: !prev[part] }));
   };
 
   const applyRerollPart = (part: PartId) => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollPart(prev, part);
+      const next = rerollPart(prev, part, locks, { allowHelmets });
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -421,7 +422,18 @@ export default function App() {
   const applyRerollColors = (part: PartId) => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollPartColors(prev, part);
+      const next = rerollPartColors(prev, part, locks);
+      setSpecText(JSON.stringify(next, null, 2));
+      setSpecParseError(null);
+      return next;
+    });
+    setCharKey((k) => k + 1);
+  };
+
+  const applyRerollEyeColor = () => {
+    setPresetId("random");
+    setSpec((prev) => {
+      const next = rerollEyeColor(prev);
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -808,7 +820,7 @@ export default function App() {
                   title="Drag to rotate"
                 >
                   <BakeCanvas
-                    key={`${presetId}-${bodyProfileId}-${charKey}-${size}`}
+                    key={`${presetId}-${bodyScale}-${charKey}-${size}`}
                     size={size}
                     colors={palette.colors}
                     silhouetteOutlineHex={outlineColors.silhouette}
@@ -974,66 +986,69 @@ export default function App() {
             open={characterOpen}
             onToggle={() => setCharacterOpen((v) => !v)}
           >
-            <div className="char-picker">
-              <label className="field">
-                Body
-                <select
-                  value={bodyProfileId}
-                  onChange={(e) =>
-                    onBodyProfileChange(e.target.value as BodyProfileId)
-                  }
-                  title="Smaller torso/legs — hands & feet stay fixed for pixel legibility"
+            <div className="char-toolbar">
+              <div className="char-picker">
+                <label className="field">
+                  Preset
+                  <select
+                    value={presetId === "random" ? "" : presetId}
+                    onChange={(e) => applyPreset(e.target.value as PresetId)}
+                  >
+                    {presetId === "random" ? (
+                      <option value="" disabled>
+                        random
+                      </option>
+                    ) : null}
+                    {PRESET_IDS.map((id) => (
+                      <option key={id} value={id}>
+                        {PRESET_LABELS[id]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="field-matched"
+                  onClick={applyRandom}
+                  title="Random character"
+                  aria-label="Random character"
                 >
-                  {BODY_PROFILE_IDS.map((id) => (
-                    <option key={id} value={id}>
-                      {BODY_PROFILES[id].label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="field">
-                Preset
-                <select
-                  value={presetId === "random" ? "" : presetId}
-                  onChange={(e) => applyPreset(e.target.value as PresetId)}
-                >
-                  {presetId === "random" ? (
-                    <option value="" disabled>
-                      random
-                    </option>
-                  ) : null}
-                  {PRESET_IDS.map((id) => (
-                    <option key={id} value={id}>
-                      {PRESET_LABELS[id]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="field-matched"
-                onClick={applyRandom}
-                title="Random character"
-                aria-label="Random character"
-              >
-                🎲
-              </button>
-            </div>
+                  🎲
+                </button>
+              </div>
 
-            <div className="part-toggles">
-              <label className="part-chip">
-                <input
-                  type="checkbox"
-                  checked={mirror}
-                  onChange={() => setMirror((v) => !v)}
-                  title="Swap lead side (L↔R weapon / stance), same facing"
-                />
-                Mirror
-              </label>
+              <div className="part-toggles">
+                <label className="part-chip">
+                  <input
+                    type="checkbox"
+                    checked={mirror}
+                    onChange={() => setMirror((v) => !v)}
+                    title="Swap lead side (L↔R weapon / stance), same facing"
+                  />
+                  Mirror
+                </label>
+                <label className="part-chip">
+                  <input
+                    type="checkbox"
+                    checked={allowHelmets}
+                    onChange={() => {
+                      const next = !allowHelmets;
+                      setAllowHelmets(next);
+                      // Drop a closed helm immediately when turning off so the
+                      // live character matches the preference before the next roll.
+                      if (!next && isHeadReplacement(spec.helmet?.style)) {
+                        applyPartEdit((s) => setHelmetStyle(s, "none"));
+                      }
+                    }}
+                    title="Allow closed / face-covering helmets in random rolls. Hats, crowns, caps, and goggles stay available either way."
+                  />
+                  Helmets
+                </label>
+              </div>
             </div>
 
             <div className="part-grid">
-              <div className="part-block">
+              <div className={`part-block${locks.eyes ? " is-locked" : ""}`}>
                 <div className="part-row">
                   <span className="part-name">eyes</span>
                   <label className="part-lock">
@@ -1046,12 +1061,36 @@ export default function App() {
                     Show
                   </label>
                   <div className="part-actions">
+                    <button
+                      type="button"
+                      className="part-icon-btn"
+                      onClick={applyRerollEyeColor}
+                      disabled={!showEyes || locks.eyes}
+                      title={
+                        locks.eyes
+                          ? "Unlock to reroll eye colour"
+                          : "Reroll eye colour"
+                      }
+                      aria-label="Reroll eye colour"
+                    >
+                      🎲
+                    </button>
+                    <button
+                      type="button"
+                      className={`part-icon-btn${locks.eyes ? " is-locked" : ""}`}
+                      onClick={() => toggleLock("eyes")}
+                      title={locks.eyes ? "Unlock eyes" : "Lock eyes"}
+                      aria-label={locks.eyes ? "Unlock eyes" : "Lock eyes"}
+                      aria-pressed={locks.eyes}
+                    >
+                      {locks.eyes ? "🔒" : "🔓"}
+                    </button>
                     <PaletteColorButton
                       value={spec.face?.eyeColor ?? "#1a1c2c"}
                       paletteColors={palette?.colors ?? []}
                       title="Eye colour"
                       ariaLabel="Eye colour"
-                      disabled={!showEyes}
+                      disabled={!showEyes || locks.eyes}
                       onChange={(hex) =>
                         applyPartEdit((s) => ({
                           ...s,
@@ -1062,7 +1101,7 @@ export default function App() {
                   </div>
                 </div>
                 <div
-                  className={`light-grid part-eye-sliders${showEyes ? "" : " is-disabled"}`}
+                  className={`light-grid part-eye-sliders${showEyes && !locks.eyes ? "" : " is-disabled"}`}
                 >
                   <label className="light-slider">
                     <span
@@ -1077,7 +1116,7 @@ export default function App() {
                       max={1.55}
                       step={0.05}
                       value={spec.face?.spacing ?? 1}
-                      disabled={!showEyes}
+                      disabled={!showEyes || locks.eyes}
                       onChange={(e) => {
                         const spacing = Number(e.target.value);
                         applyPartEdit((s) => ({
@@ -1101,7 +1140,7 @@ export default function App() {
                       max={1.65}
                       step={0.05}
                       value={spec.face?.scale ?? 1}
-                      disabled={!showEyes}
+                      disabled={!showEyes || locks.eyes}
                       onChange={(e) => {
                         const scale = Number(e.target.value);
                         applyPartEdit((s) => ({
@@ -1113,6 +1152,33 @@ export default function App() {
                     />
                     <span className="slider-val">
                       {(spec.face?.scale ?? 1).toFixed(2)}
+                    </span>
+                  </label>
+                  <label className="light-slider">
+                    <span
+                      className="light-slider-label"
+                      title="Vertical eye position"
+                    >
+                      Y
+                    </span>
+                    <input
+                      type="range"
+                      min={-0.25}
+                      max={0.25}
+                      step={0.05}
+                      value={spec.face?.y ?? 0}
+                      disabled={!showEyes || locks.eyes}
+                      onChange={(e) => {
+                        const y = Number(e.target.value);
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, y },
+                        }));
+                      }}
+                      title="Vertical eye position"
+                    />
+                    <span className="slider-val">
+                      {(spec.face?.y ?? 0).toFixed(2)}
                     </span>
                   </label>
                 </div>
@@ -1152,7 +1218,13 @@ export default function App() {
                             <CompactSelect<HelmetStyle>
                               title="helmet"
                               value={spec.helmet?.style ?? "none"}
-                              options={HELMET_STYLES}
+                              options={
+                                allowHelmets
+                                  ? HELMET_STYLES
+                                  : HELMET_STYLES.filter(
+                                      (h) => h === "none" || !isHeadReplacement(h),
+                                    )
+                              }
                               disabled={locked}
                               onPick={(v) =>
                                 applyPartEdit((s) => setHelmetStyle(s, v))
@@ -1295,6 +1367,93 @@ export default function App() {
                         />
                       </div>
                     </div>
+                    {part === "head" ? (
+                      <div
+                        className={`light-grid part-head-sliders${locked ? " is-disabled" : ""}`}
+                      >
+                        <label className="light-slider">
+                          <span
+                            className="light-slider-label"
+                            title="Overall head size (pivots from neck)"
+                          >
+                            Size
+                          </span>
+                          <input
+                            type="range"
+                            min={0.5}
+                            max={2}
+                            step={0.05}
+                            value={spec.head?.size ?? 1}
+                            disabled={locked}
+                            onChange={(e) => {
+                              const size = Number(e.target.value);
+                              applyPartEdit((s) => ({
+                                ...s,
+                                head: { ...s.head, size },
+                              }));
+                            }}
+                            title="Overall head size"
+                          />
+                          <span className="slider-val">
+                            {(spec.head?.size ?? 1).toFixed(2)}
+                          </span>
+                        </label>
+                        <label className="light-slider">
+                          <span
+                            className="light-slider-label"
+                            title="Vertical head stretch (pivots from neck)"
+                          >
+                            Height
+                          </span>
+                          <input
+                            type="range"
+                            min={0.75}
+                            max={1.5}
+                            step={0.05}
+                            value={spec.head?.yScale ?? 1}
+                            disabled={locked}
+                            onChange={(e) => {
+                              const yScale = Number(e.target.value);
+                              applyPartEdit((s) => ({
+                                ...s,
+                                head: { ...s.head, yScale },
+                              }));
+                            }}
+                            title="Vertical head scale"
+                          />
+                          <span className="slider-val">
+                            {(spec.head?.yScale ?? 1).toFixed(2)}
+                          </span>
+                        </label>
+                      </div>
+                    ) : null}
+                    {part === "torso" ? (
+                      <div className="light-grid part-torso-sliders">
+                        <label className="light-slider">
+                          <span
+                            className="light-slider-label"
+                            title="Torso/legs scale from the neck — head, hands & feet stay fixed"
+                          >
+                            Size
+                          </span>
+                          <input
+                            type="range"
+                            min={BODY_SCALE_MIN}
+                            max={BODY_SCALE_MAX}
+                            step={0.05}
+                            value={bodyScale}
+                            onChange={(e) =>
+                              onBodyScaleChange(Number(e.target.value))
+                            }
+                            title="Body scale"
+                            aria-label="Body scale"
+                          />
+                          <span className="slider-val">
+                            {bodyScale.toFixed(2)}
+                          </span>
+                        </label>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -1420,21 +1579,23 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <p className="light-subhead">Directional rims</p>
-            <div className="light-colors">
-              {RIM_COLOR_FIELDS.map((field) => (
-                <div key={field.key} className="light-color-field">
-                  <span className="light-slider-label">{field.label}</span>
-                  <FreeformColorButton
-                    value={rimLights[field.key]}
-                    onChange={(hex) => patchRimLights({ [field.key]: hex })}
-                    title={`${field.label} colour`}
-                    ariaLabel={`${field.label} colour`}
-                  />
-                </div>
-              ))}
+            <div className="light-rim-head">
+              <p className="light-subhead">Directional rims</p>
+              <div className="light-colors">
+                {RIM_COLOR_FIELDS.map((field) => (
+                  <div key={field.key} className="light-color-field">
+                    <span className="light-slider-label">{field.label}</span>
+                    <FreeformColorButton
+                      value={rimLights[field.key]}
+                      onChange={(hex) => patchRimLights({ [field.key]: hex })}
+                      title={`${field.label} colour`}
+                      ariaLabel={`${field.label} colour`}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="light-grid">
+            <div className="light-grid light-rim-grid">
               {RIM_LIGHT_ROWS.map((row) => (
                 <label
                   key={row.key}
@@ -1630,7 +1791,7 @@ export default function App() {
                 </button>
               </div>
             </div>
-            <div className="part-grid">
+            <div className="outline-pass-grid">
               <div className="part-row">
                 <label className="part-lock">
                   <input
@@ -1671,6 +1832,8 @@ export default function App() {
                   />
                 </div>
               </div>
+            </div>
+            <div className="part-grid">
               <div className="part-row">
                 <label className="part-lock">
                   <input

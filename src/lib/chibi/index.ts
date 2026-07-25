@@ -119,8 +119,8 @@ export {
   isHeadReplacement,
 } from "./helmetMode";
 export type { HelmetMount, HelmetMode } from "./helmetMode";
-export { randomCharacter, rerollPart, rerollPartColors, PART_IDS, EMPTY_LOCKS } from "./random";
-export type { PartId, PartLocks } from "./random";
+export { randomCharacter, rerollPart, rerollPartColors, rerollEyeColor, PART_IDS, EMPTY_LOCKS } from "./random";
+export type { PartId, PartLocks, RandomOptions } from "./random";
 export { ARM_POSES, COMBAT_ARM_POSES, armJointsForPose } from "./armPoses";
 export { LEG_POSES, COMBAT_LEG_POSES, legJointsForPose } from "./legPoses";
 export {
@@ -175,10 +175,17 @@ export {
   setLegPose,
 } from "./random";
 export {
+  applyBodyScale,
   applyBodyProfile,
+  BODY_SCALE_MIN,
+  BODY_SCALE_MAX,
+  BODY_SCALE_DEFAULT,
   BODY_PROFILE_IDS,
   BODY_PROFILES,
+  loadBodyScale,
+  saveBodyScale,
   loadBodyProfile,
   saveBodyProfile,
+  clampBodyScale,
   type BodyProfileId,
 } from "./units";

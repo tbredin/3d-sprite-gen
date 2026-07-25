@@ -31,6 +31,8 @@ export {
   FACE_READABILITY,
   generateFace,
   generateHead,
+  generateNeck,
+  neckAttachY,
 } from "./heads";
 export type { FaceLayout } from "./heads";
 

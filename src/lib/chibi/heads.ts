@@ -275,6 +275,8 @@ function faceEyeAnchor(opts: {
   side: -1 | 1;
   halfSepWorld: number;
   eyeH: number;
+  /** Added to `EYE_V_FRAC` (face-pad height fractions). */
+  yOffset?: number;
 }): { x: number; y: number; z: number } {
   const skin = HEAD_SKIN_BY_SHAPE[opts.shape];
   const r = CHIBI.skullR * opts.headScale;
@@ -287,7 +289,7 @@ function faceEyeAnchor(opts: {
     faceAx * EYE_SEP_FACE_FRAC,
   );
   const x = opts.side * halfSep;
-  const y = faceCy + faceAy * EYE_V_FRAC;
+  const y = faceCy + faceAy * (EYE_V_FRAC + (opts.yOffset ?? 0));
 
   let bestZ = -Infinity;
   let bestN = { x: 0, y: 0, z: 1 };
@@ -318,16 +320,48 @@ function faceEyeAnchor(opts: {
   };
 }
 
-function addNeck(g: Group, mat: Material, r: number) {
+/**
+ * World-Y of the head↔torso joint. Head size / height scales pivot here so
+ * the skull grows up from the collar instead of floating about its centre.
+ */
+export function neckAttachY(): number {
+  return LAYOUT.shoulderY + 0.1;
+}
+
+/**
+ * Skin neck stump between shoulders and jaw — lives outside `headPivot` so
+ * head size/height scales don't squash it. Always present (even under closed
+ * helms) so the head never floats above the torso.
+ */
+export function generateNeck(skin: string): Group {
+  const g = new Group();
+  g.name = "neck";
+  const mat = toon(skin);
+  const attach = neckAttachY();
+  const bottom = LAYOUT.shoulderY + 0.01;
+  const top = attach + 0.06;
+  const h = Math.max(0.16, top - bottom);
+  const mid = bottom + h * 0.5;
+  const rBot = CHIBI.skullR * 0.42;
+  const rTop = CHIBI.skullR * 0.3;
+
+  // Soft column — slightly wider at the collar, tapering into the jaw.
+  const column = new Mesh(new CylinderGeometry(rTop, rBot, h, 10), mat);
+  column.position.set(0, mid, 0.02);
+  g.add(column);
+
+  // Collar bulge so the join into the shoulders reads after palette lock.
   g.add(
     mesh(
-      new CylinderGeometry(r * 0.3, r * 0.4, 0.14, 10),
+      new SphereGeometry(rBot * 1.05, 10, 8),
       mat,
       0,
-      LAYOUT.shoulderY + 0.1,
+      bottom + rBot * 0.35,
       0.02,
     ),
   );
+
+  return g;
 }
 
 function tipFace(meshObj: Mesh) {
@@ -427,7 +461,6 @@ function buildLozenge(
       r * p.chinZ,
     ),
   );
-  addNeck(g, mat, r);
 }
 
 /** Locked skeleton — classic↔slim midpoint. */
@@ -747,6 +780,8 @@ export function generateFace(opts: {
   scale?: number;
   /** Multiplier on baseline eye separation (default 1). */
   spacing?: number;
+  /** Vertical offset in face-pad height fractions (default 0). */
+  y?: number;
   headScale?: number;
   shape?: HeadShape;
 }): Group {
@@ -754,6 +789,7 @@ export function generateFace(opts: {
   g.name = "face";
   const faceScale = opts.scale ?? 1;
   const spacing = opts.spacing ?? 1;
+  const yOffset = opts.y ?? 0;
   const headScale = opts.headScale ?? 1;
   const shape = opts.shape ?? DEFAULT_HEAD_SHAPE;
   const baseEyeW = 0.33 * (2 / 5);
@@ -773,6 +809,7 @@ export function generateFace(opts: {
       side,
       halfSepWorld: halfSep,
       eyeH,
+      yOffset,
     });
     const eye = new Mesh(
       new PlaneGeometry(eyeW, eyeH),
