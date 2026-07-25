@@ -530,25 +530,25 @@ button.ghost {
 .light-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.12rem 0.4rem;
+  gap: 0.08rem 0.35rem;
 }
 
 .light-hint {
-  margin: 0.05rem 0 0.2rem;
+  margin: 0.05rem 0 0.12rem;
   font-size: 0.58rem;
   line-height: 1.25;
 }
 
 .light-fill-grid {
   grid-template-columns: 1fr 1fr;
-  margin-bottom: 0.25rem;
-  padding-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
+  padding-bottom: 0.12rem;
   border-bottom: 1px solid #3a415c;
 }
 
 .panel .light-fill-row {
-  grid-template-columns: 2rem minmax(0, 1fr) 1.7rem auto;
-  gap: 0.12rem;
+  grid-template-columns: 1.7rem minmax(0, 1fr) 1.55rem auto;
+  gap: 0.1rem;
   min-width: 0;
 }
 
@@ -556,27 +556,37 @@ button.ghost {
   min-width: 0;
 }
 
+.light-rim-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.25rem 0.45rem;
+  align-items: center;
+  margin: 0.1rem 0 0.12rem;
+}
+
 .light-subhead {
-  margin: 0.15rem 0 0.3rem;
+  margin: 0;
   font-size: 0.62rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 .light-colors {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.25rem 0.4rem;
-  margin-bottom: 0.35rem;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid #3a415c;
+  gap: 0.15rem 0.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  justify-items: end;
 }
 
 .light-color-field {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
   margin: 0;
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -585,7 +595,11 @@ button.ghost {
 }
 
 .light-color-field .light-slider-label {
-  flex: 0 0 2.5rem;
+  flex: 0 0 auto;
+}
+
+.light-rim-grid {
+  margin: 0;
 }
 
 .light-profiles {
@@ -644,10 +658,10 @@ button.ghost {
 
 .panel .light-slider {
   display: grid;
-  grid-template-columns: 2.5rem 1fr 1.85rem;
+  grid-template-columns: 2.1rem 1fr 1.7rem;
   grid-template-rows: auto;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.12rem;
   margin: 0;
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -689,6 +703,19 @@ button.ghost {
 
 @media (max-width: 520px) {
   .light-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .light-rim-head {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .light-colors {
+    justify-items: start;
+  }
+
+  .outline-pass-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1098,6 +1125,27 @@ button.color-control-swatch.swatch-btn:disabled {
 /* Outline toggles reuse part-row; checkbox label fills the left. */
 .part-row > label.part-lock {
   flex: 1 1 auto;
+}
+
+.outline-pass-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.12rem 0.35rem;
+  margin: 0 0 0.12rem;
+}
+
+.outline-pass-grid .part-row {
+  min-width: 0;
+  border: 1px solid #3a415c;
+  background: #12141f;
+}
+
+.outline-pass-grid .part-row > label.part-lock {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .panel label.part-lock {

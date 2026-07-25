@@ -1579,21 +1579,23 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <p className="light-subhead">Directional rims</p>
-            <div className="light-colors">
-              {RIM_COLOR_FIELDS.map((field) => (
-                <div key={field.key} className="light-color-field">
-                  <span className="light-slider-label">{field.label}</span>
-                  <FreeformColorButton
-                    value={rimLights[field.key]}
-                    onChange={(hex) => patchRimLights({ [field.key]: hex })}
-                    title={`${field.label} colour`}
-                    ariaLabel={`${field.label} colour`}
-                  />
-                </div>
-              ))}
+            <div className="light-rim-head">
+              <p className="light-subhead">Directional rims</p>
+              <div className="light-colors">
+                {RIM_COLOR_FIELDS.map((field) => (
+                  <div key={field.key} className="light-color-field">
+                    <span className="light-slider-label">{field.label}</span>
+                    <FreeformColorButton
+                      value={rimLights[field.key]}
+                      onChange={(hex) => patchRimLights({ [field.key]: hex })}
+                      title={`${field.label} colour`}
+                      ariaLabel={`${field.label} colour`}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="light-grid">
+            <div className="light-grid light-rim-grid">
               {RIM_LIGHT_ROWS.map((row) => (
                 <label
                   key={row.key}
@@ -1789,7 +1791,7 @@ export default function App() {
                 </button>
               </div>
             </div>
-            <div className="part-grid">
+            <div className="outline-pass-grid">
               <div className="part-row">
                 <label className="part-lock">
                   <input
@@ -1830,6 +1832,8 @@ export default function App() {
                   />
                 </div>
               </div>
+            </div>
+            <div className="part-grid">
               <div className="part-row">
                 <label className="part-lock">
                   <input
