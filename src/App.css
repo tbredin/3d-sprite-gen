@@ -698,12 +698,21 @@ button.ghost {
   pointer-events: none;
 }
 
-.char-picker {
+.char-toolbar {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.35rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem 0.45rem;
   align-items: end;
   margin: 0 0 0.35rem;
+}
+
+.char-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.35rem;
+  align-items: end;
+  min-width: 0;
+  margin: 0;
 }
 
 .char-picker .field {
@@ -720,9 +729,11 @@ button.ghost {
 
 .part-toggles {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  margin: 0 0 0.35rem;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 0.2rem;
+  margin: 0;
+  align-self: center;
 }
 
 .panel label.part-chip {

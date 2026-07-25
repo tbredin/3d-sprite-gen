@@ -986,63 +986,65 @@ export default function App() {
             open={characterOpen}
             onToggle={() => setCharacterOpen((v) => !v)}
           >
-            <div className="char-picker">
-              <label className="field">
-                Preset
-                <select
-                  value={presetId === "random" ? "" : presetId}
-                  onChange={(e) => applyPreset(e.target.value as PresetId)}
+            <div className="char-toolbar">
+              <div className="char-picker">
+                <label className="field">
+                  Preset
+                  <select
+                    value={presetId === "random" ? "" : presetId}
+                    onChange={(e) => applyPreset(e.target.value as PresetId)}
+                  >
+                    {presetId === "random" ? (
+                      <option value="" disabled>
+                        random
+                      </option>
+                    ) : null}
+                    {PRESET_IDS.map((id) => (
+                      <option key={id} value={id}>
+                        {PRESET_LABELS[id]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  className="field-matched"
+                  onClick={applyRandom}
+                  title="Random character"
+                  aria-label="Random character"
                 >
-                  {presetId === "random" ? (
-                    <option value="" disabled>
-                      random
-                    </option>
-                  ) : null}
-                  {PRESET_IDS.map((id) => (
-                    <option key={id} value={id}>
-                      {PRESET_LABELS[id]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button
-                type="button"
-                className="field-matched"
-                onClick={applyRandom}
-                title="Random character"
-                aria-label="Random character"
-              >
-                🎲
-              </button>
-            </div>
+                  🎲
+                </button>
+              </div>
 
-            <div className="part-toggles">
-              <label className="part-chip">
-                <input
-                  type="checkbox"
-                  checked={mirror}
-                  onChange={() => setMirror((v) => !v)}
-                  title="Swap lead side (L↔R weapon / stance), same facing"
-                />
-                Mirror
-              </label>
-              <label className="part-chip">
-                <input
-                  type="checkbox"
-                  checked={allowHelmets}
-                  onChange={() => {
-                    const next = !allowHelmets;
-                    setAllowHelmets(next);
-                    // Drop a closed helm immediately when turning off so the
-                    // live character matches the preference before the next roll.
-                    if (!next && isHeadReplacement(spec.helmet?.style)) {
-                      applyPartEdit((s) => setHelmetStyle(s, "none"));
-                    }
-                  }}
-                  title="Allow closed / face-covering helmets in random rolls. Hats, crowns, caps, and goggles stay available either way."
-                />
-                Helmets
-              </label>
+              <div className="part-toggles">
+                <label className="part-chip">
+                  <input
+                    type="checkbox"
+                    checked={mirror}
+                    onChange={() => setMirror((v) => !v)}
+                    title="Swap lead side (L↔R weapon / stance), same facing"
+                  />
+                  Mirror
+                </label>
+                <label className="part-chip">
+                  <input
+                    type="checkbox"
+                    checked={allowHelmets}
+                    onChange={() => {
+                      const next = !allowHelmets;
+                      setAllowHelmets(next);
+                      // Drop a closed helm immediately when turning off so the
+                      // live character matches the preference before the next roll.
+                      if (!next && isHeadReplacement(spec.helmet?.style)) {
+                        applyPartEdit((s) => setHelmetStyle(s, "none"));
+                      }
+                    }}
+                    title="Allow closed / face-covering helmets in random rolls. Hats, crowns, caps, and goggles stay available either way."
+                  />
+                  Helmets
+                </label>
+              </div>
             </div>
 
             <div className="part-grid">
