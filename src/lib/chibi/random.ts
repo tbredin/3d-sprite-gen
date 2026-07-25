@@ -32,6 +32,69 @@ export const EMPTY_LOCKS: PartLocks = {
   eyes: false,
 };
 
+/**
+ * Fine-grained locks — one per dropdown on the part rows. A field survives a
+ * roll when its own lock is set or when its parent part is locked.
+ *
+ * `offhandAngle` is UI-only: the variant lives in module state on `assemble`,
+ * not in the spec, so no roll can move it. The lock exists so the dropdown
+ * reads the same as its neighbours.
+ */
+export type FieldLockId =
+  | "headShape"
+  | "hairStyle"
+  | "helmetStyle"
+  | "torsoStyle"
+  | "hem"
+  | "cape"
+  | "backLoadout"
+  | "armPose"
+  | "weapon"
+  | "offhand"
+  | "offhandAngle"
+  | "legPose";
+
+export const FIELD_LOCK_PART: Record<FieldLockId, PartId> = {
+  headShape: "head",
+  hairStyle: "head",
+  helmetStyle: "head",
+  torsoStyle: "torso",
+  hem: "torso",
+  cape: "torso",
+  backLoadout: "torso",
+  armPose: "arms",
+  weapon: "arms",
+  offhand: "arms",
+  offhandAngle: "arms",
+  legPose: "legs",
+};
+
+export type FieldLocks = Record<FieldLockId, boolean>;
+
+export const EMPTY_FIELD_LOCKS: FieldLocks = {
+  headShape: false,
+  hairStyle: false,
+  helmetStyle: false,
+  torsoStyle: false,
+  hem: false,
+  cape: false,
+  backLoadout: false,
+  armPose: false,
+  weapon: false,
+  offhand: false,
+  offhandAngle: false,
+  legPose: false,
+};
+
+/** A field is pinned by its own lock or by the lock on its parent part. */
+export function isFieldLocked(
+  field: FieldLockId,
+  locks?: PartLocks,
+  fieldLocks?: FieldLocks,
+): boolean {
+  return Boolean(fieldLocks?.[field] || locks?.[FIELD_LOCK_PART[field]]);
+}
+
 /** Weighted toward readable silhouette styles — bald only under helmets. */
 const HAIR: HairStyle[] = [
   "anime",
@@ -461,6 +524,99 @@ function randomLegs(poseHint?: LegPose): LegsBits {
 }
 
 /**
+ * Put field-locked values back after a roll swapped whole part bundles.
+ *
+ * Runs last so soft coupling still shapes the *unlocked* fields, then the
+ * pinned ones win. `rolled` reports which parts the caller actually re-rolled
+ * — without it a torso reroll would happily "restore" arms that never moved.
+ */
+function applyFieldLocks(
+  next: CharacterSpec,
+  prev: CharacterSpec | undefined,
+  pinned: (field: FieldLockId) => boolean,
+  rolled: (part: PartId) => boolean,
+): CharacterSpec {
+  if (!prev) return next;
+
+  if (rolled("head")) {
+    if (pinned("headShape") && prev.head?.shape) {
+      next.head = { ...next.head, shape: prev.head.shape };
+    }
+    if (pinned("helmetStyle")) {
+      next.helmet = prev.helmet ? { ...prev.helmet } : undefined;
+    }
+    if (pinned("hairStyle") && prev.hair) {
+      next.hair = { ...(next.hair ?? prev.hair), style: prev.hair.style };
+    } else if (pinned("helmetStyle") && next.hair) {
+      // A pinned helm can contradict the rolled hair: replacement helms bald
+      // the skull, overlays need something under them.
+      if (isHeadReplacement(next.helmet?.style ?? "none")) {
+        next.hair = { ...next.hair, style: "bald" };
+      } else if (next.hair.style === "bald") {
+        next.hair = { ...next.hair, style: pick(HAIR) };
+      }
+    }
+  }
+
+  if (rolled("torso")) {
+    if (pinned("torsoStyle")) {
+      next.torso = { ...next.torso, style: prev.torso.style };
+    }
+    if (next.accessories) {
+      if (pinned("hem")) {
+        next.accessories = {
+          ...next.accessories,
+          hem: prev.accessories?.hem ?? "none",
+        };
+      }
+      if (pinned("cape")) {
+        next.accessories = {
+          ...next.accessories,
+          cape: prev.accessories?.cape ?? false,
+        };
+      }
+      if (pinned("backLoadout")) {
+        next.accessories = {
+          ...next.accessories,
+          backLoadout: prev.accessories?.backLoadout ?? "none",
+        };
+      }
+    }
+  }
+
+  if (rolled("arms")) {
+    if (pinned("weapon")) {
+      const lead = next.leadSide ?? DEFAULT_LEAD;
+      next.weapon = prev.weapon
+        ? {
+            ...prev.weapon,
+            hand: handForWeapon(prev.weapon.type, lead),
+          }
+        : undefined;
+      // The pose was drawn for the weapon we just threw away — redraw it from
+      // the pinned one so the stance language still matches the prop.
+      if (prev.weapon && !pinned("armPose")) {
+        next.arms = { ...next.arms, pose: poseForWeapon(prev.weapon.type).arm };
+      }
+    }
+    if (pinned("armPose")) {
+      next.arms = { ...next.arms, pose: prev.arms.pose };
+    }
+    if (pinned("offhand")) {
+      next.offhand = prev.offhand ? { ...prev.offhand } : undefined;
+    }
+  }
+
+  // Arms drive the leg pose (ipsilateral stance), so an arms roll moves legs
+  // too — a pinned leg pose has to survive both.
+  if ((rolled("legs") || rolled("arms")) && pinned("legPose")) {
+    next.legs = { ...next.legs, pose: prev.legs.pose };
+  }
+
+  return next;
+}
+
+/**
  * Build a random CharacterSpec biased toward combat-ready JRPG sprites.
  * Keeps the silhouette fighting stance (torso ¾, ipsilateral lead) — pose
  * names only vary exaggeration inside that language.
@@ -480,6 +636,7 @@ export function randomCharacter(
   locks?: PartLocks,
   base?: CharacterSpec,
   opts?: RandomOptions,
+  fieldLocks?: FieldLocks,
 ): CharacterSpec {
   const keep = locks ?? EMPTY_LOCKS;
   const prev = base;
@@ -528,15 +685,20 @@ export function randomCharacter(
     ? { legs: prev.legs }
     : randomLegs(!keep.arms ? arms.legPose : undefined);
 
-  return {
-    ...head,
-    ...torso,
-    leadSide: arms.leadSide,
-    arms: arms.arms,
-    weapon: arms.weapon,
-    offhand: arms.offhand,
-    ...legs,
-  };
+  return applyFieldLocks(
+    {
+      ...head,
+      ...torso,
+      leadSide: arms.leadSide,
+      arms: arms.arms,
+      weapon: arms.weapon,
+      offhand: arms.offhand,
+      ...legs,
+    },
+    prev,
+    (field) => isFieldLocked(field, keep, fieldLocks),
+    (part) => !keep[part],
+  );
 }
 
 /** Reroll one part (style + colors), keeping the rest of the spec. */
@@ -545,43 +707,62 @@ export function rerollPart(
   part: PartId,
   locks?: PartLocks,
   opts?: RandomOptions,
+  fieldLocks?: FieldLocks,
 ): CharacterSpec {
+  const pinned = (field: FieldLockId) => isFieldLocked(field, locks, fieldLocks);
+  const rolled = (p: PartId) => p === part;
+
   if (part === "head") {
     const head = randomHead(spec.skin, opts?.allowHelmets ?? true);
     // Eyes lock keeps face even when the head dice is pressed.
     if (locks?.eyes && spec.face) {
       head.face = spec.face;
     }
-    return { ...spec, ...head };
+    return applyFieldLocks({ ...spec, ...head }, spec, pinned, rolled);
   }
   if (part === "torso") {
     const torso = randomTorso(spec.helmet?.style);
-    return {
-      ...spec,
-      ...torso,
-      arms: {
-        ...spec.arms,
-        sleeveColor: torso.torso.color,
+    return applyFieldLocks(
+      {
+        ...spec,
+        ...torso,
+        arms: {
+          ...spec.arms,
+          sleeveColor: torso.torso.color,
+        },
       },
-    };
+      spec,
+      pinned,
+      rolled,
+    );
   }
   if (part === "arms") {
     // Keep leadSide so ipsilateral feet stay matched when only arms reroll.
     const next = randomArms(spec.skin, spec.torso.color, spec.leadSide ?? DEFAULT_LEAD);
-    return {
-      ...spec,
-      leadSide: next.leadSide,
-      arms: next.arms,
-      weapon: next.weapon,
-      offhand: next.offhand,
-      legs: { ...spec.legs, pose: next.legPose },
-    };
+    return applyFieldLocks(
+      {
+        ...spec,
+        leadSide: next.leadSide,
+        arms: next.arms,
+        weapon: next.weapon,
+        offhand: next.offhand,
+        legs: { ...spec.legs, pose: next.legPose },
+      },
+      spec,
+      pinned,
+      rolled,
+    );
   }
   // Legs-only: keep leadSide, pick a stance variant that still reads.
-  return {
-    ...spec,
-    ...randomLegs(pick(COMBAT_LEG_POSES)),
-  };
+  return applyFieldLocks(
+    {
+      ...spec,
+      ...randomLegs(pick(COMBAT_LEG_POSES)),
+    },
+    spec,
+    pinned,
+    rolled,
+  );
 }
 
 /** Keep geometry/styles; only shuffle colors owned by that part. */

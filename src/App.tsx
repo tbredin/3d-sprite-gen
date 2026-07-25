@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import {
   BakeCanvas,
   saveSprite,
@@ -58,6 +64,8 @@ import {
 } from "./lib/facing";
 import {
   EMPTY_LOCKS,
+  EMPTY_FIELD_LOCKS,
+  FIELD_LOCK_PART,
   getPreset,
   PART_IDS,
   PRESET_IDS,
@@ -99,6 +107,8 @@ import {
   type CharacterSpec,
   type PartId,
   type PartLocks,
+  type FieldLockId,
+  type FieldLocks,
   type PresetId,
   type HeadShape,
   type HairStyle,
@@ -239,6 +249,41 @@ function CompactSelect<T extends string>({
   );
 }
 
+/**
+ * Wraps one part-row dropdown with its own 🔒. A pinned field keeps its value
+ * through Play random and the part 🎲; the section lock still pins everything.
+ */
+function FieldLockGroup({
+  field,
+  label,
+  locked,
+  onToggle,
+  children,
+}: {
+  field: FieldLockId;
+  label: string;
+  locked: boolean;
+  onToggle: (field: FieldLockId) => void;
+  children: ReactNode;
+}) {
+  const action = locked ? `Unlock ${label}` : `Lock ${label}`;
+  return (
+    <div className={`part-field${locked ? " is-locked" : ""}`}>
+      {children}
+      <button
+        type="button"
+        className={`part-icon-btn part-field-lock${locked ? " is-locked" : ""}`}
+        onClick={() => onToggle(field)}
+        title={action}
+        aria-label={action}
+        aria-pressed={locked}
+      >
+        {locked ? "🔒" : "🔓"}
+      </button>
+    </div>
+  );
+}
+
 export default function App() {
   const [facingPersist] = useState(() => loadFacingPersist());
   const [facing, setFacing] = useState<FacingId>(facingPersist.facing);
@@ -259,6 +304,9 @@ export default function App() {
   const specFileRef = useRef<HTMLInputElement>(null);
   const [charKey, setCharKey] = useState(0);
   const [locks, setLocks] = useState<PartLocks>({ ...EMPTY_LOCKS });
+  const [fieldLocks, setFieldLocks] = useState<FieldLocks>({
+    ...EMPTY_FIELD_LOCKS,
+  });
   const [mirror, setMirror] = useState(false);
   const [showEyes, setShowEyes] = useState(true);
   /** Session preference: closed helms in random rolls. Hats/crowns stay allowed. */
@@ -396,7 +444,7 @@ export default function App() {
   const applyRandom = () => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = randomCharacter(locks, prev, { allowHelmets });
+      const next = randomCharacter(locks, prev, { allowHelmets }, fieldLocks);
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -408,10 +456,18 @@ export default function App() {
     setLocks((prev) => ({ ...prev, [part]: !prev[part] }));
   };
 
+  const toggleFieldLock = (field: FieldLockId) => {
+    setFieldLocks((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  /** Effective lock for one dropdown: its own pin or its section's. */
+  const fieldPinned = (field: FieldLockId) =>
+    fieldLocks[field] || locks[FIELD_LOCK_PART[field]];
+
   const applyRerollPart = (part: PartId) => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollPart(prev, part, locks, { allowHelmets });
+      const next = rerollPart(prev, part, locks, { allowHelmets }, fieldLocks);
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -1197,139 +1253,224 @@ export default function App() {
                       <div className="part-inline-controls">
                         {part === "head" ? (
                           <>
-                            <CompactSelect<HeadShape>
-                              title="shape"
-                              value={spec.head?.shape ?? "lozenge"}
-                              options={HEAD_SHAPES}
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setHeadShape(s, v))
-                              }
-                            />
-                            <CompactSelect<HairStyle>
-                              title="hair"
-                              value={spec.hair?.style ?? "bald"}
-                              options={HAIR_STYLES}
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setHairStyle(s, v))
-                              }
-                            />
-                            <CompactSelect<HelmetStyle>
-                              title="helmet"
-                              value={spec.helmet?.style ?? "none"}
-                              options={
-                                allowHelmets
-                                  ? HELMET_STYLES
-                                  : HELMET_STYLES.filter(
-                                      (h) => h === "none" || !isHeadReplacement(h),
-                                    )
-                              }
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setHelmetStyle(s, v))
-                              }
-                            />
+                            <FieldLockGroup
+                              field="headShape"
+                              label="head shape"
+                              locked={fieldLocks.headShape}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<HeadShape>
+                                title="shape"
+                                value={spec.head?.shape ?? "lozenge"}
+                                options={HEAD_SHAPES}
+                                disabled={fieldPinned("headShape")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setHeadShape(s, v))
+                                }
+                              />
+                            </FieldLockGroup>
+                            <FieldLockGroup
+                              field="hairStyle"
+                              label="hair"
+                              locked={fieldLocks.hairStyle}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<HairStyle>
+                                title="hair"
+                                value={spec.hair?.style ?? "bald"}
+                                options={HAIR_STYLES}
+                                disabled={fieldPinned("hairStyle")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setHairStyle(s, v))
+                                }
+                              />
+                            </FieldLockGroup>
+                            <FieldLockGroup
+                              field="helmetStyle"
+                              label="helmet"
+                              locked={fieldLocks.helmetStyle}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<HelmetStyle>
+                                title="helmet"
+                                value={spec.helmet?.style ?? "none"}
+                                options={
+                                  allowHelmets
+                                    ? HELMET_STYLES
+                                    : HELMET_STYLES.filter(
+                                        (h) =>
+                                          h === "none" || !isHeadReplacement(h),
+                                      )
+                                }
+                                disabled={fieldPinned("helmetStyle")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setHelmetStyle(s, v))
+                                }
+                              />
+                            </FieldLockGroup>
                           </>
                         ) : null}
                         {part === "torso" ? (
                           <>
-                            <CompactSelect<TorsoStyle>
-                              title="style"
-                              value={spec.torso.style}
-                              options={TORSO_STYLES}
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setTorsoStyle(s, v))
-                              }
-                            />
-                            <CompactSelect<HemStyle>
-                              title="hem"
-                              value={spec.accessories?.hem ?? "none"}
-                              options={HEM_STYLES}
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setHemStyle(s, v))
-                              }
-                            />
-                            <CompactSelect<"off" | "on">
-                              title="cape"
-                              value={spec.accessories?.cape ? "on" : "off"}
-                              options={["off", "on"]}
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setCape(s, v === "on"))
-                              }
-                            />
-                            <CompactSelect<BackLoadout>
-                              title="back"
-                              value={spec.accessories?.backLoadout ?? "none"}
-                              options={BACK_LOADOUTS}
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setBackLoadout(s, v))
-                              }
-                            />
+                            <FieldLockGroup
+                              field="torsoStyle"
+                              label="torso style"
+                              locked={fieldLocks.torsoStyle}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<TorsoStyle>
+                                title="style"
+                                value={spec.torso.style}
+                                options={TORSO_STYLES}
+                                disabled={fieldPinned("torsoStyle")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setTorsoStyle(s, v))
+                                }
+                              />
+                            </FieldLockGroup>
+                            <FieldLockGroup
+                              field="hem"
+                              label="hem"
+                              locked={fieldLocks.hem}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<HemStyle>
+                                title="hem"
+                                value={spec.accessories?.hem ?? "none"}
+                                options={HEM_STYLES}
+                                disabled={fieldPinned("hem")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setHemStyle(s, v))
+                                }
+                              />
+                            </FieldLockGroup>
+                            <FieldLockGroup
+                              field="cape"
+                              label="cape"
+                              locked={fieldLocks.cape}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<"off" | "on">
+                                title="cape"
+                                value={spec.accessories?.cape ? "on" : "off"}
+                                options={["off", "on"]}
+                                disabled={fieldPinned("cape")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setCape(s, v === "on"))
+                                }
+                              />
+                            </FieldLockGroup>
+                            <FieldLockGroup
+                              field="backLoadout"
+                              label="back loadout"
+                              locked={fieldLocks.backLoadout}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<BackLoadout>
+                                title="back"
+                                value={spec.accessories?.backLoadout ?? "none"}
+                                options={BACK_LOADOUTS}
+                                disabled={fieldPinned("backLoadout")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setBackLoadout(s, v))
+                                }
+                              />
+                            </FieldLockGroup>
                           </>
                         ) : null}
                         {part === "arms" ? (
                           <>
-                            <CompactSelect<ArmPose>
-                              title="pose"
-                              value={spec.arms.pose}
-                              options={ARM_POSES}
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setArmPose(s, v))
-                              }
-                            />
-                            <CompactSelect<WeaponType>
-                              title="weapon"
-                              value={spec.weapon?.type ?? "none"}
-                              options={WEAPON_TYPES}
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setWeaponType(s, v))
-                              }
-                            />
-                            <CompactSelect<WeaponType>
-                              title="offhand"
-                              value={spec.offhand?.type ?? "none"}
-                              options={OFFHAND_TYPES}
-                              disabled={locked}
-                              onPick={(v) =>
-                                applyPartEdit((s) => setOffhandType(s, v))
-                              }
-                            />
+                            <FieldLockGroup
+                              field="armPose"
+                              label="arm pose"
+                              locked={fieldLocks.armPose}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<ArmPose>
+                                title="pose"
+                                value={spec.arms.pose}
+                                options={ARM_POSES}
+                                disabled={fieldPinned("armPose")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setArmPose(s, v))
+                                }
+                              />
+                            </FieldLockGroup>
+                            <FieldLockGroup
+                              field="weapon"
+                              label="weapon"
+                              locked={fieldLocks.weapon}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<WeaponType>
+                                title="weapon"
+                                value={spec.weapon?.type ?? "none"}
+                                options={WEAPON_TYPES}
+                                disabled={fieldPinned("weapon")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setWeaponType(s, v))
+                                }
+                              />
+                            </FieldLockGroup>
+                            <FieldLockGroup
+                              field="offhand"
+                              label="offhand"
+                              locked={fieldLocks.offhand}
+                              onToggle={toggleFieldLock}
+                            >
+                              <CompactSelect<WeaponType>
+                                title="offhand"
+                                value={spec.offhand?.type ?? "none"}
+                                options={OFFHAND_TYPES}
+                                disabled={fieldPinned("offhand")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) => setOffhandType(s, v))
+                                }
+                              />
+                            </FieldLockGroup>
                             {spec.offhand &&
                             spec.offhand.type !== "none" &&
                             spec.offhand.type !== "shield" ? (
-                              <CompactSelect<string>
-                                title="offhand angle"
-                                value={offhandVariant}
-                                options={OFFHAND_VARIANT_IDS}
-                                disabled={locked}
-                                onPick={(v) => {
-                                  setOffhandVariant(
-                                    OFFHAND_VARIANT_IDS.indexOf(v),
-                                  );
-                                  setOffhandVariantState(v);
-                                  applyPartEdit((s) => s);
-                                }}
-                              />
+                              <FieldLockGroup
+                                field="offhandAngle"
+                                label="offhand angle"
+                                locked={fieldLocks.offhandAngle}
+                                onToggle={toggleFieldLock}
+                              >
+                                <CompactSelect<string>
+                                  title="offhand angle"
+                                  value={offhandVariant}
+                                  options={OFFHAND_VARIANT_IDS}
+                                  disabled={fieldPinned("offhandAngle")}
+                                  onPick={(v) => {
+                                    setOffhandVariant(
+                                      OFFHAND_VARIANT_IDS.indexOf(v),
+                                    );
+                                    setOffhandVariantState(v);
+                                    applyPartEdit((s) => s);
+                                  }}
+                                />
+                              </FieldLockGroup>
                             ) : null}
                           </>
                         ) : null}
                         {part === "legs" ? (
-                          <CompactSelect<LegPose>
-                            title="pose"
-                            value={spec.legs.pose}
-                            options={LEG_POSES}
-                            disabled={locked}
-                            onPick={(v) =>
-                              applyPartEdit((s) => setLegPose(s, v))
-                            }
-                          />
+                          <FieldLockGroup
+                            field="legPose"
+                            label="leg pose"
+                            locked={fieldLocks.legPose}
+                            onToggle={toggleFieldLock}
+                          >
+                            <CompactSelect<LegPose>
+                              title="pose"
+                              value={spec.legs.pose}
+                              options={LEG_POSES}
+                              disabled={fieldPinned("legPose")}
+                              onPick={(v) =>
+                                applyPartEdit((s) => setLegPose(s, v))
+                              }
+                            />
+                          </FieldLockGroup>
                         ) : null}
                       </div>
 

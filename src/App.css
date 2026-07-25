@@ -906,6 +906,37 @@ button.ghost {
   line-height: 1.1;
 }
 
+/* Dropdown + its own lock travel together when the row wraps. */
+.part-field {
+  display: flex;
+  align-items: center;
+  gap: 0.02rem;
+  flex: 1 1 3.5rem;
+  min-width: 0;
+}
+
+.part-field .part-inline-select,
+.panel .part-field .part-inline-select {
+  flex: 1 1 auto;
+}
+
+.part-field-lock,
+.panel button.part-field-lock {
+  width: 0.95rem;
+  font-size: 0.58rem;
+  opacity: 0.4;
+}
+
+.part-field-lock:hover,
+.part-field-lock.is-locked {
+  opacity: 1;
+}
+
+/* A locked section greys its dropdowns but leaves the field locks clickable. */
+.part-block.is-locked .part-field-lock {
+  pointer-events: auto;
+}
+
 .part-actions {
   display: flex;
   align-items: center;

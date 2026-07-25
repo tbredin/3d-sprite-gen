@@ -119,8 +119,18 @@ export {
   isHeadReplacement,
 } from "./helmetMode";
 export type { HelmetMount, HelmetMode } from "./helmetMode";
-export { randomCharacter, rerollPart, rerollPartColors, rerollEyeColor, PART_IDS, EMPTY_LOCKS } from "./random";
-export type { PartId, PartLocks, RandomOptions } from "./random";
+export {
+  randomCharacter,
+  rerollPart,
+  rerollPartColors,
+  rerollEyeColor,
+  PART_IDS,
+  EMPTY_LOCKS,
+  EMPTY_FIELD_LOCKS,
+  FIELD_LOCK_PART,
+  isFieldLocked,
+} from "./random";
+export type { PartId, PartLocks, FieldLockId, FieldLocks, RandomOptions } from "./random";
 export { ARM_POSES, COMBAT_ARM_POSES, armJointsForPose } from "./armPoses";
 export { LEG_POSES, COMBAT_LEG_POSES, legJointsForPose } from "./legPoses";
 export {
