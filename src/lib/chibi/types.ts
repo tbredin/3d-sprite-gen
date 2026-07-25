@@ -211,6 +211,12 @@ export type CharacterSpec = {
      * Multiplies the art-directed baseline separation; independent of `scale`.
      */
     spacing?: number;
+    /**
+     * Vertical offset in face-pad height fractions (default 0).
+     * Positive raises the eye row; negative lowers it. Added to the
+     * art-directed baseline (`EYE_V_FRAC`).
+     */
+    y?: number;
   };
   torso: {
     style: TorsoStyle;

@@ -272,6 +272,7 @@ export function assembleCharacter(
       // Independent of head.scale — scientist bumps eyes without touching hair.
       scale: spec.face?.scale ?? 1,
       spacing: spec.face?.spacing ?? 1,
+      y: spec.face?.y ?? 0,
       headScale,
       shape: headShape,
     });

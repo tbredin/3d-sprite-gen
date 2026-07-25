@@ -21,13 +21,15 @@ export type PartId = "head" | "torso" | "arms" | "legs";
 
 export const PART_IDS: PartId[] = ["head", "torso", "arms", "legs"];
 
-export type PartLocks = Record<PartId, boolean>;
+/** Per-part locks; `eyes` is independent of `head` so face can stay pinned. */
+export type PartLocks = Record<PartId, boolean> & { eyes: boolean };
 
 export const EMPTY_LOCKS: PartLocks = {
   head: false,
   torso: false,
   arms: false,
   legs: false,
+  eyes: false,
 };
 
 /** Weighted toward readable silhouette styles — bald only under helmets. */
@@ -309,6 +311,21 @@ type ArmsBits = Pick<CharacterSpec, "arms" | "weapon" | "offhand" | "leadSide"> 
 };
 type LegsBits = Pick<CharacterSpec, "legs">;
 
+/** Snap slider-ish values to 0.05 steps (matches the eye UI ranges). */
+function snap05(n: number): number {
+  return Math.round(n / 0.05) * 0.05;
+}
+
+function randomFace(): NonNullable<CharacterSpec["face"]> {
+  return {
+    eyeColor: pick(EYES),
+    // Match Dist / Size / Y slider ranges in App.
+    spacing: snap05(0.55 + Math.random() * 1.0),
+    scale: snap05(0.55 + Math.random() * 1.1),
+    y: snap05(-0.25 + Math.random() * 0.5),
+  };
+}
+
 function randomHead(skinHint?: string): HeadBits {
   const skin = skinHint ?? pick(SKINS);
   const helmetStyle = pick(HELMET);
@@ -330,9 +347,7 @@ function randomHead(skinHint?: string): HeadBits {
       scale: 0.94 + Math.random() * 0.08,
     },
     hair,
-    face: {
-      eyeColor: pick(EYES),
-    },
+    face: randomFace(),
     helmet: {
       style: helmetStyle,
       ...defaultHelmetColors(helmetStyle),
@@ -442,6 +457,9 @@ function randomLegs(poseHint?: LegPose): LegsBits {
  * Build a random CharacterSpec biased toward combat-ready JRPG sprites.
  * Keeps the silhouette fighting stance (torso ¾, ipsilateral lead) — pose
  * names only vary exaggeration inside that language.
+ *
+ * `eyes` lock is independent of `head`: locked eyes keep colour / spacing /
+ * scale / y through full-character rolls (Play random).
  */
 export function randomCharacter(locks?: PartLocks, base?: CharacterSpec): CharacterSpec {
   const keep = locks ?? EMPTY_LOCKS;
@@ -454,6 +472,14 @@ export function randomCharacter(locks?: PartLocks, base?: CharacterSpec): Charac
     face: prev.face,
     helmet: prev.helmet,
   } : randomHead(keep.head ? prev?.skin : undefined);
+
+  // Eyes lock overrides face whether or not the head was kept.
+  if (keep.eyes && prev?.face) {
+    head.face = prev.face;
+  } else if (keep.head && !keep.eyes) {
+    // Head pinned but eyes free — reshuffle face on the same skull.
+    head.face = randomFace();
+  }
 
   const torso = keep.torso && prev
     ? { torso: prev.torso, accessories: prev.accessories }
@@ -494,9 +520,17 @@ export function randomCharacter(locks?: PartLocks, base?: CharacterSpec): Charac
 }
 
 /** Reroll one part (style + colors), keeping the rest of the spec. */
-export function rerollPart(spec: CharacterSpec, part: PartId): CharacterSpec {
+export function rerollPart(
+  spec: CharacterSpec,
+  part: PartId,
+  locks?: PartLocks,
+): CharacterSpec {
   if (part === "head") {
     const head = randomHead(spec.skin);
+    // Eyes lock keeps face even when the head dice is pressed.
+    if (locks?.eyes && spec.face) {
+      head.face = spec.face;
+    }
     return { ...spec, ...head };
   }
   if (part === "torso") {
@@ -530,7 +564,11 @@ export function rerollPart(spec: CharacterSpec, part: PartId): CharacterSpec {
 }
 
 /** Keep geometry/styles; only shuffle colors owned by that part. */
-export function rerollPartColors(spec: CharacterSpec, part: PartId): CharacterSpec {
+export function rerollPartColors(
+  spec: CharacterSpec,
+  part: PartId,
+  locks?: PartLocks,
+): CharacterSpec {
   const next = structuredClone(spec);
   if (part === "head") {
     // Hands belong to arms — pin their tint before skin changes.
@@ -539,7 +577,10 @@ export function rerollPartColors(spec: CharacterSpec, part: PartId): CharacterSp
     }
     next.skin = pick(SKINS);
     if (next.hair) next.hair.color = pick(HAIR_COLORS);
-    if (next.face) next.face.eyeColor = pick(EYES);
+    // Eye colour lives on the eyes row — only shuffle when eyes are unlocked.
+    if (!locks?.eyes) {
+      next.face = { ...next.face, eyeColor: pick(EYES) };
+    }
     if (next.helmet && next.helmet.style !== "none") {
       const d = defaultHelmetColors(next.helmet.style);
       next.helmet.color = d.color;
@@ -590,6 +631,14 @@ export function rerollPartColors(spec: CharacterSpec, part: PartId): CharacterSp
     bootColor: pick(BOOT),
   };
   return next;
+}
+
+/** Shuffle only eye colour (eyes-row 🎲). */
+export function rerollEyeColor(spec: CharacterSpec): CharacterSpec {
+  return {
+    ...spec,
+    face: { ...spec.face, eyeColor: pick(EYES) },
+  };
 }
 
 /* -------------------------------------------------------------------------- */

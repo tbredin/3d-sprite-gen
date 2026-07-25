@@ -275,6 +275,8 @@ function faceEyeAnchor(opts: {
   side: -1 | 1;
   halfSepWorld: number;
   eyeH: number;
+  /** Added to `EYE_V_FRAC` (face-pad height fractions). */
+  yOffset?: number;
 }): { x: number; y: number; z: number } {
   const skin = HEAD_SKIN_BY_SHAPE[opts.shape];
   const r = CHIBI.skullR * opts.headScale;
@@ -287,7 +289,7 @@ function faceEyeAnchor(opts: {
     faceAx * EYE_SEP_FACE_FRAC,
   );
   const x = opts.side * halfSep;
-  const y = faceCy + faceAy * EYE_V_FRAC;
+  const y = faceCy + faceAy * (EYE_V_FRAC + (opts.yOffset ?? 0));
 
   let bestZ = -Infinity;
   let bestN = { x: 0, y: 0, z: 1 };
@@ -747,6 +749,8 @@ export function generateFace(opts: {
   scale?: number;
   /** Multiplier on baseline eye separation (default 1). */
   spacing?: number;
+  /** Vertical offset in face-pad height fractions (default 0). */
+  y?: number;
   headScale?: number;
   shape?: HeadShape;
 }): Group {
@@ -754,6 +758,7 @@ export function generateFace(opts: {
   g.name = "face";
   const faceScale = opts.scale ?? 1;
   const spacing = opts.spacing ?? 1;
+  const yOffset = opts.y ?? 0;
   const headScale = opts.headScale ?? 1;
   const shape = opts.shape ?? DEFAULT_HEAD_SHAPE;
   const baseEyeW = 0.33 * (2 / 5);
@@ -773,6 +778,7 @@ export function generateFace(opts: {
       side,
       halfSepWorld: halfSep,
       eyeH,
+      yOffset,
     });
     const eye = new Mesh(
       new PlaneGeometry(eyeW, eyeH),

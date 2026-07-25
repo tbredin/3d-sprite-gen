@@ -65,6 +65,7 @@ import {
   randomCharacter,
   rerollPart,
   rerollPartColors,
+  rerollEyeColor,
   applyBodyProfile as setChibiBodyProfile,
   BODY_PROFILE_IDS,
   BODY_PROFILES,
@@ -403,14 +404,14 @@ export default function App() {
     setCharKey((k) => k + 1);
   };
 
-  const toggleLock = (part: PartId) => {
+  const toggleLock = (part: PartId | "eyes") => {
     setLocks((prev) => ({ ...prev, [part]: !prev[part] }));
   };
 
   const applyRerollPart = (part: PartId) => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollPart(prev, part);
+      const next = rerollPart(prev, part, locks);
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -421,7 +422,18 @@ export default function App() {
   const applyRerollColors = (part: PartId) => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollPartColors(prev, part);
+      const next = rerollPartColors(prev, part, locks);
+      setSpecText(JSON.stringify(next, null, 2));
+      setSpecParseError(null);
+      return next;
+    });
+    setCharKey((k) => k + 1);
+  };
+
+  const applyRerollEyeColor = () => {
+    setPresetId("random");
+    setSpec((prev) => {
+      const next = rerollEyeColor(prev);
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -1033,7 +1045,7 @@ export default function App() {
             </div>
 
             <div className="part-grid">
-              <div className="part-block">
+              <div className={`part-block${locks.eyes ? " is-locked" : ""}`}>
                 <div className="part-row">
                   <span className="part-name">eyes</span>
                   <label className="part-lock">
@@ -1046,12 +1058,36 @@ export default function App() {
                     Show
                   </label>
                   <div className="part-actions">
+                    <button
+                      type="button"
+                      className="part-icon-btn"
+                      onClick={applyRerollEyeColor}
+                      disabled={!showEyes || locks.eyes}
+                      title={
+                        locks.eyes
+                          ? "Unlock to reroll eye colour"
+                          : "Reroll eye colour"
+                      }
+                      aria-label="Reroll eye colour"
+                    >
+                      🎲
+                    </button>
+                    <button
+                      type="button"
+                      className={`part-icon-btn${locks.eyes ? " is-locked" : ""}`}
+                      onClick={() => toggleLock("eyes")}
+                      title={locks.eyes ? "Unlock eyes" : "Lock eyes"}
+                      aria-label={locks.eyes ? "Unlock eyes" : "Lock eyes"}
+                      aria-pressed={locks.eyes}
+                    >
+                      {locks.eyes ? "🔒" : "🔓"}
+                    </button>
                     <PaletteColorButton
                       value={spec.face?.eyeColor ?? "#1a1c2c"}
                       paletteColors={palette?.colors ?? []}
                       title="Eye colour"
                       ariaLabel="Eye colour"
-                      disabled={!showEyes}
+                      disabled={!showEyes || locks.eyes}
                       onChange={(hex) =>
                         applyPartEdit((s) => ({
                           ...s,
@@ -1062,7 +1098,7 @@ export default function App() {
                   </div>
                 </div>
                 <div
-                  className={`light-grid part-eye-sliders${showEyes ? "" : " is-disabled"}`}
+                  className={`light-grid part-eye-sliders${showEyes && !locks.eyes ? "" : " is-disabled"}`}
                 >
                   <label className="light-slider">
                     <span
@@ -1077,7 +1113,7 @@ export default function App() {
                       max={1.55}
                       step={0.05}
                       value={spec.face?.spacing ?? 1}
-                      disabled={!showEyes}
+                      disabled={!showEyes || locks.eyes}
                       onChange={(e) => {
                         const spacing = Number(e.target.value);
                         applyPartEdit((s) => ({
@@ -1101,7 +1137,7 @@ export default function App() {
                       max={1.65}
                       step={0.05}
                       value={spec.face?.scale ?? 1}
-                      disabled={!showEyes}
+                      disabled={!showEyes || locks.eyes}
                       onChange={(e) => {
                         const scale = Number(e.target.value);
                         applyPartEdit((s) => ({
@@ -1113,6 +1149,33 @@ export default function App() {
                     />
                     <span className="slider-val">
                       {(spec.face?.scale ?? 1).toFixed(2)}
+                    </span>
+                  </label>
+                  <label className="light-slider">
+                    <span
+                      className="light-slider-label"
+                      title="Vertical eye position"
+                    >
+                      Y
+                    </span>
+                    <input
+                      type="range"
+                      min={-0.25}
+                      max={0.25}
+                      step={0.05}
+                      value={spec.face?.y ?? 0}
+                      disabled={!showEyes || locks.eyes}
+                      onChange={(e) => {
+                        const y = Number(e.target.value);
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, y },
+                        }));
+                      }}
+                      title="Vertical eye position"
+                    />
+                    <span className="slider-val">
+                      {(spec.face?.y ?? 0).toFixed(2)}
                     </span>
                   </label>
                 </div>
