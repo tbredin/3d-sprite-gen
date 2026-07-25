@@ -1,5 +1,6 @@
 import { Group, Quaternion, Vector3 } from "three";
 import type { CharacterSpec, PresetId, WeaponType } from "./types";
+import { TWO_HANDED_TYPES } from "./types";
 import { helmetModeFor } from "./helmetMode";
 import { addHullOutlines } from "./outlines";
 import { PartGroupId, tagPartGroup } from "./partGroups";
@@ -62,21 +63,78 @@ type GripRole = "lead" | "off";
  * length direction; `grip` is where the hold point sits in the hand's space so
  * the handle passes through the mitt.
  */
+/** Bladed / hafted frame: length up +Y, hold point just under the guard. */
+const hafted = () => ({
+  axis: new Vector3(0, 1, 0),
+  grip: new Vector3(0, -0.02, 0.05),
+});
+/** Gun frame: barrel forward +Z, hold point at the receiver. */
+const gunned = () => ({
+  axis: new Vector3(0, 0, 1),
+  grip: new Vector3(0, 0, 0.03),
+});
+
 const WEAPON_GRIP: Record<HeldWeapon, { axis: Vector3; grip: Vector3 }> = {
-  sword: { axis: new Vector3(0, 1, 0), grip: new Vector3(0, -0.02, 0.05) },
-  axe: { axis: new Vector3(0, 1, 0), grip: new Vector3(0, -0.02, 0.05) },
-  staff: { axis: new Vector3(0, 1, 0), grip: new Vector3(0, -0.02, 0.05) },
-  maul: { axis: new Vector3(0, 1, 0), grip: new Vector3(0, -0.02, 0.05) },
-  spear: { axis: new Vector3(0, 1, 0), grip: new Vector3(0, -0.02, 0.05) },
-  rifle: { axis: new Vector3(0, 0, 1), grip: new Vector3(0, 0, 0.03) },
+  sword: hafted(),
+  swordBroad: hafted(),
+  swordCurved: hafted(),
+  swordRapier: hafted(),
+  swordClaymore: hafted(),
+  dagger: hafted(),
+  daggerCurved: hafted(),
+  claw: hafted(),
+  clawTwin: hafted(),
+  axe: hafted(),
+  axeBearded: hafted(),
+  axeHand: hafted(),
+  greataxe: hafted(),
+  greataxeDouble: hafted(),
+  hammer: hafted(),
+  hammerWar: hafted(),
+  hammerClub: hafted(),
+  maul: hafted(),
+  maulSpiked: hafted(),
+  spear: hafted(),
+  spearBarbed: hafted(),
+  halberd: hafted(),
+  staff: hafted(),
+  wand: hafted(),
+  wandCrystal: hafted(),
+  pistol: gunned(),
+  pistolFlint: gunned(),
+  pistolHeavy: gunned(),
+  rifle: gunned(),
+  rifleLong: gunned(),
+  rifleCarbine: gunned(),
 };
 
+/** Barrel-forward props share the rifle carry and its trail-hand foregrip. */
+const GUN_TYPES = new Set<WeaponType>([
+  "pistol",
+  "pistolFlint",
+  "pistolHeavy",
+  "rifle",
+  "rifleLong",
+  "rifleCarbine",
+]);
+
 /** Two-handed weapons — the trail hand is IK'd onto the shaft below the grip. */
-const TWO_HANDED = new Set<WeaponType>(["maul", "spear"]);
-/** Where the trail hand grips the shaft (weapon-local), toward the butt. */
+const TWO_HANDED = new Set<WeaponType>(TWO_HANDED_TYPES);
+/**
+ * Where the trail hand grips (weapon-local): down the shaft toward the butt for
+ * hafted weapons, forward along the barrel for long guns.
+ */
 const TWO_HAND_GRIP: Partial<Record<HeldWeapon, Vector3>> = {
   maul: new Vector3(0, -0.26, 0),
+  maulSpiked: new Vector3(0, -0.26, 0),
   spear: new Vector3(0, -0.26, 0),
+  spearBarbed: new Vector3(0, -0.28, 0),
+  halberd: new Vector3(0, -0.28, 0),
+  greataxe: new Vector3(0, -0.3, 0),
+  greataxeDouble: new Vector3(0, -0.3, 0),
+  rifle: new Vector3(0, 0, 0.3),
+  rifleLong: new Vector3(0, 0, 0.34),
+  rifleCarbine: new Vector3(0, 0, 0.26),
 };
 
 /**
@@ -130,7 +188,7 @@ function weaponTargetDir(
   handId: "left" | "right",
 ): Vector3 {
   const out = handId === "right" ? 1 : -1;
-  if (type === "rifle") {
+  if (GUN_TYPES.has(type)) {
     return role === "off"
       ? new Vector3(0.3 * out, -0.5, 0.82)
       : new Vector3(0.28 * out, -0.18, 1);

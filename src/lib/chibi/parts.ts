@@ -3059,6 +3059,566 @@ export const WEAPON_READABILITY = {
   shieldBossR: 0.11,
 } as const;
 
+/* -------------------------------------------------------------------------- */
+/* Weapon variants                                                            */
+/*                                                                            */
+/* Same canonical frame as the original six: grip at the origin, blade / haft  */
+/* runs up +Y, gun barrels run forward +Z. Each variant must read as a         */
+/* different silhouette from its siblings at bake size — vary blade profile,   */
+/* guard, head mass and barrel length, not just proportions.                  */
+/* -------------------------------------------------------------------------- */
+
+/** Shared prop palette so every variant stays in one material family. */
+const WOOD = "#5a3d24";
+const PALE_WOOD = "#6a4a2c";
+const WRAP = "#3a2818";
+const CAP = "#2a1c14";
+const TRIM_STEEL = "#eef2f5";
+const BAND_STEEL = "#2b3038";
+const GUN_DETAIL = "#14151f";
+
+type WeaponCtx = {
+  /** Body material tinted from `weapon.color`. */
+  mat: Material;
+  /** Lightened `weapon.color` for edge glints and studs. */
+  accent: string;
+};
+
+type WeaponBuilder = (g: Group, ctx: WeaponCtx) => void;
+
+/** Wrapped handle at the origin, optionally capped with a round pommel. */
+function addHandle(
+  g: Group,
+  opts: { r: number; len: number; y: number; pommel?: number; core?: string },
+) {
+  g.add(
+    mesh(limbCylinder(opts.r, opts.len), toonDetail(opts.core ?? WRAP), 0, opts.y, 0),
+  );
+  if (opts.pommel != null) {
+    g.add(
+      mesh(
+        new SphereGeometry(opts.pommel, 8, 6),
+        toonDetail(CAP),
+        0,
+        opts.y - opts.len * 0.5,
+        0,
+      ),
+    );
+  }
+}
+
+/** Wooden haft with a wrapped grip over the origin and a capped butt. */
+function addHaft(
+  g: Group,
+  opts: { r: number; len: number; y: number; wood?: string },
+) {
+  g.add(mesh(limbCylinder(opts.r, opts.len), toonDetail(opts.wood ?? WOOD), 0, opts.y, 0));
+  g.add(mesh(limbCylinder(opts.r * 1.18, 0.17), toonDetail(WRAP), 0, -0.02, 0));
+  g.add(
+    mesh(
+      new SphereGeometry(opts.r * 1.25, 8, 6),
+      toonDetail(CAP),
+      0,
+      opts.y - opts.len * 0.5,
+      0,
+    ),
+  );
+}
+
+/**
+ * Sabre / kris curve: short segments each tilted a little further toward +Z,
+ * chained tip-to-tail, finished with a matching point. The bright strip rides
+ * the convex (outer) edge as a child so it follows each segment's tilt.
+ */
+function addCurvedBlade(
+  g: Group,
+  mat: Material,
+  accent: string,
+  o: {
+    y: number;
+    segs: number;
+    segLen: number;
+    width: number;
+    taper: number;
+    thick: number;
+    bend: number;
+  },
+) {
+  let y = o.y;
+  let z = 0;
+  let ang = 0;
+  for (let i = 0; i < o.segs; i++) {
+    ang += o.bend;
+    const w = o.width - i * o.taper;
+    const piece = new Mesh(new BoxGeometry(o.thick, o.segLen, w), mat);
+    piece.rotation.x = ang;
+    piece.position.set(
+      0,
+      y + Math.cos(ang) * o.segLen * 0.5,
+      z + Math.sin(ang) * o.segLen * 0.5,
+    );
+    const edge = new Mesh(
+      new BoxGeometry(o.thick * 1.12, o.segLen * 0.94, 0.04),
+      toonDetail(accent),
+    );
+    edge.position.set(0, 0, -w * 0.5);
+    piece.add(edge);
+    g.add(piece);
+    y += Math.cos(ang) * o.segLen;
+    z += Math.sin(ang) * o.segLen;
+  }
+  const tip = new Mesh(new ConeGeometry(o.width * 0.55, o.segLen, 5), mat);
+  tip.rotation.x = ang;
+  tip.position.set(
+    0,
+    y + Math.cos(ang) * o.segLen * 0.5,
+    z + Math.sin(ang) * o.segLen * 0.5,
+  );
+  g.add(tip);
+}
+
+/**
+ * Flat blade point: a 4-sided cone squashed on X so the pyramid matches a box
+ * blade's thin-and-wide cross-section instead of reading as a spike.
+ */
+function bladePoint(mat: Material, halfWidth: number, height: number, y: number) {
+  const tip = new Mesh(new ConeGeometry(halfWidth * 1.41, height, 4), mat);
+  tip.rotation.y = Math.PI / 4;
+  tip.scale.set(0.42, 1, 1);
+  tip.position.set(0, y, 0);
+  return tip;
+}
+
+/** Wide, heavy blade with a blocky pommel — the brute of the sword family. */
+function buildSwordBroad(g: Group, { mat, accent }: WeaponCtx) {
+  addHandle(g, { r: 0.06, len: 0.2, y: -0.02, core: "#4a3626" });
+  g.add(mesh(new BoxGeometry(0.13, 0.09, 0.13), toonDetail(CAP), 0, -0.16, 0));
+  g.add(mesh(new BoxGeometry(0.42, 0.08, 0.15), toonDetail(TRIM_STEEL), 0, 0.11, 0));
+  g.add(mesh(new BoxGeometry(0.075, 0.62, 0.27), mat, 0, 0.46, 0));
+  g.add(mesh(new BoxGeometry(0.085, 0.5, 0.05), toonDetail(accent), 0, 0.44, 0.14));
+  g.add(bladePoint(mat, 0.135, 0.2, 0.87));
+}
+
+/** Single-edged sabre: round tsuba, no crossguard, forward-arcing blade. */
+function buildSwordCurved(g: Group, { mat, accent }: WeaponCtx) {
+  addHandle(g, { r: 0.05, len: 0.28, y: 0, pommel: 0.05 });
+  const tsuba = new Mesh(new CylinderGeometry(0.12, 0.12, 0.045, 10), toonDetail(TRIM_STEEL));
+  tsuba.position.set(0, 0.16, 0);
+  g.add(tsuba);
+  addCurvedBlade(g, mat, accent, {
+    y: 0.18,
+    segs: 4,
+    segLen: 0.19,
+    width: 0.15,
+    taper: 0.012,
+    thick: 0.06,
+    bend: 0.15,
+  });
+}
+
+/** Duelling thrust blade: swept bell guard over a long slim diamond section. */
+function buildSwordRapier(g: Group, { mat, accent }: WeaponCtx) {
+  addHandle(g, { r: 0.045, len: 0.18, y: -0.01, pommel: 0.055 });
+  const bell = new Mesh(new SphereGeometry(0.13, 10, 8), toonDetail(TRIM_STEEL));
+  bell.scale.set(1, 0.6, 1);
+  bell.position.set(0, 0.13, 0);
+  g.add(bell);
+  g.add(mesh(new BoxGeometry(0.3, 0.045, 0.05), toonDetail(TRIM_STEEL), 0, 0.09, 0));
+  const blade = new Mesh(new CylinderGeometry(0.065, 0.04, 0.8, 4), mat);
+  blade.position.set(0, 0.6, 0);
+  g.add(blade);
+  g.add(mesh(new ConeGeometry(0.04, 0.14, 4), toonDetail(accent), 0, 1.07, 0));
+}
+
+/** Greatsword-long blade on a one-hand carry: swept quillons, ricasso band. */
+function buildSwordClaymore(g: Group, { mat, accent }: WeaponCtx) {
+  addHandle(g, { r: 0.055, len: 0.3, y: 0, core: "#4a3626" });
+  g.add(mesh(new SphereGeometry(0.062, 8, 6), toonDetail(CAP), 0, -0.18, 0));
+  for (const s of [-1, 1] as const) {
+    const quillon = new Mesh(new BoxGeometry(0.24, 0.055, 0.1), toonDetail(TRIM_STEEL));
+    quillon.position.set(s * 0.12, 0.19, 0);
+    quillon.rotation.z = s * 0.42; // outer ends angle up toward the tip
+    g.add(quillon);
+  }
+  g.add(mesh(new BoxGeometry(0.08, 0.82, 0.2), mat, 0, 0.68, 0));
+  g.add(mesh(new BoxGeometry(0.09, 0.16, 0.12), toonDetail(BAND_STEEL), 0, 0.3, 0));
+  g.add(mesh(new BoxGeometry(0.09, 0.68, 0.045), toonDetail(accent), 0, 0.7, 0.11));
+  g.add(bladePoint(mat, 0.1, 0.22, 1.2));
+}
+
+/** Short straight stabber — sword language at a third of the reach. */
+function buildDagger(g: Group, { mat, accent }: WeaponCtx) {
+  addHandle(g, { r: 0.05, len: 0.16, y: -0.01, pommel: 0.048 });
+  g.add(mesh(new BoxGeometry(0.2, 0.05, 0.1), toonDetail(TRIM_STEEL), 0, 0.09, 0));
+  g.add(mesh(new BoxGeometry(0.06, 0.26, 0.14), mat, 0, 0.25, 0));
+  g.add(mesh(new BoxGeometry(0.07, 0.22, 0.04), toonDetail(accent), 0, 0.25, 0.07));
+  g.add(bladePoint(mat, 0.07, 0.16, 0.46));
+}
+
+/** Hooked-quillon knife with a hard kris curve. */
+function buildDaggerCurved(g: Group, { mat, accent }: WeaponCtx) {
+  addHandle(g, { r: 0.05, len: 0.15, y: -0.01, pommel: 0.05 });
+  g.add(mesh(new BoxGeometry(0.09, 0.06, 0.15), toonDetail(BAND_STEEL), 0, 0.08, 0));
+  const hook = new Mesh(new BoxGeometry(0.055, 0.17, 0.06), toonDetail(TRIM_STEEL));
+  hook.position.set(0, 0.11, 0.09);
+  hook.rotation.x = -0.7;
+  g.add(hook);
+  addCurvedBlade(g, mat, accent, {
+    y: 0.11,
+    segs: 3,
+    segLen: 0.15,
+    width: 0.13,
+    taper: 0.015,
+    thick: 0.055,
+    bend: 0.23,
+  });
+}
+
+/** Three stubby rakes off a knuckle plate — fist-length reach. */
+function buildClaw(g: Group, { mat, accent }: WeaponCtx) {
+  g.add(mesh(limbCylinder(0.052, 0.22), toonDetail(WRAP), 0, -0.02, 0));
+  g.add(mesh(new BoxGeometry(0.11, 0.12, 0.3), toonDetail(BAND_STEEL), 0, 0.11, 0.02));
+  for (const dz of [-0.1, 0, 0.1] as const) {
+    const blade = new Mesh(new BoxGeometry(0.07, 0.24, 0.07), mat);
+    blade.position.set(0, 0.28, dz + 0.03);
+    blade.rotation.x = dz * 1.4; // fan the outer rakes apart
+    const point = new Mesh(new ConeGeometry(0.05, 0.14, 5), mat);
+    point.position.set(0, 0.14, 0);
+    blade.add(point);
+    g.add(blade);
+  }
+  g.add(mesh(new BoxGeometry(0.12, 0.06, 0.32), toonDetail(accent), 0, 0.17, 0.02));
+}
+
+/** Two long paired blades off a back-of-hand guard plate. */
+function buildClawTwin(g: Group, { mat, accent }: WeaponCtx) {
+  g.add(mesh(limbCylinder(0.05, 0.2), toonDetail(WRAP), 0, -0.02, 0));
+  g.add(mesh(new BoxGeometry(0.16, 0.2, 0.14), toonDetail(BAND_STEEL), 0, 0.06, -0.06));
+  for (const dz of [-0.08, 0.08] as const) {
+    const blade = new Mesh(new BoxGeometry(0.06, 0.46, 0.1), mat);
+    blade.position.set(0, 0.34, dz);
+    blade.rotation.x = dz * 1.1;
+    const glint = new Mesh(new BoxGeometry(0.07, 0.4, 0.035), toonDetail(accent));
+    glint.position.set(0, 0, Math.sign(dz) * 0.05);
+    blade.add(glint);
+    const point = new Mesh(new ConeGeometry(0.055, 0.18, 5), mat);
+    point.position.set(0, 0.28, 0);
+    blade.add(point);
+    g.add(blade);
+  }
+}
+
+/** Short banded rod with a cut gem head — a staff at wand length. */
+function buildWand(g: Group, { mat, accent }: WeaponCtx) {
+  g.add(mesh(limbCylinder(0.045, 0.44), toonDetail(WOOD), 0, 0.14, 0));
+  g.add(mesh(limbCylinder(0.055, 0.13), toonDetail(WRAP), 0, -0.03, 0));
+  g.add(mesh(new SphereGeometry(0.05, 8, 6), toonDetail(CAP), 0, -0.1, 0));
+  for (const y of [0.24, 0.3] as const) {
+    g.add(mesh(limbCylinder(0.055, 0.03), toonDetail(BAND_STEEL), 0, y, 0));
+  }
+  // Gem is two cones nose-to-nose so it still reads faceted after downscale.
+  g.add(mesh(new ConeGeometry(0.11, 0.16, 6), mat, 0, 0.46, 0));
+  const girdle = new Mesh(new ConeGeometry(0.11, 0.1, 6), toonDetail(accent));
+  girdle.rotation.x = Math.PI;
+  girdle.position.set(0, 0.33, 0);
+  g.add(girdle);
+}
+
+/** Bound rod topped with a raw crystal cluster splitting three ways. */
+function buildWandCrystal(g: Group, { mat, accent }: WeaponCtx) {
+  g.add(mesh(limbCylinder(0.05, 0.5, 6), toonDetail(WRAP), 0, 0.16, 0));
+  g.add(mesh(new BoxGeometry(0.09, 0.09, 0.09), toonDetail(CAP), 0, -0.11, 0));
+  for (const y of [0.05, 0.2] as const) {
+    g.add(mesh(limbCylinder(0.058, 0.035, 6), toonDetail(BAND_STEEL), 0, y, 0));
+  }
+  const shards = [
+    { r: 0.095, h: 0.32, x: 0, z: 0, rx: 0, rz: 0 },
+    { r: 0.06, h: 0.22, x: 0.07, z: 0.03, rx: 0.1, rz: 0.55 },
+    { r: 0.055, h: 0.18, x: -0.06, z: -0.04, rx: -0.25, rz: -0.5 },
+  ];
+  shards.forEach((s, i) => {
+    const shard = new Mesh(new ConeGeometry(s.r, s.h, 5), i === 0 ? mat : toonDetail(accent));
+    shard.position.set(s.x, 0.42 + s.h * 0.3, s.z);
+    shard.rotation.set(s.rx, 0, s.rz);
+    g.add(shard);
+  });
+}
+
+/** One-hander whose bit droops into a long beard below the socket. */
+function buildAxeBearded(g: Group, { mat, accent }: WeaponCtx) {
+  addHaft(g, { r: 0.048, len: 0.58, y: 0.2 });
+  const hy = 0.42;
+  g.add(mesh(new BoxGeometry(0.1, 0.18, 0.13), mat, 0, hy + 0.04, 0.03));
+  g.add(mesh(new BoxGeometry(0.055, 0.36, 0.22), mat, 0, hy - 0.06, 0.19));
+  g.add(mesh(new BoxGeometry(0.035, 0.4, 0.05), toonDetail(accent), 0, hy - 0.06, 0.31));
+  g.add(mesh(new BoxGeometry(0.07, 0.05, 0.16), toonDetail(BAND_STEEL), 0, hy + 0.12, 0.12));
+}
+
+/** Stubby hatchet — wedge bit forward, counterweight spike behind. */
+function buildAxeHand(g: Group, { mat, accent }: WeaponCtx) {
+  addHaft(g, { r: 0.045, len: 0.46, y: 0.14, wood: PALE_WOOD });
+  const hy = 0.32;
+  g.add(mesh(new BoxGeometry(0.09, 0.16, 0.12), mat, 0, hy, 0.02));
+  g.add(mesh(new BoxGeometry(0.05, 0.2, 0.17), mat, 0, hy, 0.15));
+  g.add(mesh(new BoxGeometry(0.032, 0.24, 0.04), toonDetail(accent), 0, hy, 0.25));
+  const spike = new Mesh(new ConeGeometry(0.045, 0.16, 5), mat);
+  spike.rotation.x = -Math.PI / 2;
+  spike.position.set(0, hy, -0.12);
+  g.add(spike);
+}
+
+/** Two-handed single bit: long haft, huge horned crescent. */
+function buildGreataxe(g: Group, { mat, accent }: WeaponCtx) {
+  addHaft(g, { r: 0.055, len: 1.2, y: 0.32 });
+  const hy = 0.8;
+  g.add(mesh(new BoxGeometry(0.12, 0.34, 0.16), mat, 0, hy, 0.02));
+  g.add(mesh(new BoxGeometry(0.06, 0.52, 0.3), mat, 0, hy, 0.26));
+  for (const dy of [-0.24, 0.24] as const) {
+    g.add(mesh(new BoxGeometry(0.07, 0.1, 0.16), mat, 0, hy + dy, 0.16)); // horns
+  }
+  g.add(mesh(new BoxGeometry(0.04, 0.56, 0.06), toonDetail(accent), 0, hy, 0.43));
+  g.add(mesh(new ConeGeometry(0.05, 0.18, 6), mat, 0, hy + 0.28, 0));
+}
+
+/** Two-handed twin bit — symmetric heads either side of the haft. */
+function buildGreataxeDouble(g: Group, { mat, accent }: WeaponCtx) {
+  addHaft(g, { r: 0.055, len: 1.26, y: 0.34 });
+  const hy = 0.82;
+  g.add(mesh(new BoxGeometry(0.13, 0.36, 0.18), mat, 0, hy, 0));
+  for (const s of [-1, 1] as const) {
+    g.add(mesh(new BoxGeometry(0.055, 0.46, 0.28), mat, 0, hy, s * 0.24));
+    g.add(mesh(new BoxGeometry(0.035, 0.5, 0.055), toonDetail(accent), 0, hy, s * 0.4));
+  }
+  g.add(mesh(new BoxGeometry(0.15, 0.07, 0.2), toonDetail(BAND_STEEL), 0, hy - 0.23, 0));
+}
+
+/** Two-handed drum head ringed with spikes — rounder read than `maul`. */
+function buildMaulSpiked(g: Group, { mat, accent }: WeaponCtx) {
+  addHaft(g, { r: 0.052, len: 1.12, y: 0.3, wood: PALE_WOOD });
+  const hy = 0.78;
+  g.add(mesh(new CylinderGeometry(0.17, 0.17, 0.3, 8), mat, 0, hy, 0));
+  for (const dy of [-0.17, 0.17] as const) {
+    g.add(mesh(limbCylinder(0.19, 0.05), toonDetail(BAND_STEEL), 0, hy + dy, 0));
+  }
+  // Radial spikes: yaw a carrier group so each cone points straight outward.
+  for (let i = 0; i < 4; i++) {
+    const carrier = new Group();
+    carrier.position.set(0, hy, 0);
+    carrier.rotation.y = (i / 4) * Math.PI * 2 + Math.PI / 8;
+    const spike = new Mesh(new ConeGeometry(0.055, 0.17, 5), toonDetail(accent));
+    spike.rotation.x = Math.PI / 2;
+    spike.position.set(0, 0, 0.21);
+    carrier.add(spike);
+    g.add(carrier);
+  }
+  g.add(mesh(new ConeGeometry(0.07, 0.18, 6), mat, 0, hy + 0.24, 0));
+}
+
+/** Plain one-hand smith hammer — blunt head laid across the haft. */
+function buildHammer(g: Group, { mat, accent }: WeaponCtx) {
+  addHaft(g, { r: 0.048, len: 0.62, y: 0.22, wood: PALE_WOOD });
+  const hy = 0.5;
+  g.add(mesh(new BoxGeometry(0.15, 0.17, 0.36), mat, 0, hy, 0));
+  for (const dz of [-1, 1] as const) {
+    g.add(mesh(new BoxGeometry(0.16, 0.18, 0.05), toonDetail(accent), 0, hy, dz * 0.19));
+  }
+  g.add(mesh(new BoxGeometry(0.1, 0.06, 0.38), toonDetail(BAND_STEEL), 0, hy + 0.1, 0));
+}
+
+/** War hammer — flat face forward, beak hooking back and down. */
+function buildHammerWar(g: Group, { mat, accent }: WeaponCtx) {
+  addHaft(g, { r: 0.05, len: 0.74, y: 0.26 });
+  const hy = 0.58;
+  g.add(mesh(new BoxGeometry(0.11, 0.22, 0.12), toonDetail(BAND_STEEL), 0, hy, 0));
+  g.add(mesh(new BoxGeometry(0.16, 0.2, 0.18), mat, 0, hy, 0.16));
+  g.add(mesh(new BoxGeometry(0.17, 0.21, 0.04), toonDetail(accent), 0, hy, 0.26));
+  const beak = new Mesh(new ConeGeometry(0.06, 0.28, 5), mat);
+  beak.rotation.x = -Math.PI / 2 - 0.35;
+  beak.position.set(0, hy - 0.03, -0.16);
+  g.add(beak);
+  g.add(mesh(new ConeGeometry(0.04, 0.12, 5), mat, 0, hy + 0.17, 0));
+}
+
+/** Crude lashed club-hammer: flared stone head, no forged plates. */
+function buildHammerClub(g: Group, { mat, accent }: WeaponCtx) {
+  addHaft(g, { r: 0.055, len: 0.54, y: 0.16 });
+  g.add(mesh(new CylinderGeometry(0.19, 0.13, 0.32, 6), mat, 0, 0.46, 0));
+  g.add(mesh(limbCylinder(0.15, 0.06, 6), toonDetail(WRAP), 0, 0.29, 0));
+  const chips: [number, number, number][] = [
+    [0.1, 0.5, 0.08],
+    [-0.09, 0.44, -0.1],
+    [0.02, 0.57, -0.09],
+  ];
+  for (const [x, y, z] of chips) {
+    g.add(mesh(new SphereGeometry(0.045, 6, 5), toonDetail(accent), x, y, z));
+  }
+}
+
+/** Two-handed harpoon spear — swept barbs behind a narrow point. */
+function buildSpearBarbed(g: Group, { mat, accent }: WeaponCtx) {
+  g.add(mesh(limbCylinder(0.042, 1.42), toonDetail(PALE_WOOD), 0, 0.4, 0));
+  g.add(mesh(limbCylinder(0.052, 0.18), toonDetail(WRAP), 0, -0.02, 0));
+  const butt = new Mesh(new ConeGeometry(0.05, 0.14, 6), toonDetail(BAND_STEEL));
+  butt.rotation.x = Math.PI;
+  butt.position.set(0, -0.35, 0);
+  g.add(butt);
+  const hy = 1.04;
+  g.add(mesh(new BoxGeometry(0.08, 0.12, 0.08), toonDetail(WRAP), 0, hy - 0.16, 0));
+  g.add(mesh(new ConeGeometry(0.075, 0.36, 4), mat, 0, hy + 0.14, 0));
+  for (const s of [-1, 1] as const) {
+    const barb = new Mesh(new ConeGeometry(0.04, 0.2, 5), mat);
+    barb.rotation.x = s * (Math.PI - 0.7); // sweeps down and out from the socket
+    barb.position.set(0, hy - 0.02, s * 0.08);
+    g.add(barb);
+  }
+  g.add(mesh(new BoxGeometry(0.025, 0.3, 0.035), toonDetail(accent), 0, hy + 0.14, 0.05));
+}
+
+/** Two-handed polearm stacking an axe bit, a rear spike and a spear point. */
+function buildHalberd(g: Group, { mat, accent }: WeaponCtx) {
+  g.add(mesh(limbCylinder(0.048, 1.5), toonDetail(WOOD), 0, 0.42, 0));
+  g.add(mesh(limbCylinder(0.058, 0.18), toonDetail(WRAP), 0, -0.02, 0));
+  g.add(mesh(new SphereGeometry(0.06, 8, 6), toonDetail(CAP), 0, -0.33, 0));
+  const hy = 0.86;
+  g.add(mesh(new BoxGeometry(0.1, 0.4, 0.12), toonDetail(BAND_STEEL), 0, hy, 0)); // langets
+  g.add(mesh(new BoxGeometry(0.055, 0.34, 0.26), mat, 0, hy, 0.2));
+  g.add(mesh(new BoxGeometry(0.035, 0.38, 0.05), toonDetail(accent), 0, hy, 0.33));
+  const rear = new Mesh(new ConeGeometry(0.05, 0.22, 5), mat);
+  rear.rotation.x = -Math.PI / 2 - 0.25;
+  rear.position.set(0, hy - 0.02, -0.14);
+  g.add(rear);
+  g.add(mesh(new ConeGeometry(0.06, 0.34, 4), mat, 0, 1.32, 0));
+  g.add(mesh(new BoxGeometry(0.02, 0.26, 0.03), toonDetail(accent), 0, 1.32, 0.04));
+}
+
+/** Sidearm: short +Z barrel over a blocky slide, raked grip below. */
+function buildPistol(g: Group, { mat, accent }: WeaponCtx) {
+  const barrel = new Mesh(limbCylinder(0.055, 0.26), mat);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, 0.06, 0.24);
+  g.add(barrel);
+  g.add(mesh(new BoxGeometry(0.11, 0.14, 0.32), mat, 0, 0.04, 0.1));
+  g.add(mesh(new BoxGeometry(0.12, 0.1, 0.14), toonDetail(BAND_STEEL), 0, -0.04, 0));
+  const grip = new Mesh(new BoxGeometry(0.1, 0.24, 0.11), toonDetail(GUN_DETAIL));
+  grip.rotation.x = -0.28;
+  grip.position.set(0, -0.14, -0.05);
+  g.add(grip);
+  g.add(mesh(new BoxGeometry(0.04, 0.06, 0.04), toonDetail(accent), 0, 0.15, 0.34));
+}
+
+/** Flintlock: long slim barrel on a carved stock, lock plate and cock. */
+function buildPistolFlint(g: Group, { mat, accent }: WeaponCtx) {
+  const barrel = new Mesh(limbCylinder(0.045, 0.44, 6), mat);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, 0.07, 0.32);
+  g.add(barrel);
+  const muzzle = new Mesh(limbCylinder(0.062, 0.05), toonDetail(accent));
+  muzzle.rotation.x = Math.PI / 2;
+  muzzle.position.set(0, 0.07, 0.52);
+  g.add(muzzle);
+  g.add(mesh(new BoxGeometry(0.09, 0.13, 0.3), toonDetail(WOOD), 0, 0, 0.12));
+  const grip = new Mesh(new BoxGeometry(0.085, 0.26, 0.12), toonDetail(WOOD));
+  grip.rotation.x = -0.5;
+  grip.position.set(0, -0.14, -0.1);
+  g.add(grip);
+  g.add(mesh(new SphereGeometry(0.055, 8, 6), toonDetail(CAP), 0, -0.26, -0.17));
+  g.add(mesh(new BoxGeometry(0.13, 0.12, 0.1), toonDetail(BAND_STEEL), 0, 0.06, -0.02));
+  const cock = new Mesh(new BoxGeometry(0.05, 0.13, 0.06), toonDetail(accent));
+  cock.rotation.x = 0.5;
+  cock.position.set(0, 0.17, -0.05);
+  g.add(cock);
+}
+
+/** Hand cannon: fat stub barrel, revolver drum, slab frame. */
+function buildPistolHeavy(g: Group, { mat, accent }: WeaponCtx) {
+  const barrel = new Mesh(limbCylinder(0.085, 0.24), mat);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, 0.07, 0.26);
+  g.add(barrel);
+  g.add(mesh(new BoxGeometry(0.17, 0.17, 0.08), toonDetail(accent), 0, 0.07, 0.4)); // brake
+  const drum = new Mesh(new CylinderGeometry(0.11, 0.11, 0.2, 8), toonDetail(BAND_STEEL));
+  drum.rotation.x = Math.PI / 2;
+  drum.position.set(0, 0.05, 0.06);
+  g.add(drum);
+  g.add(mesh(new BoxGeometry(0.13, 0.2, 0.16), mat, 0, 0, -0.04));
+  const grip = new Mesh(new BoxGeometry(0.12, 0.26, 0.13), toonDetail(GUN_DETAIL));
+  grip.rotation.x = -0.22;
+  grip.position.set(0, -0.16, -0.1);
+  g.add(grip);
+  g.add(mesh(new BoxGeometry(0.05, 0.07, 0.05), toonDetail(GUN_DETAIL), 0, 0.17, 0.16));
+}
+
+/** Marksman long gun: extended barrel, wooden stock, scope on top. */
+function buildRifleLong(g: Group, { mat, accent }: WeaponCtx) {
+  const barrel = new Mesh(limbCylinder(0.07, 0.88), mat);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, 0.05, 0.54);
+  g.add(barrel);
+  g.add(mesh(new BoxGeometry(0.14, 0.16, 0.34), mat, 0, -0.02, 0.1));
+  g.add(mesh(new BoxGeometry(0.12, 0.14, 0.32), toonDetail(WOOD), 0, 0, 0.34));
+  g.add(mesh(new BoxGeometry(0.1, 0.16, 0.42), toonDetail(WOOD), 0, -0.06, -0.26));
+  g.add(mesh(new BoxGeometry(0.1, 0.1, 0.14), toonDetail(WOOD), 0, 0.04, -0.12)); // comb
+  const scope = new Mesh(limbCylinder(0.05, 0.3), toonDetail(GUN_DETAIL));
+  scope.rotation.x = Math.PI / 2;
+  scope.position.set(0, 0.2, 0.16);
+  g.add(scope);
+  for (const z of [0.04, 0.28] as const) {
+    g.add(mesh(new BoxGeometry(0.05, 0.1, 0.05), toonDetail(BAND_STEEL), 0, 0.12, z));
+  }
+  g.add(mesh(new BoxGeometry(0.07, 0.16, 0.06), toonDetail(GUN_DETAIL), 0, -0.18, 0.14));
+  const muzzle = new Mesh(limbCylinder(0.08, 0.07), toonDetail(accent));
+  muzzle.rotation.x = Math.PI / 2;
+  muzzle.position.set(0, 0.05, 0.95);
+  g.add(muzzle);
+}
+
+/** Stubby carbine: short barrel, drum magazine, skeleton stock. */
+function buildRifleCarbine(g: Group, { mat, accent }: WeaponCtx) {
+  const barrel = new Mesh(limbCylinder(0.075, 0.4), mat);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, 0.05, 0.34);
+  g.add(barrel);
+  g.add(mesh(new BoxGeometry(0.18, 0.22, 0.32), mat, 0, -0.01, 0.06));
+  g.add(mesh(new BoxGeometry(0.14, 0.12, 0.2), toonDetail(BAND_STEEL), 0, 0.09, 0.26));
+  g.add(mesh(new BoxGeometry(0.1, 0.06, 0.3), toonDetail(accent), 0, 0.15, 0.08)); // top rail
+  const drum = new Mesh(new CylinderGeometry(0.13, 0.13, 0.09, 10), toonDetail(GUN_DETAIL));
+  drum.rotation.z = Math.PI / 2;
+  drum.position.set(0, -0.2, 0.08);
+  g.add(drum);
+  g.add(mesh(new BoxGeometry(0.07, 0.14, 0.06), toonDetail(GUN_DETAIL), 0, -0.15, -0.06));
+  g.add(mesh(new BoxGeometry(0.08, 0.06, 0.28), toonDetail(GUN_DETAIL), 0, 0.04, -0.24));
+  g.add(mesh(new BoxGeometry(0.08, 0.18, 0.07), toonDetail(GUN_DETAIL), 0, -0.03, -0.36));
+}
+
+/** Variant meshes beyond the original six, keyed by type. */
+const WEAPON_VARIANTS: Partial<Record<WeaponType, WeaponBuilder>> = {
+  swordBroad: buildSwordBroad,
+  swordCurved: buildSwordCurved,
+  swordRapier: buildSwordRapier,
+  swordClaymore: buildSwordClaymore,
+  dagger: buildDagger,
+  daggerCurved: buildDaggerCurved,
+  claw: buildClaw,
+  clawTwin: buildClawTwin,
+  wand: buildWand,
+  wandCrystal: buildWandCrystal,
+  axeBearded: buildAxeBearded,
+  axeHand: buildAxeHand,
+  greataxe: buildGreataxe,
+  greataxeDouble: buildGreataxeDouble,
+  maulSpiked: buildMaulSpiked,
+  hammer: buildHammer,
+  hammerWar: buildHammerWar,
+  hammerClub: buildHammerClub,
+  spearBarbed: buildSpearBarbed,
+  halberd: buildHalberd,
+  pistol: buildPistol,
+  pistolFlint: buildPistolFlint,
+  pistolHeavy: buildPistolHeavy,
+  rifleLong: buildRifleLong,
+  rifleCarbine: buildRifleCarbine,
+};
+
 /**
  * Held props in hand-local space: grip at origin.
  * Parent into the hand Group from generateArms so they track every pose.
@@ -3085,6 +3645,12 @@ export function generateWeapon(opts: {
   const t = WEAPON_READABILITY;
   /** +1 right hand (default), −1 left — lateral prop offsets. */
   const hx = opts.hand === "left" ? -1 : 1;
+
+  const variant = WEAPON_VARIANTS[opts.type];
+  if (variant) {
+    variant(g, { mat, accent });
+    return g;
+  }
 
   if (opts.type === "sword") {
     // Canonical grip: hold point at origin, blade up +Y, edge facing +Z.

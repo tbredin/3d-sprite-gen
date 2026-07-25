@@ -23,6 +23,7 @@ import {
   HEM_STYLES,
   OFFHAND_TYPES,
   TORSO_STYLES,
+  TWO_HANDED_TYPES,
   WEAPON_TYPES,
 } from "./types";
 
@@ -235,19 +236,94 @@ const HEM: HemStyle[] = [
   "none",
 ];
 
+/**
+ * Weapon families. Pose language and off-hand pairing follow the family, so a
+ * new variant only has to be listed here to behave like its siblings.
+ */
+const CASTER_TYPES = new Set<WeaponType>(["staff", "wand", "wandCrystal"]);
+const BLADE_TYPES = new Set<WeaponType>([
+  "sword",
+  "swordBroad",
+  "swordCurved",
+  "swordRapier",
+  "swordClaymore",
+  "dagger",
+  "daggerCurved",
+  "claw",
+  "clawTwin",
+]);
+/** One-handed choppers / bludgeons — same swing stance as `axe`. */
+const CHOP_TYPES = new Set<WeaponType>([
+  "axe",
+  "axeBearded",
+  "axeHand",
+  "hammer",
+  "hammerWar",
+  "hammerClub",
+]);
+const PISTOL_TYPES = new Set<WeaponType>(["pistol", "pistolFlint", "pistolHeavy"]);
+const GUN_TYPES = new Set<WeaponType>([
+  ...PISTOL_TYPES,
+  "rifle",
+  "rifleLong",
+  "rifleCarbine",
+]);
+/** Shafted two-handers — braced stance, trail hand IK'd onto the haft. */
+const TWO_HAND_MELEE = new Set<WeaponType>(
+  TWO_HANDED_TYPES.filter((w) => !GUN_TYPES.has(w)),
+);
+/** Props that leave the trail hand free for a shield or a twin. */
+const ONE_HAND_MELEE = new Set<WeaponType>([...BLADE_TYPES, ...CHOP_TYPES]);
+
+/**
+ * Roll pool. The originals keep the heaviest weights so the variants add
+ * variety without swamping the classic silhouettes.
+ */
 const WEAPON: WeaponType[] = [
   "sword",
   "sword",
   "sword",
+  "sword",
   "axe",
   "axe",
+  "axe",
+  "staff",
   "staff",
   "staff",
   "spear",
   "spear",
   "maul",
+  "maul",
+  "rifle",
   "rifle",
   "shield",
+  "shield",
+  "shield",
+  "swordBroad",
+  "swordCurved",
+  "swordRapier",
+  "swordClaymore",
+  "dagger",
+  "daggerCurved",
+  "claw",
+  "clawTwin",
+  "wand",
+  "wandCrystal",
+  "axeBearded",
+  "axeHand",
+  "greataxe",
+  "greataxeDouble",
+  "maulSpiked",
+  "hammer",
+  "hammerWar",
+  "hammerClub",
+  "spearBarbed",
+  "halberd",
+  "pistol",
+  "pistolFlint",
+  "pistolHeavy",
+  "rifleLong",
+  "rifleCarbine",
 ];
 
 const BACK_LOADOUT: BackLoadout[] = [
@@ -341,13 +417,13 @@ function pickTrim(cloth: string): string | undefined {
 function poseForWeapon(weapon: WeaponType): { arm: ArmPose; leg: LegPose } {
   // Variants stay inside the silhouette stance language (lead fwd / trail back).
   // Legs stay planted — no crouch hop / mid-stride.
-  if (weapon === "staff") {
+  if (CASTER_TYPES.has(weapon)) {
     return {
       arm: pick(["cast", "raise", "ready"] as ArmPose[]),
       leg: pick(["ready", "stand", "guard"] as LegPose[]),
     };
   }
-  if (weapon === "rifle") {
+  if (GUN_TYPES.has(weapon)) {
     return {
       arm: pick(["extended", "reach", "ready"] as ArmPose[]),
       leg: pick(["ready", "wide", "stand"] as LegPose[]),
@@ -359,13 +435,13 @@ function poseForWeapon(weapon: WeaponType): { arm: ArmPose; leg: LegPose } {
       leg: pick(["guard", "wide", "ready"] as LegPose[]),
     };
   }
-  if (weapon === "sword" || weapon === "axe") {
+  if (ONE_HAND_MELEE.has(weapon)) {
     return {
       arm: pick(["ready", "extended", "reach"] as ArmPose[]),
       leg: pick(["ready", "lunge", "wide", "guard"] as LegPose[]),
     };
   }
-  if (weapon === "spear" || weapon === "maul") {
+  if (TWO_HAND_MELEE.has(weapon)) {
     // Two-handers: lead forward so the shaft cuts a diagonal; trail is IK'd on.
     return {
       arm: pick(["ready", "extended", "guard"] as ArmPose[]),
@@ -524,13 +600,19 @@ function randomArms(
     Math.random() < 0.2
       ? 0.1 + Math.random() * 0.2
       : 0.5 + Math.random() * 0.4;
-  // Sword + shield is the classic combat silhouette — give it often. Failing
-  // that, a blade sometimes gets a second low-held blade in the off hand.
+  // Blade + shield is the classic combat silhouette — give it often. Failing
+  // that, a one-hander sometimes pairs with a twin carried low; sidearms dual
+  // wield instead of taking a shield.
   let offhand: { type: WeaponType; color: string } | undefined;
-  if (weaponType === "sword" && Math.random() < 0.55) {
-    offhand = { type: "shield", color: pick(CLOTH) };
-  } else if (weaponType === "sword" && Math.random() < 0.35) {
-    offhand = { type: "sword", color: pick(CLOTH) };
+  if (ONE_HAND_MELEE.has(weaponType)) {
+    const roll = Math.random();
+    if (roll < 0.5) {
+      offhand = { type: "shield", color: pick(CLOTH) };
+    } else if (roll < 0.78) {
+      offhand = { type: weaponType, color: pick(CLOTH) };
+    }
+  } else if (PISTOL_TYPES.has(weaponType) && Math.random() < 0.4) {
+    offhand = { type: weaponType, color: pick(CLOTH) };
   }
   return {
     leadSide,
