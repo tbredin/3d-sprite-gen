@@ -13,12 +13,13 @@ import {
   generateHelmet,
   generateHem,
   generateLegs,
+  generateNeck,
   generatePouches,
   generateTorso,
   generateWeapon,
+  neckAttachY,
 } from "./parts";
 import { legsYawForLead, resolveLeadSide, torsoYawForLead } from "./stance";
-import { LAYOUT } from "./units";
 
 /**
  * Assemble a full chibi from a declarative spec.
@@ -26,8 +27,9 @@ import { LAYOUT } from "./units";
  *
  * Hierarchy for silhouette stance (see stance.ts):
  *   root  — facing +Z; BakeCanvas rotationY turns the whole sprite
- *     headPivot — head / face / hair / helmet; ChibiCharacter yaws it a little
- *       toward the camera (see headStick.ts) so the face stays "sticky"
+ *     neck — fixed skin stump (not scaled with the head)
+ *     headPivot @ neck — size/height scale + sticky yaw pivot from the neck
+ *       headLocal — world-authored geometry offset so neck is the origin
  *     upperBody (yaw ≈ ±45°) — torso, hem, cape, back gear, arms (+ weapons)
  *     legs (yaw ≈ 40% of torso) — planted ipsilateral lead; tracks ¾ body
  *
@@ -246,18 +248,31 @@ export function assembleCharacter(
   const replaceHead = helmetMode.mount === "replace";
   const showFace = (!replaceHead || helmetMode.showFace) && showEyes;
   const headScale = spec.head?.scale ?? 1;
+  const headSize = spec.head?.size ?? 1;
   const headYScale = spec.head?.yScale ?? 1;
   const headShape = spec.head?.shape;
+  const neckY = neckAttachY();
 
-  // Head, face, hair and helmet share one pivot so dynamic head rotation can
-  // yaw them together in place (skull sits on x=z=0, so rotation.y spins it
-  // about its own vertical axis). See headStick.ts / ChibiCharacter.
+  // Skin neck sits on the torso and does not scale with the head — stops the
+  // skull floating when body is small or head size is dialled down.
+  const neck = generateNeck(spec.skin);
+  root.add(neck);
+  addHullOutlines(neck, 0.022);
+  tagPartGroup(neck, PartGroupId.HEAD);
+
+  // Head assembly pivots at the neck: size / height scale and sticky yaw all
+  // share this origin. Geometry is authored in world Y, then offset into a
+  // local group so (0,0,0) of headPivot is the neck joint.
   const headPivot = new Group();
   headPivot.name = "headPivot";
-  // Stretch around the head centre so the neck attachment stays stable.
-  headPivot.scale.y = headYScale;
-  headPivot.position.y = LAYOUT.headCenterY * (1 - headYScale);
+  headPivot.position.set(0, neckY, 0);
+  headPivot.scale.set(headSize, headSize * headYScale, headSize);
   root.add(headPivot);
+
+  const headLocal = new Group();
+  headLocal.name = "headLocal";
+  headLocal.position.set(0, -neckY, 0);
+  headPivot.add(headLocal);
 
   if (!replaceHead) {
     const head = generateHead({
@@ -265,7 +280,7 @@ export function assembleCharacter(
       scale: headScale,
       shape: headShape,
     });
-    headPivot.add(head);
+    headLocal.add(head);
     addHullOutlines(head, 0.03);
     tagPartGroup(head, PartGroupId.HEAD);
   }
@@ -289,7 +304,7 @@ export function assembleCharacter(
         if (hiddenEyes.has(child.name)) child.visible = false;
       }
     }
-    headPivot.add(face);
+    headLocal.add(face);
     tagPartGroup(face, PartGroupId.HEAD);
   }
 
@@ -301,7 +316,7 @@ export function assembleCharacter(
       color: spec.hair.color,
       complexity: spec.hair.complexity,
     });
-    headPivot.add(hair);
+    headLocal.add(hair);
     addHullOutlines(hair, 0.026);
     tagPartGroup(hair, PartGroupId.HEAD);
   }
@@ -313,7 +328,7 @@ export function assembleCharacter(
       visor: spec.helmet.visor,
       scale: headScale,
     });
-    headPivot.add(helmet);
+    headLocal.add(helmet);
     addHullOutlines(helmet, 0.032);
     tagPartGroup(helmet, PartGroupId.HEAD);
   }

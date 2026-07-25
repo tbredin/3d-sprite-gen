@@ -1387,7 +1387,34 @@ export default function App() {
                         <label className="light-slider">
                           <span
                             className="light-slider-label"
-                            title="Vertical head scale"
+                            title="Overall head size (pivots from neck)"
+                          >
+                            Size
+                          </span>
+                          <input
+                            type="range"
+                            min={0.5}
+                            max={2}
+                            step={0.05}
+                            value={spec.head?.size ?? 1}
+                            disabled={locked}
+                            onChange={(e) => {
+                              const size = Number(e.target.value);
+                              applyPartEdit((s) => ({
+                                ...s,
+                                head: { ...s.head, size },
+                              }));
+                            }}
+                            title="Overall head size"
+                          />
+                          <span className="slider-val">
+                            {(spec.head?.size ?? 1).toFixed(2)}
+                          </span>
+                        </label>
+                        <label className="light-slider">
+                          <span
+                            className="light-slider-label"
+                            title="Vertical head stretch (pivots from neck)"
                           >
                             Height
                           </span>

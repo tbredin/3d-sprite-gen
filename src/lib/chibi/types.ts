@@ -183,8 +183,13 @@ export type CharacterSpec = {
     /** Overall head scale (hair stays world-sized). */
     scale?: number;
     /**
-     * Vertical scale for the complete head assembly (default 1).
-     * Includes skull, face, hair, hats, and helmets.
+     * Uniform scale of the complete head assembly (default 1).
+     * Includes skull, face, hair, hats, and helmets. Pivots from the neck.
+     */
+    size?: number;
+    /**
+     * Extra vertical stretch on top of `size` (default 1).
+     * Also pivots from the neck.
      */
     yScale?: number;
   };
