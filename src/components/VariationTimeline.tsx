@@ -13,6 +13,15 @@ import {
   type VariationStatus,
 } from "../api";
 import { downloadDataUrl } from "../lib/capture";
+import {
+  loadVariationSettings,
+  saveVariationSettings,
+  VARIATION_GUIDANCE_MAX,
+  VARIATION_GUIDANCE_MIN,
+  VARIATION_GUIDANCE_STEP,
+  VARIATION_STEPS_MAX,
+  VARIATION_STEPS_MIN,
+} from "../lib/variationSettings";
 
 const CONCURRENCY = 3;
 const PREVIEW_GAP = 8;
@@ -23,10 +32,10 @@ const REMIX_MAX_MS = 4 * 60 * 60 * 1000;
 const DEFAULT_STEPS = 30;
 const DEFAULT_GUIDANCE = 7;
 /** UI slider max — Remix always uses this. */
-const MAX_STEPS = 40;
-const GUIDANCE_MIN = 4;
-const GUIDANCE_MAX = 10;
-const GUIDANCE_STEP = 0.5;
+const MAX_STEPS = VARIATION_STEPS_MAX;
+const GUIDANCE_MIN = VARIATION_GUIDANCE_MIN;
+const GUIDANCE_MAX = VARIATION_GUIDANCE_MAX;
+const GUIDANCE_STEP = VARIATION_GUIDANCE_STEP;
 
 type StreamMode =
   | "stopped"
@@ -105,8 +114,12 @@ export function VariationTimeline({
   const [error, setError] = useState<string | null>(null);
   const [steer, setSteer] = useState("");
   const [freedom, setFreedom] = useState<FreedomChoice>("auto");
-  const [steps, setSteps] = useState(DEFAULT_STEPS);
-  const [guidance, setGuidance] = useState(DEFAULT_GUIDANCE);
+  const [steps, setSteps] = useState(
+    () => loadVariationSettings()?.steps ?? DEFAULT_STEPS,
+  );
+  const [guidance, setGuidance] = useState(
+    () => loadVariationSettings()?.guidance ?? DEFAULT_GUIDANCE,
+  );
   const [inflight, setInflight] = useState(0);
   const [warming, setWarming] = useState(false);
   const [phase, setPhase] = useState<string | null>(null);
@@ -130,6 +143,8 @@ export function VariationTimeline({
   const warmupPromiseRef = useRef<Promise<void> | null>(null);
   const idleDeadlineRef = useRef<number | null>(null);
   const remixCursorRef = useRef(0);
+  /** Persisted Steps/CFG win over server defaults on first status fetch. */
+  const hadPersistedSettingsRef = useRef(loadVariationSettings() != null);
 
   sourceRef.current = sourceDataUrl;
   itemsRef.current = items;
@@ -143,12 +158,17 @@ export function VariationTimeline({
   modeRef.current = mode;
 
   useEffect(() => {
+    saveVariationSettings({ steps, guidance });
+  }, [steps, guidance]);
+
+  useEffect(() => {
     void listVariations()
       .then(setItems)
       .catch(() => setItems([]));
     void fetchVariationStatus()
       .then((s) => {
         setStatus(s);
+        if (hadPersistedSettingsRef.current) return;
         if (typeof s.default_steps === "number") setSteps(s.default_steps);
         if (typeof s.default_guidance === "number") {
           setGuidance(s.default_guidance);
@@ -648,7 +668,7 @@ export function VariationTimeline({
             <input
               id="timeline-steps"
               type="range"
-              min={16}
+              min={VARIATION_STEPS_MIN}
               max={MAX_STEPS}
               step={1}
               value={steps}
