@@ -171,23 +171,39 @@ function buildChibi(def: BodyProfileDef): ChibiUnits {
   };
 }
 
+/** 1× reference — head/neck stay here while body scale changes underneath. */
+const REF_CHIBI = buildChibi(BODY_BASE);
+const REF_SHOULDER_Y = REF_CHIBI.legs + REF_CHIBI.torso;
+const REF_HEAD_CENTER_Y = REF_SHOULDER_Y + REF_CHIBI.headTall * 0.48;
+const REF_HEAD_TOP_Y = REF_CHIBI.totalHeight;
+const REF_PIVOT_Y = REF_CHIBI.totalHeight * 0.5;
+
+/**
+ * Layout with the neck/shoulders pinned to the 1× figure.
+ * Smaller bodies lift the feet toward the neck; larger bodies push them down.
+ */
 function buildLayout(chibi: ChibiUnits): LayoutUnits {
+  const shoulderY = REF_SHOULDER_Y;
+  const hipY = shoulderY - chibi.torso;
+  const footY = hipY - chibi.legs;
   return {
-    footY: 0,
-    hipY: chibi.legs,
-    shoulderY: chibi.legs + chibi.torso,
-    headCenterY: chibi.legs + chibi.torso + chibi.headTall * 0.48,
-    headTopY: chibi.totalHeight,
+    footY,
+    hipY,
+    shoulderY,
+    headCenterY: REF_HEAD_CENTER_Y,
+    headTopY: REF_HEAD_TOP_Y,
   };
 }
 
 function applyProfileDef(def: BodyProfileDef) {
   CHIBI = buildChibi(def);
   LAYOUT = buildLayout(CHIBI);
-  CHARACTER_PIVOT_Y = CHIBI.totalHeight * 0.5;
+  // Fixed to the 1× figure so bake framing keeps the head steady while the
+  // body scales from the neck.
+  CHARACTER_PIVOT_Y = REF_PIVOT_Y;
 }
 
-/** Apply continuous body scale (0.5–1.5). Head / hands / feet stay fixed. */
+/** Apply continuous body scale (0.5–1.5). Head stays put; body scales from neck. */
 export function applyBodyScale(scale: number) {
   applyProfileDef(scaledBodyDef(scale));
 }
@@ -254,7 +270,7 @@ export function saveBodyProfile(id: BodyProfileId) {
 const initialScale = loadBodyScale();
 export let CHIBI: ChibiUnits = buildChibi(BODY_BASE);
 export let LAYOUT: LayoutUnits = buildLayout(CHIBI);
-export let CHARACTER_PIVOT_Y = CHIBI.totalHeight * 0.5;
+export let CHARACTER_PIVOT_Y = REF_PIVOT_Y;
 
 applyBodyScale(initialScale);
 
