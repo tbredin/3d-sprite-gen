@@ -175,10 +175,17 @@ export {
   setLegPose,
 } from "./random";
 export {
+  applyBodyScale,
   applyBodyProfile,
+  BODY_SCALE_MIN,
+  BODY_SCALE_MAX,
+  BODY_SCALE_DEFAULT,
   BODY_PROFILE_IDS,
   BODY_PROFILES,
+  loadBodyScale,
+  saveBodyScale,
   loadBodyProfile,
   saveBodyProfile,
+  clampBodyScale,
   type BodyProfileId,
 } from "./units";

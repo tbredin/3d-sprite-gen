@@ -66,11 +66,11 @@ import {
   rerollPart,
   rerollPartColors,
   rerollEyeColor,
-  applyBodyProfile as setChibiBodyProfile,
-  BODY_PROFILE_IDS,
-  BODY_PROFILES,
-  loadBodyProfile,
-  saveBodyProfile,
+  applyBodyScale as setChibiBodyScale,
+  BODY_SCALE_MIN,
+  BODY_SCALE_MAX,
+  loadBodyScale,
+  saveBodyScale,
   HEAD_SHAPES,
   HAIR_STYLES,
   HELMET_STYLES,
@@ -96,7 +96,6 @@ import {
   setOffhandType,
   setLegPose,
   isHeadReplacement,
-  type BodyProfileId,
   type CharacterSpec,
   type PartId,
   type PartLocks,
@@ -251,9 +250,7 @@ export default function App() {
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
   const [presetId, setPresetId] = useState<PresetId | "random">("mage");
-  const [bodyProfileId, setBodyProfileId] = useState<BodyProfileId>(() =>
-    loadBodyProfile(),
-  );
+  const [bodyScale, setBodyScale] = useState(() => loadBodyScale());
   const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
   const [specText, setSpecText] = useState(() =>
     JSON.stringify(getPreset("mage"), null, 2),
@@ -389,10 +386,10 @@ export default function App() {
     setCharKey((k) => k + 1);
   };
 
-  const onBodyProfileChange = (id: BodyProfileId) => {
-    setBodyProfileId(id);
-    setChibiBodyProfile(id);
-    saveBodyProfile(id);
+  const onBodyScaleChange = (scale: number) => {
+    setBodyScale(scale);
+    setChibiBodyScale(scale);
+    saveBodyScale(scale);
     setCharKey((k) => k + 1);
   };
 
@@ -823,7 +820,7 @@ export default function App() {
                   title="Drag to rotate"
                 >
                   <BakeCanvas
-                    key={`${presetId}-${bodyProfileId}-${charKey}-${size}`}
+                    key={`${presetId}-${bodyScale}-${charKey}-${size}`}
                     size={size}
                     colors={palette.colors}
                     silhouetteOutlineHex={outlineColors.silhouette}
@@ -990,21 +987,20 @@ export default function App() {
             onToggle={() => setCharacterOpen((v) => !v)}
           >
             <div className="char-picker">
-              <label className="field">
-                Body
-                <select
-                  value={bodyProfileId}
-                  onChange={(e) =>
-                    onBodyProfileChange(e.target.value as BodyProfileId)
-                  }
-                  title="Smaller torso/legs — hands & feet stay fixed for pixel legibility"
-                >
-                  {BODY_PROFILE_IDS.map((id) => (
-                    <option key={id} value={id}>
-                      {BODY_PROFILES[id].label}
-                    </option>
-                  ))}
-                </select>
+              <label className="field" title="Torso/legs scale — head, hands & feet stay fixed">
+                <span className="field-heading">
+                  Body
+                  <span className="field-value">{bodyScale.toFixed(2)}×</span>
+                </span>
+                <input
+                  type="range"
+                  min={BODY_SCALE_MIN}
+                  max={BODY_SCALE_MAX}
+                  step={0.05}
+                  value={bodyScale}
+                  onChange={(e) => onBodyScaleChange(Number(e.target.value))}
+                  aria-label="Body scale"
+                />
               </label>
               <label className="field">
                 Preset
@@ -1398,7 +1394,7 @@ export default function App() {
                           <input
                             type="range"
                             min={0.75}
-                            max={2}
+                            max={1.5}
                             step={0.05}
                             value={spec.head?.yScale ?? 1}
                             disabled={locked}

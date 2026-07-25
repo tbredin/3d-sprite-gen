@@ -710,6 +710,13 @@ button.ghost {
   min-width: 0;
 }
 
+.char-picker .field input[type="range"] {
+  width: 100%;
+  height: var(--control-h);
+  margin: 0;
+  padding: 0;
+}
+
 .panel button.field-matched {
   background: var(--accent);
   border-color: color-mix(in srgb, var(--ink) 55%, #000);
