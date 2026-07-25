@@ -1432,7 +1432,7 @@ export default function App() {
                             className="light-slider-label"
                             title="Torso/legs scale from the neck — head, hands & feet stay fixed"
                           >
-                            Body
+                            Size
                           </span>
                           <input
                             type="range"
