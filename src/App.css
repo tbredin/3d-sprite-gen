@@ -9,6 +9,9 @@
   --focus: #f5e07a;
   --control-h: 2rem;
   --gap: 0.55rem;
+  --swatch-border: #3a415c;
+  /* ~10% brighter than --swatch-border so mini outlines still read on the palette icon. */
+  --swatch-border-mini: color-mix(in srgb, var(--swatch-border) 90%, white);
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   color: var(--text);
   background:
@@ -189,7 +192,7 @@ body {
   border: 1px solid #3a415c;
   height: var(--control-h);
   padding: 0 0.5rem;
-  border-radius: 0;
+  border-radius: 4px;
   box-sizing: border-box;
 }
 
@@ -874,7 +877,14 @@ button.ghost {
   align-items: center;
   gap: 0.25rem;
   min-height: 1.35rem;
-  padding: 0.08rem 0.25rem 0.08rem 0.3rem;
+  padding: 0.08rem 0.25rem 0.08rem 4px;
+}
+
+.part-title {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
 }
 
 .part-name {
@@ -885,10 +895,19 @@ button.ghost {
   letter-spacing: 0.02em;
 }
 
+.part-row-lock {
+  opacity: 0.55;
+}
+
+.part-row-lock:hover,
+.part-row-lock.is-locked {
+  opacity: 1;
+}
+
 .part-inline-controls {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: calc(0.2rem + 4px);
   flex: 1 1 auto;
   min-width: 0;
   flex-wrap: wrap;
@@ -906,11 +925,11 @@ button.ghost {
   line-height: 1.1;
 }
 
-/* Dropdown + its own lock travel together when the row wraps. */
+/* Lock sits left of its dropdown; the pair wraps together. */
 .part-field {
   display: flex;
   align-items: center;
-  gap: 0.02rem;
+  gap: 2px;
   flex: 1 1 3.5rem;
   min-width: 0;
 }
@@ -920,10 +939,7 @@ button.ghost {
   flex: 1 1 auto;
 }
 
-.part-field-lock,
-.panel button.part-field-lock {
-  width: 0.95rem;
-  font-size: 0.58rem;
+.part-field-lock {
   opacity: 0.4;
 }
 
@@ -977,13 +993,37 @@ button.ghost {
   opacity: 1;
 }
 
+/* Beat `.panel button.part-icon-btn` (same specificity otherwise loses by order). */
+.part-icon-btn.part-row-lock,
+.panel button.part-icon-btn.part-row-lock,
+.part-icon-btn.part-field-lock,
+.panel button.part-icon-btn.part-field-lock {
+  /* content-box so horizontal padding actually widens the hit area. */
+  box-sizing: content-box;
+  width: 0.42rem;
+  /* Match other emoji controls for hit area; glyph stays 0.42rem. */
+  height: 1.25rem !important;
+  max-height: 1.25rem;
+  font-size: 0.42rem;
+  /* Negative margin cancels the padding so the hit area grows, not the layout. */
+  padding: 0 2px !important;
+  margin: 0 -2px;
+}
+
+.part-icon-btn.part-row-lock,
+.panel button.part-icon-btn.part-row-lock {
+  width: calc(0.42rem + 1px);
+  font-size: calc(0.42rem + 1px);
+  /* Keep the +1px visual side gap: 2px padding − 1px margin net. */
+  margin: 0 -1px;
+}
+
 .color-control {
   position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.15rem;
   flex: 0 0 auto;
-  /* PartColorMenu pads to maxPartColorSlots; keep a floor for single-swatch controls */
   min-width: 12px;
   min-height: 12px;
 }
@@ -1052,6 +1092,58 @@ button.color-control-swatch.swatch-btn:disabled {
   align-items: center;
   gap: 1px;
   pointer-events: none;
+}
+
+/* Part colour trigger: palette glyph with mini-swatches overlaid at its right. */
+.part-color-trigger,
+.panel button.part-color-trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted, #9aa4b0);
+}
+
+.part-color-trigger:hover:not(:disabled) {
+  color: var(--text, #e8ecf4);
+}
+
+.part-color-palette-icon {
+  display: block;
+  flex: none;
+  opacity: 0.9;
+}
+
+/* Overlaid, so the stack never grows the row or swallows the trigger click. */
+.part-color-mini-stack {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0;
+  pointer-events: none;
+}
+
+.part-color-mini {
+  display: block;
+  box-sizing: content-box;
+  width: 3px;
+  height: 3px;
+  flex: none;
+  border: 1px solid var(--swatch-border-mini);
+  border-radius: 50%;
+}
+
+.part-color-mini + .part-color-mini {
+  margin-top: -1px;
+}
+
+.part-color-mini-empty {
+  background: repeating-conic-gradient(#3a415c 0% 25%, #12141f 0% 50%) 50% /
+    3px 3px;
 }
 
 .color-control-native {
@@ -1149,7 +1241,6 @@ button.color-control-swatch.swatch-btn:disabled {
 
 .part-color-swatches {
   margin-top: 0.15rem;
-  max-height: 4.5rem;
 }
 
 /* Outline toggles reuse part-row; checkbox label fills the left. */
@@ -1337,8 +1428,6 @@ button.color-control-swatch.swatch-btn:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  max-height: 72px;
-  overflow: auto;
   padding: 0.3rem;
   background: #0c0e16;
   border: 1px solid #3a415c;
@@ -1347,16 +1436,17 @@ button.color-control-swatch.swatch-btn:disabled {
 .swatch {
   display: block;
   box-sizing: border-box;
-  width: 12px;
+  width: 13px;
   aspect-ratio: 1;
   height: auto;
   flex: none;
-  border: 1px solid #0006;
+  border: 1px solid var(--swatch-border);
+  border-radius: 50%;
   padding: 0;
 }
 
 button.swatch-btn {
-  width: 12px;
+  width: 13px;
   aspect-ratio: 1;
   height: auto;
   min-height: 0;
@@ -1365,7 +1455,7 @@ button.swatch-btn {
   cursor: pointer;
   appearance: none;
   background-clip: padding-box;
-  border: 1px solid #0006;
+  border: 1px solid var(--swatch-border);
   line-height: 0;
   font-size: 0;
 }

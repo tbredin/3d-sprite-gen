@@ -269,7 +269,6 @@ function FieldLockGroup({
   const action = locked ? `Unlock ${label}` : `Lock ${label}`;
   return (
     <div className={`part-field${locked ? " is-locked" : ""}`}>
-      {children}
       <button
         type="button"
         className={`part-icon-btn part-field-lock${locked ? " is-locked" : ""}`}
@@ -280,6 +279,7 @@ function FieldLockGroup({
       >
         {locked ? "🔒" : "🔓"}
       </button>
+      {children}
     </div>
   );
 }
@@ -294,11 +294,11 @@ export default function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
-  const [presetId, setPresetId] = useState<PresetId | "random">("mage");
+  const [presetId, setPresetId] = useState<PresetId | "random">("knight");
   const [bodyScale, setBodyScale] = useState(() => loadBodyScale());
-  const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
+  const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("knight"));
   const [specText, setSpecText] = useState(() =>
-    JSON.stringify(getPreset("mage"), null, 2),
+    JSON.stringify(getPreset("knight"), null, 2),
   );
   const [specParseError, setSpecParseError] = useState<string | null>(null);
   const specFileRef = useRef<HTMLInputElement>(null);
@@ -1106,7 +1106,19 @@ export default function App() {
             <div className="part-grid">
               <div className={`part-block${locks.eyes ? " is-locked" : ""}`}>
                 <div className="part-row">
-                  <span className="part-name">eyes</span>
+                  <div className="part-title">
+                    <button
+                      type="button"
+                      className={`part-icon-btn part-row-lock${locks.eyes ? " is-locked" : ""}`}
+                      onClick={() => toggleLock("eyes")}
+                      title={locks.eyes ? "Unlock eyes" : "Lock eyes"}
+                      aria-label={locks.eyes ? "Unlock eyes" : "Lock eyes"}
+                      aria-pressed={locks.eyes}
+                    >
+                      {locks.eyes ? "🔒" : "🔓"}
+                    </button>
+                    <span className="part-name">eyes</span>
+                  </div>
                   <label className="part-lock">
                     <input
                       type="checkbox"
@@ -1130,16 +1142,6 @@ export default function App() {
                       aria-label="Reroll eye colour"
                     >
                       🎲
-                    </button>
-                    <button
-                      type="button"
-                      className={`part-icon-btn${locks.eyes ? " is-locked" : ""}`}
-                      onClick={() => toggleLock("eyes")}
-                      title={locks.eyes ? "Unlock eyes" : "Lock eyes"}
-                      aria-label={locks.eyes ? "Unlock eyes" : "Lock eyes"}
-                      aria-pressed={locks.eyes}
-                    >
-                      {locks.eyes ? "🔒" : "🔓"}
                     </button>
                     <PaletteColorButton
                       value={spec.face?.eyeColor ?? "#1a1c2c"}
@@ -1248,7 +1250,19 @@ export default function App() {
                     className={`part-block${locked ? " is-locked" : ""}`}
                   >
                     <div className="part-row">
-                      <span className="part-name">{part}</span>
+                      <div className="part-title">
+                        <button
+                          type="button"
+                          className={`part-icon-btn part-row-lock${locked ? " is-locked" : ""}`}
+                          onClick={() => toggleLock(part)}
+                          title={locked ? `Unlock ${part}` : `Lock ${part}`}
+                          aria-label={locked ? `Unlock ${part}` : `Lock ${part}`}
+                          aria-pressed={locked}
+                        >
+                          {locked ? "🔒" : "🔓"}
+                        </button>
+                        <span className="part-name">{part}</span>
+                      </div>
 
                       <div className="part-inline-controls">
                         {part === "head" ? (
@@ -1486,18 +1500,6 @@ export default function App() {
                           aria-label={`Reroll ${part}`}
                         >
                           🎲
-                        </button>
-                        <button
-                          type="button"
-                          className={`part-icon-btn${locked ? " is-locked" : ""}`}
-                          onClick={() => toggleLock(part)}
-                          title={locked ? "Unlock" : "Lock"}
-                          aria-label={
-                            locked ? `Unlock ${part}` : `Lock ${part}`
-                          }
-                          aria-pressed={locked}
-                        >
-                          {locked ? "🔒" : "🔓"}
                         </button>
                         <PartColorMenu
                           part={part}
