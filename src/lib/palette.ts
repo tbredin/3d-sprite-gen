@@ -258,7 +258,7 @@ export type OutlinePassSettings = {
   silhouette: boolean;
   /** Internal seams between part groups (needs an ID pass). */
   partSeams: boolean;
-  /** Internal seams between differently-coloured opaque neighbours. */
+  /** Internal seams between differently-assigned material colours (flat ID pass). */
   textureSeams: boolean;
 };
 
@@ -278,7 +278,7 @@ export function loadOutlinePassSettings(): OutlinePassSettings {
     return {
       silhouette: parsed.silhouette !== false,
       partSeams: parsed.partSeams !== false,
-      // Off by default — colour boundaries are noisy with dither / soft ramps.
+      // Off by default — opt in for garment material edges (belt, boots, etc.).
       textureSeams: parsed.textureSeams === true,
     };
   } catch {
@@ -339,12 +339,14 @@ export function applyPixelOutline(
 
 /**
  * Single-pixel outline that also draws seams between differently-tagged
- * part groups and/or differently-coloured neighbours, not just the outer
- * silhouette. `idBuffer` is an RGBA byte buffer at the same size/orientation
- * as `data`, produced by `renderPartGroupBuffer` + decoded per-pixel with
- * `decodePartGroupPixel`. Falls back to silhouette / texture seams when
- * `idBuffer` is omitted. Silhouette, part seams, and texture seams each use
- * their own palette hex.
+ * part groups and/or differently-assigned material colours, not just the
+ * outer silhouette.
+ *
+ * `idBuffer` is an RGBA byte buffer from `renderPartGroupBuffer`, decoded
+ * with `decodePartGroupPixel`. `materialColorBuffer` is from
+ * `renderMaterialColorBuffer` (flat unlit base colours) — used so texture
+ * seams follow sleeve / belt / boot / neckline material edges instead of
+ * every lit shade band after quantize.
  */
 export function applyPartOutline(
   data: ImageData,
@@ -352,6 +354,7 @@ export function applyPartOutline(
   idBuffer?: Uint8Array | Uint8ClampedArray,
   decodePixel?: (r: number, g: number, b: number, a: number) => number,
   pass: OutlinePassSettings = DEFAULT_OUTLINE_PASS,
+  materialColorBuffer?: Uint8Array | Uint8ClampedArray,
 ): ImageData {
   if (!pass.silhouette && !pass.partSeams && !pass.textureSeams) return data;
 
@@ -373,13 +376,20 @@ export function applyPartOutline(
     }
   }
 
-  // Packed RGB keys for texture-seam comparisons (alpha ignored).
+  // Flat material colours from the unlit ID-style pass (not the lit bake).
+  const wantTextureSeams = pass.textureSeams && !!materialColorBuffer;
   const colorKey = new Int32Array(w * h);
-  if (pass.textureSeams) {
+  const matOpaque = new Uint8Array(w * h);
+  if (wantTextureSeams) {
     for (let i = 0; i < w * h; i++) {
-      if (!opaque[i]) continue;
       const o = i * 4;
-      colorKey[i] = (px[o]! << 16) | (px[o + 1]! << 8) | px[o + 2]!;
+      const a = materialColorBuffer![o + 3]!;
+      if (a < 8) continue;
+      matOpaque[i] = 1;
+      colorKey[i] =
+        (materialColorBuffer![o]! << 16) |
+        (materialColorBuffer![o + 1]! << 8) |
+        materialColorBuffer![o + 2]!;
     }
   }
 
@@ -435,20 +445,20 @@ export function applyPartOutline(
     }
   }
 
-  // Texture seams: opaque pixel bordering a differently-coloured opaque
-  // neighbour. Lower packed-RGB side only, same 1px-wide rule as part seams.
-  if (pass.textureSeams) {
+  // Texture seams: opaque pixel whose flat material colour differs from an
+  // opaque neighbour's. Lower packed-RGB side only (1px-wide rule).
+  if (wantTextureSeams) {
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const i = y * w + x;
-        if (!opaque[i]) continue;
+        if (!opaque[i] || !matOpaque[i]) continue;
         const key = colorKey[i]!;
         for (const [dy, dx] of NEIGHBORS) {
           const nx = x + dx;
           const ny = y + dy;
           if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
           const ni = ny * w + nx;
-          if (!opaque[ni]) continue;
+          if (!opaque[ni] || !matOpaque[ni]) continue;
           const nKey = colorKey[ni]!;
           if (nKey !== key && key < nKey) {
             textureSeamPixels.add(i);

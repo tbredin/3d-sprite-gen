@@ -35,7 +35,7 @@ import {
   type OutlinePassSettings,
   type SpriteSize,
 } from "../lib/palette";
-import { renderPartGroupBuffer } from "../lib/chibi/idPass";
+import { renderMaterialColorBuffer, renderPartGroupBuffer } from "../lib/chibi/idPass";
 import { decodePartGroupPixel } from "../lib/chibi/partGroups";
 import {
   applyEdgeMask,
@@ -263,10 +263,21 @@ function BakeCapture({
 
           const pass = outlinePassRef.current;
           let idFlipped: Uint8Array | undefined;
-          // Skip the ID pass when seams are off — it is an extra full render.
+          let matFlipped: Uint8Array | undefined;
+          // Extra full renders — skip when the matching seam pass is off.
           if (pass.partSeams) {
             const idBuffer = renderPartGroupBuffer(gl, scene, bakeCam, size, target);
             idFlipped = flipRowsRGBA(idBuffer, size);
+          }
+          if (pass.textureSeams) {
+            const matBuffer = renderMaterialColorBuffer(
+              gl,
+              scene,
+              bakeCam,
+              size,
+              target,
+            );
+            matFlipped = flipRowsRGBA(matBuffer, size);
           }
 
           const opaqueMask = new Uint8Array(size * size);
@@ -383,6 +394,7 @@ function BakeCapture({
             idFlipped,
             idFlipped ? decodePartGroupPixel : undefined,
             pass,
+            matFlipped,
           );
 
           const out = document.createElement("canvas");
