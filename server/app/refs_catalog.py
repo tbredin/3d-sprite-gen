@@ -158,6 +158,25 @@ def remove_background(name: str) -> dict[str, Any]:
     return item
 
 
+def flip_horizontal(name: str) -> dict[str, Any]:
+    """Mirror the sprite left/right on disk."""
+    path = _safe_ref_path(name)
+    from PIL import Image
+
+    img = Image.open(path).convert("RGBA").transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+    out = path if path.suffix.lower() == ".png" else path.with_suffix(".png")
+    img.save(out, format="PNG")
+    if out != path and path.exists():
+        path.unlink()
+        name = out.name
+
+    house_lora.mark_refs_changed()
+    item = get_ref(name)
+    item["flipped"] = "horizontal"
+    item["image"] = f"{item['image']}?v={int(out.stat().st_mtime)}"
+    return item
+
+
 def _colour_dist(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
     return (
         (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2

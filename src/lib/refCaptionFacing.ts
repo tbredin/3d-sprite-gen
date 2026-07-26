@@ -140,3 +140,29 @@ export function applyFacingClause(
   if (!base) return opt.clause;
   return `${base}, ${opt.clause}`;
 }
+
+/** Mirror left/right for a horizontal image flip. Up/down stay put. */
+export function mirrorFacingId(facingId: RefFacingId): RefFacingId {
+  switch (facingId) {
+    case "left":
+      return "right";
+    case "right":
+      return "left";
+    case "away-tl":
+      return "away-tr";
+    case "away-tr":
+      return "away-tl";
+    case "toward-bl":
+      return "toward-br";
+    case "toward-br":
+      return "toward-bl";
+    default:
+      return facingId;
+  }
+}
+
+export function mirrorFacingInCaption(caption: string): string {
+  const facing = parseFacingId(caption);
+  if (!facing) return caption;
+  return applyFacingClause(caption, mirrorFacingId(facing));
+}

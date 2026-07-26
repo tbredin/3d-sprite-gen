@@ -175,6 +175,15 @@ def refs_remove_background(name: str) -> dict:
         raise HTTPException(400, str(exc)) from exc
 
 
+@app.post("/api/refs/{name}/flip-horizontal")
+def refs_flip_horizontal(name: str) -> dict:
+    """Mirror a training ref left/right."""
+    try:
+        return refs_catalog.flip_horizontal(name)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"unknown ref {name}") from exc
+
+
 @app.get("/api/refs/{name}")
 def refs_get(name: str) -> dict:
     try:

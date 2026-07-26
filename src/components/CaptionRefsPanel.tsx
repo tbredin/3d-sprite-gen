@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   browseRefsDir,
   deleteRef,
+  flipRefHorizontal,
   listRefs,
   rebuildHouseLora,
   removeRefBackground,
@@ -12,6 +13,7 @@ import {
 } from "../api";
 import {
   applyFacingClause,
+  mirrorFacingInCaption,
   parseFacingId,
   REF_FACING_OPTIONS,
   type RefFacingId,
@@ -98,6 +100,7 @@ export function CaptionRefsPanel() {
   const [loadingDir, setLoadingDir] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [removingBg, setRemovingBg] = useState(false);
+  const [flipping, setFlipping] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [filter, setFilter] = useState<"all" | "auto" | "custom">("all");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -268,6 +271,51 @@ export function CaptionRefsPanel() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setRemovingBg(false);
+    }
+  };
+
+  const onFlipHorizontal = async () => {
+    if (!current) return;
+    setFlipping(true);
+    setError(null);
+    try {
+      const updated = await flipRefHorizontal(current.name);
+      const flippedCaption = mirrorFacingInCaption(draft);
+      if (catalog) {
+        writeLocalCaption(catalog.refs_dir, updated.name, flippedCaption);
+      }
+      setDraft(flippedCaption);
+      setCatalog((prev) => {
+        if (!prev) return prev;
+        const nextItems = prev.items.map((item) => {
+          if (item.name !== updated.name && item.name !== current.name) {
+            return item;
+          }
+          return {
+            ...item,
+            ...updated,
+            caption: flippedCaption,
+            facing: parseFacingId(flippedCaption),
+            has_custom: true,
+          };
+        });
+        return {
+          ...prev,
+          items: nextItems,
+          custom_count: nextItems.filter((item) => item.has_custom).length,
+          auto_count: nextItems.filter((item) => !item.has_custom).length,
+          lora: {
+            ...prev.lora,
+            dirty: true,
+            state: prev.lora.lora_exists ? "dirty" : prev.lora.state,
+            message: "Refs changed — rebuild LoRA to apply.",
+          },
+        };
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setFlipping(false);
     }
   };
 
@@ -641,8 +689,17 @@ export function CaptionRefsPanel() {
                 </button>
                 <button
                   type="button"
+                  className="ghost-btn"
+                  disabled={flipping || deleting}
+                  onClick={() => void onFlipHorizontal()}
+                  title="Mirror the image left/right and update the facing caption"
+                >
+                  {flipping ? "Flipping…" : "Flip L/R"}
+                </button>
+                <button
+                  type="button"
                   className="ghost-btn captions-delete-btn"
-                  disabled={deleting || removingBg}
+                  disabled={deleting || removingBg || flipping}
                   onClick={() => void onDeleteRef()}
                   title="Permanently delete this image from the training folder"
                 >
