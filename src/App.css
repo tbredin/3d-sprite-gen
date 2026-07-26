@@ -2057,8 +2057,41 @@ button.swatch-btn {
 }
 
 .captions-path {
-  margin: 0 0 0.65rem;
+  margin: 0;
   word-break: break-all;
+}
+
+.captions-dir-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+.captions-dir-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.captions-dir-input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  box-sizing: border-box;
+  height: 1.7rem;
+  padding: 0 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--panel) 70%, #0c0d12);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.captions-dir-input:focus {
+  outline: 1px solid var(--accent);
+  border-color: var(--accent);
 }
 
 .captions-filters {

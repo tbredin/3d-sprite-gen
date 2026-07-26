@@ -100,12 +100,22 @@ def lora_status() -> dict:
     return house_lora.refresh_status()
 
 
+class LoraRebuildBody(BaseModel):
+    captions: dict[str, str] = Field(default_factory=dict)
+
+
 @app.post("/api/lora/rebuild")
-async def lora_rebuild(max_steps: int = 500) -> dict:
+async def lora_rebuild(
+    max_steps: int = 500,
+    body: Optional[LoraRebuildBody] = None,
+) -> dict:
     """Train / rebuild the SDXL house LoRA on curated-iso (background)."""
     steps = max(50, min(2000, int(max_steps)))
     try:
-        return house_lora.start_rebuild(max_steps=steps)
+        return house_lora.start_rebuild(
+            max_steps=steps,
+            caption_overrides=body.captions if body else None,
+        )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     except RuntimeError as exc:
@@ -116,10 +126,32 @@ class CaptionBody(BaseModel):
     caption: str = ""
 
 
+class RefsDirBody(BaseModel):
+    path: str
+
+
 @app.get("/api/refs")
 def refs_list() -> dict:
     """Training frames + captions under curated-iso / HOUSE_LORA_REFS."""
     return refs_catalog.list_refs()
+
+
+@app.put("/api/refs/dir")
+def refs_set_dir(body: RefsDirBody) -> dict:
+    """Load images from another directory."""
+    try:
+        return refs_catalog.set_refs_directory(body.path)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@app.post("/api/refs/browse")
+async def refs_browse() -> dict:
+    """Open a native folder picker and load its images."""
+    try:
+        return await asyncio.to_thread(refs_catalog.browse_refs_directory)
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.get("/api/refs/{name}/image")

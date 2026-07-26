@@ -230,6 +230,28 @@ export async function listRefs(): Promise<RefsCatalog> {
   return res.json();
 }
 
+export async function setRefsDir(path: string): Promise<RefsCatalog> {
+  const res = await fetch("/api/refs/dir", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ path }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `set refs dir ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function browseRefsDir(): Promise<RefsCatalog> {
+  const res = await fetch("/api/refs/browse", { method: "POST" });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `browse refs ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function saveRefCaption(
   name: string,
   caption: string,
@@ -270,10 +292,17 @@ export async function fetchLoraStatus(): Promise<LoraStatus> {
   return res.json();
 }
 
-export async function rebuildHouseLora(maxSteps = 500): Promise<LoraStatus> {
+export async function rebuildHouseLora(
+  maxSteps = 500,
+  captions: Record<string, string> = {},
+): Promise<LoraStatus> {
   const res = await fetch(
     `/api/lora/rebuild?max_steps=${encodeURIComponent(String(maxSteps))}`,
-    { method: "POST" },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ captions }),
+    },
   );
   if (!res.ok) {
     const text = await res.text();

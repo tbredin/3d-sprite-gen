@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -110,3 +111,37 @@ def delete_ref(name: str) -> dict[str, Any]:
         deleted.append(sidecar.name)
     house_lora.mark_refs_changed()
     return {"deleted": deleted, "name": name}
+
+
+def set_refs_directory(path: str) -> dict[str, Any]:
+    """Point the catalog at another image folder."""
+    house_lora.set_refs_dir(path)
+    return list_refs()
+
+
+def browse_refs_directory() -> dict[str, Any]:
+    """Open a native folder picker and load the selected directory."""
+    current = house_lora.refs_dir()
+    start = str(current if current.is_dir() else Path.home())
+    safe_start = start.replace("\\", "\\\\").replace('"', '\\"')
+    script = (
+        'set theFolder to choose folder with prompt "Select AI variations source" '
+        f'default location POSIX file "{safe_start}"\n'
+        "POSIX path of theFolder"
+    )
+    try:
+        result = subprocess.run(
+            ["osascript", "-e", script],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+        raise RuntimeError("Native folder picker is unavailable.") from exc
+    if result.returncode != 0:
+        raise RuntimeError("Folder selection cancelled.")
+    chosen = (result.stdout or "").strip()
+    if not chosen:
+        raise RuntimeError("Folder selection cancelled.")
+    return set_refs_directory(chosen)
