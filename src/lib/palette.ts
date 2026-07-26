@@ -150,6 +150,9 @@ export function quantizeImageData(
 /** Default bake outline — Endesga deep indigo (nearest classic near-black rim). */
 export const DEFAULT_OUTLINE_HEX = "1a1932";
 
+/** Default silhouette rim — light grey, chosen independently of the palette. */
+export const DEFAULT_SILHOUETTE_HEX = "b4b4b4";
+
 /** Per-pass outline colours (silhouette rim vs internal part seams). */
 export type OutlineColors = {
   silhouette: string;
@@ -157,9 +160,29 @@ export type OutlineColors = {
 };
 
 export const DEFAULT_OUTLINE_COLORS: OutlineColors = {
-  silhouette: DEFAULT_OUTLINE_HEX,
+  silhouette: DEFAULT_SILHOUETTE_HEX,
   partSeams: DEFAULT_OUTLINE_HEX,
 };
+
+/**
+ * The defaults snapped into `paletteColors`, so a palette without the exact
+ * hexes still gets its closest light grey rim / dark seam instead of a colour
+ * outside the lock.
+ */
+export function defaultOutlineColors(paletteColors?: string[]): OutlineColors {
+  return {
+    silhouette: snapOutlineHex(DEFAULT_SILHOUETTE_HEX, paletteColors),
+    partSeams: snapOutlineHex(DEFAULT_OUTLINE_HEX, paletteColors),
+  };
+}
+
+function snapOutlineHex(hex: string, paletteColors?: string[]): string {
+  if (!paletteColors?.length) return hex;
+  if (paletteColors.some((c) => normalizePaletteHex(c) === hex)) return hex;
+  const [r, g, b] = hexToRgb(hex);
+  const [nr, ng, nb] = nearestPaletteColor(r, g, b, paletteColors.map(hexToRgb));
+  return [nr, ng, nb].map((c) => c.toString(16).padStart(2, "0")).join("");
+}
 
 const OUTLINE_COLORS_STORAGE_KEY = "3d-sprite-gen:outline-colors-v1";
 /** Pre-split storage — migrated once into both colours when v1 is absent. */
@@ -179,7 +202,7 @@ function sanitizeOutlineHex(raw: string, paletteColors?: string[]): string | nul
 }
 
 export function loadOutlineColors(paletteColors?: string[]): OutlineColors {
-  const fallback = { ...DEFAULT_OUTLINE_COLORS };
+  const fallback = defaultOutlineColors(paletteColors);
   try {
     const raw = localStorage.getItem(OUTLINE_COLORS_STORAGE_KEY);
     if (raw) {

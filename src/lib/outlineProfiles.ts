@@ -3,8 +3,8 @@ import {
   type EdgeOutlineSettings,
 } from "./edgeOutline";
 import {
-  DEFAULT_OUTLINE_COLORS,
   DEFAULT_OUTLINE_PASS,
+  defaultOutlineColors,
   normalizePaletteHex,
   type OutlineColors,
   type OutlinePassSettings,
@@ -146,7 +146,7 @@ function normalizeColors(
   raw: Partial<OutlineColors> | undefined,
   paletteColors?: string[],
 ): OutlineColors {
-  const fallback = { ...DEFAULT_OUTLINE_COLORS };
+  const fallback = defaultOutlineColors(paletteColors);
   const sil =
     typeof raw?.silhouette === "string"
       ? sanitizeHex(raw.silhouette, paletteColors)
@@ -214,7 +214,7 @@ function normalizeLegacyEdgeProfile(
     name: o.name.trim() || "Untitled",
     settings: {
       pass: { ...DEFAULT_OUTLINE_PASS },
-      colors: { ...DEFAULT_OUTLINE_COLORS },
+      colors: defaultOutlineColors(paletteColors),
       edge: normalizeEdgeOutlineSettings(
         o.settings as Partial<EdgeOutlineSettings>,
         paletteColors,
