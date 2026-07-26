@@ -1168,6 +1168,7 @@ export default function App() {
                     colors={palette.colors}
                     silhouetteOutlineHex={outlineColors.silhouette}
                     partSeamsOutlineHex={outlineColors.partSeams}
+                    textureSeamsOutlineHex={outlineColors.textureSeams}
                     outlinePass={outlinePass}
                     zoom={1}
                     cameraHeight={cameraHeight}
@@ -2485,6 +2486,28 @@ export default function App() {
                     value={outlineColors.partSeams}
                     onChange={(hex) => patchOutlineColor({ partSeams: hex })}
                     disabled={!outlinePass.partSeams || !palette}
+                  />
+                </div>
+              </div>
+              <div className="part-row">
+                <label className="part-lock">
+                  <input
+                    type="checkbox"
+                    checked={outlinePass.textureSeams}
+                    onChange={(e) =>
+                      patchOutlinePass({ textureSeams: e.target.checked })
+                    }
+                  />
+                  Texture seams
+                </label>
+                <div className="part-actions">
+                  <OutlineSwatchSelect
+                    colors={palette?.colors ?? []}
+                    value={outlineColors.textureSeams}
+                    onChange={(hex) =>
+                      patchOutlineColor({ textureSeams: hex })
+                    }
+                    disabled={!outlinePass.textureSeams || !palette}
                   />
                 </div>
               </div>

@@ -11,8 +11,8 @@ import {
 } from "./palette";
 
 /**
- * Named snapshot of the full Outlines panel: silhouette / part-seams toggles
- * + colours, and the entire edge-detection board.
+ * Named snapshot of the full Outlines panel: silhouette / part-seams /
+ * texture-seams toggles + colours, and the entire edge-detection board.
  */
 export type OutlineProfileSettings = {
   pass: OutlinePassSettings;
@@ -139,6 +139,7 @@ function normalizePass(
   return {
     silhouette: raw?.silhouette !== false,
     partSeams: raw?.partSeams !== false,
+    textureSeams: raw?.textureSeams === true,
   };
 }
 
@@ -155,9 +156,14 @@ function normalizeColors(
     typeof raw?.partSeams === "string"
       ? sanitizeHex(raw.partSeams, paletteColors)
       : null;
+  const tex =
+    typeof raw?.textureSeams === "string"
+      ? sanitizeHex(raw.textureSeams, paletteColors)
+      : null;
   return {
     silhouette: sil ?? fallback.silhouette,
     partSeams: seams ?? fallback.partSeams,
+    textureSeams: tex ?? seams ?? fallback.textureSeams,
   };
 }
 

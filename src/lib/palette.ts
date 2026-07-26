@@ -155,15 +155,17 @@ export const DEFAULT_OUTLINE_HEX = "1a1932";
 /** Default silhouette rim — light grey, chosen independently of the palette. */
 export const DEFAULT_SILHOUETTE_HEX = "b4b4b4";
 
-/** Per-pass outline colours (silhouette rim vs internal part seams). */
+/** Per-pass outline colours (silhouette rim vs internal seams). */
 export type OutlineColors = {
   silhouette: string;
   partSeams: string;
+  textureSeams: string;
 };
 
 export const DEFAULT_OUTLINE_COLORS: OutlineColors = {
   silhouette: DEFAULT_SILHOUETTE_HEX,
   partSeams: DEFAULT_OUTLINE_HEX,
+  textureSeams: DEFAULT_OUTLINE_HEX,
 };
 
 /**
@@ -175,6 +177,7 @@ export function defaultOutlineColors(paletteColors?: string[]): OutlineColors {
   return {
     silhouette: snapOutlineHex(DEFAULT_SILHOUETTE_HEX, paletteColors),
     partSeams: snapOutlineHex(DEFAULT_OUTLINE_HEX, paletteColors),
+    textureSeams: snapOutlineHex(DEFAULT_OUTLINE_HEX, paletteColors),
   };
 }
 
@@ -218,12 +221,19 @@ export function loadOutlineColors(paletteColors?: string[]): OutlineColors {
           (typeof parsed.partSeams === "string" &&
             sanitizeOutlineHex(parsed.partSeams, paletteColors)) ||
           fallback.partSeams,
+        textureSeams:
+          (typeof parsed.textureSeams === "string" &&
+            sanitizeOutlineHex(parsed.textureSeams, paletteColors)) ||
+          // Pre-split saves only had partSeams — reuse that dark seam.
+          (typeof parsed.partSeams === "string" &&
+            sanitizeOutlineHex(parsed.partSeams, paletteColors)) ||
+          fallback.textureSeams,
       };
     }
     const legacy = localStorage.getItem(OUTLINE_HEX_LEGACY_KEY);
     if (legacy) {
       const hex = sanitizeOutlineHex(legacy, paletteColors) ?? fallback.silhouette;
-      return { silhouette: hex, partSeams: hex };
+      return { silhouette: hex, partSeams: hex, textureSeams: hex };
     }
     return fallback;
   } catch {
@@ -237,6 +247,7 @@ export function saveOutlineColors(colors: OutlineColors) {
     JSON.stringify({
       silhouette: normalizePaletteHex(colors.silhouette),
       partSeams: normalizePaletteHex(colors.partSeams),
+      textureSeams: normalizePaletteHex(colors.textureSeams),
     }),
   );
 }
@@ -247,11 +258,14 @@ export type OutlinePassSettings = {
   silhouette: boolean;
   /** Internal seams between part groups (needs an ID pass). */
   partSeams: boolean;
+  /** Internal seams between differently-assigned material colours (flat ID pass). */
+  textureSeams: boolean;
 };
 
 export const DEFAULT_OUTLINE_PASS: OutlinePassSettings = {
   silhouette: true,
   partSeams: true,
+  textureSeams: false,
 };
 
 const OUTLINE_PASS_STORAGE_KEY = "3d-sprite-gen:outline-pass-v1";
@@ -264,6 +278,8 @@ export function loadOutlinePassSettings(): OutlinePassSettings {
     return {
       silhouette: parsed.silhouette !== false,
       partSeams: parsed.partSeams !== false,
+      // Off by default — opt in for garment material edges (belt, boots, etc.).
+      textureSeams: parsed.textureSeams === true,
     };
   } catch {
     return { ...DEFAULT_OUTLINE_PASS };
@@ -323,11 +339,14 @@ export function applyPixelOutline(
 
 /**
  * Single-pixel outline that also draws seams between differently-tagged
- * part groups, not just the outer silhouette. `idBuffer` is an RGBA byte
- * buffer at the same size/orientation as `data`, produced by
- * `renderPartGroupBuffer` + decoded per-pixel with `decodePartGroupPixel`.
- * Falls back to silhouette-only outlining when `idBuffer` is omitted.
- * Silhouette rim and part seams each use their own palette hex.
+ * part groups and/or differently-assigned material colours, not just the
+ * outer silhouette.
+ *
+ * `idBuffer` is an RGBA byte buffer from `renderPartGroupBuffer`, decoded
+ * with `decodePartGroupPixel`. `materialColorBuffer` is from
+ * `renderMaterialColorBuffer` (flat unlit base colours) — used so texture
+ * seams follow sleeve / belt / boot / neckline material edges instead of
+ * every lit shade band after quantize.
  */
 export function applyPartOutline(
   data: ImageData,
@@ -335,23 +354,47 @@ export function applyPartOutline(
   idBuffer?: Uint8Array | Uint8ClampedArray,
   decodePixel?: (r: number, g: number, b: number, a: number) => number,
   pass: OutlinePassSettings = DEFAULT_OUTLINE_PASS,
+  materialColorBuffer?: Uint8Array | Uint8ClampedArray,
+  /** When set, soft texture-seam blends snap back to the palette lock. */
+  paletteColors?: string[],
 ): ImageData {
-  if (!pass.silhouette && !pass.partSeams) return data;
+  if (!pass.silhouette && !pass.partSeams && !pass.textureSeams) return data;
 
   const { width: w, height: h, data: px } = data;
   const [sr, sg, sb] = hexToRgb(colors.silhouette);
   const [pr, pg, pb] = hexToRgb(colors.partSeams);
+  const [tr, tg, tb] = hexToRgb(colors.textureSeams);
+  const paletteRgb = paletteColors?.length
+    ? paletteColors.map(hexToRgb)
+    : undefined;
   const opaque = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     opaque[i] = px[i * 4 + 3] >= 8 ? 1 : 0;
   }
 
-  const wantSeams = pass.partSeams && !!idBuffer && !!decodePixel;
+  const wantPartSeams = pass.partSeams && !!idBuffer && !!decodePixel;
   const partId = new Int16Array(w * h).fill(0);
-  if (wantSeams) {
+  if (wantPartSeams) {
     for (let i = 0; i < w * h; i++) {
       const o = i * 4;
       partId[i] = decodePixel!(idBuffer![o]!, idBuffer![o + 1]!, idBuffer![o + 2]!, idBuffer![o + 3]!);
+    }
+  }
+
+  // Flat material colours from the unlit ID-style pass (not the lit bake).
+  const wantTextureSeams = pass.textureSeams && !!materialColorBuffer;
+  const colorKey = new Int32Array(w * h);
+  const matOpaque = new Uint8Array(w * h);
+  if (wantTextureSeams) {
+    for (let i = 0; i < w * h; i++) {
+      const o = i * 4;
+      const a = materialColorBuffer![o + 3]!;
+      if (a < 8) continue;
+      matOpaque[i] = 1;
+      colorKey[i] =
+        (materialColorBuffer![o]! << 16) |
+        (materialColorBuffer![o + 1]! << 8) |
+        materialColorBuffer![o + 2]!;
     }
   }
 
@@ -362,7 +405,8 @@ export function applyPartOutline(
     [-1, 0],
   ] as const;
   const silhouettePixels = new Set<number>();
-  const seamPixels = new Set<number>();
+  const partSeamPixels = new Set<number>();
+  const textureSeamPixels = new Set<number>();
 
   // Outer silhouette: transparent pixel touching an opaque one grows the ring.
   if (pass.silhouette) {
@@ -386,7 +430,7 @@ export function applyPartOutline(
   // Internal seams: opaque pixel bordering an opaque pixel from a different
   // part. Only the lower-id side is repainted so a seam stays 1px wide
   // instead of 2px (one line drawn on each side of the boundary).
-  if (wantSeams) {
+  if (wantPartSeams) {
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const i = y * w + x;
@@ -398,7 +442,7 @@ export function applyPartOutline(
           const ni = ny * w + nx;
           if (!opaque[ni] || partId[ni] <= 0) continue;
           if (partId[ni] !== partId[i] && partId[i] < partId[ni]) {
-            seamPixels.add(i);
+            partSeamPixels.add(i);
             break;
           }
         }
@@ -406,18 +450,59 @@ export function applyPartOutline(
     }
   }
 
+  // Texture seams: opaque pixel whose flat material colour differs from an
+  // opaque neighbour's. Lower packed-RGB side only (1px-wide rule).
+  if (wantTextureSeams) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (!opaque[i] || !matOpaque[i]) continue;
+        const key = colorKey[i]!;
+        for (const [dy, dx] of NEIGHBORS) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const ni = ny * w + nx;
+          if (!opaque[ni] || !matOpaque[ni]) continue;
+          const nKey = colorKey[ni]!;
+          if (nKey !== key && key < nKey) {
+            textureSeamPixels.add(i);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // Paint order: texture seams, then part seams, then silhouette on top so
+  // geometry / rim wins where passes overlap. Texture seams blend at 50% so
+  // material edges read softer than solid part seams.
+  const TEXTURE_SEAM_OPACITY = 0.5;
+  for (const i of textureSeamPixels) {
+    const o = i * 4;
+    let r = Math.round(px[o]! * (1 - TEXTURE_SEAM_OPACITY) + tr * TEXTURE_SEAM_OPACITY);
+    let g = Math.round(px[o + 1]! * (1 - TEXTURE_SEAM_OPACITY) + tg * TEXTURE_SEAM_OPACITY);
+    let b = Math.round(px[o + 2]! * (1 - TEXTURE_SEAM_OPACITY) + tb * TEXTURE_SEAM_OPACITY);
+    if (paletteRgb) {
+      [r, g, b] = nearestPaletteColor(r, g, b, paletteRgb);
+    }
+    px[o] = r;
+    px[o + 1] = g;
+    px[o + 2] = b;
+    px[o + 3] = 255;
+  }
+  for (const i of partSeamPixels) {
+    const o = i * 4;
+    px[o] = pr;
+    px[o + 1] = pg;
+    px[o + 2] = pb;
+    px[o + 3] = 255;
+  }
   for (const i of silhouettePixels) {
     const o = i * 4;
     px[o] = sr;
     px[o + 1] = sg;
     px[o + 2] = sb;
-    px[o + 3] = 255;
-  }
-  for (const i of seamPixels) {
-    const o = i * 4;
-    px[o] = pr;
-    px[o + 1] = pg;
-    px[o + 2] = pb;
     px[o + 3] = 255;
   }
   return data;

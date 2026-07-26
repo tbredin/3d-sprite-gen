@@ -35,7 +35,7 @@ import {
   type OutlinePassSettings,
   type SpriteSize,
 } from "../lib/palette";
-import { renderPartGroupBuffer } from "../lib/chibi/idPass";
+import { renderMaterialColorBuffer, renderPartGroupBuffer } from "../lib/chibi/idPass";
 import { decodePartGroupPixel } from "../lib/chibi/partGroups";
 import {
   applyEdgeMask,
@@ -89,6 +89,8 @@ type BakeProps = {
   silhouetteOutlineHex: string;
   /** Endesga hex (no #) for internal part-seam outlines. */
   partSeamsOutlineHex: string;
+  /** Endesga hex (no #) for colour-boundary (texture) seam outlines. */
+  textureSeamsOutlineHex: string;
   outlinePass?: OutlinePassSettings;
   zoom: number;
   /** 1 = classic iso elevation; higher = steeper camera. */
@@ -146,6 +148,7 @@ function BakeCapture({
   colors,
   silhouetteOutlineHex,
   partSeamsOutlineHex,
+  textureSeamsOutlineHex,
   outlinePass,
   zoom,
   cameraHeight,
@@ -165,6 +168,7 @@ function BakeCapture({
   colors: string[];
   silhouetteOutlineHex: string;
   partSeamsOutlineHex: string;
+  textureSeamsOutlineHex: string;
   outlinePass: OutlinePassSettings;
   zoom: number;
   cameraHeight: number;
@@ -259,10 +263,21 @@ function BakeCapture({
 
           const pass = outlinePassRef.current;
           let idFlipped: Uint8Array | undefined;
-          // Skip the ID pass when seams are off — it is an extra full render.
+          let matFlipped: Uint8Array | undefined;
+          // Extra full renders — skip when the matching seam pass is off.
           if (pass.partSeams) {
             const idBuffer = renderPartGroupBuffer(gl, scene, bakeCam, size, target);
             idFlipped = flipRowsRGBA(idBuffer, size);
+          }
+          if (pass.textureSeams) {
+            const matBuffer = renderMaterialColorBuffer(
+              gl,
+              scene,
+              bakeCam,
+              size,
+              target,
+            );
+            matFlipped = flipRowsRGBA(matBuffer, size);
           }
 
           const opaqueMask = new Uint8Array(size * size);
@@ -374,10 +389,13 @@ function BakeCapture({
             {
               silhouette: silhouetteOutlineHex,
               partSeams: partSeamsOutlineHex,
+              textureSeams: textureSeamsOutlineHex,
             },
             idFlipped,
             idFlipped ? decodePartGroupPixel : undefined,
             pass,
+            matFlipped,
+            colors,
           );
 
           const out = document.createElement("canvas");
@@ -403,8 +421,10 @@ function BakeCapture({
     colors,
     silhouetteOutlineHex,
     partSeamsOutlineHex,
+    textureSeamsOutlineHex,
     outlinePass.silhouette,
     outlinePass.partSeams,
+    outlinePass.textureSeams,
     zoom,
     cameraHeight,
     rotationX,
@@ -583,6 +603,7 @@ export function BakeCanvas({
   colors,
   silhouetteOutlineHex,
   partSeamsOutlineHex,
+  textureSeamsOutlineHex,
   outlinePass = DEFAULT_OUTLINE_PASS,
   zoom,
   cameraHeight = DEFAULT_CAMERA_HEIGHT,
@@ -706,6 +727,7 @@ export function BakeCanvas({
         colors={colors}
         silhouetteOutlineHex={silhouetteOutlineHex}
         partSeamsOutlineHex={partSeamsOutlineHex}
+        textureSeamsOutlineHex={textureSeamsOutlineHex}
         outlinePass={outlinePass}
         zoom={zoom}
         cameraHeight={cameraHeight}
