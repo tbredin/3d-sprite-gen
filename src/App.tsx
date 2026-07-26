@@ -1294,7 +1294,7 @@ export default function App() {
               <>
                 <button
                   type="button"
-                  className="ghost collapse-reroll"
+                  className="part-icon-btn part-row-reroll"
                   onClick={applyRandom}
                   title="Random character"
                   aria-label="Random character"
