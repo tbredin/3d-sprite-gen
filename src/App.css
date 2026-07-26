@@ -748,9 +748,8 @@ button.ghost {
 }
 
 .char-toolbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.35rem 0.45rem;
+  display: flex;
+  gap: 0.35rem 2.5rem;
   align-items: end;
   margin: 0 0 0.35rem;
 }
@@ -762,6 +761,7 @@ button.ghost {
   align-items: end;
   min-width: 0;
   margin: 0;
+  flex: 1 1 100%;
 }
 
 .char-picker .field {
@@ -782,8 +782,6 @@ button.ghost {
   flex-wrap: nowrap;
   gap: 0.1rem;
   margin: 0;
-  align-self: center;
-  align-items: flex-start;
 }
 
 .panel label.part-chip {
