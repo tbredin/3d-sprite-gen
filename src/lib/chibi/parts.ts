@@ -3205,6 +3205,8 @@ function buildSwordCurved(g: Group, { mat, accent }: WeaponCtx) {
   const tsuba = new Mesh(new CylinderGeometry(0.12, 0.12, 0.045, 10), toonDetail(TRIM_STEEL));
   tsuba.position.set(0, 0.16, 0);
   g.add(tsuba);
+  // Negative bend: tip arcs toward −Z so after aimHeldWeapon the curve reads
+  // away from the face (positive bend looked like a reversed grip).
   addCurvedBlade(g, mat, accent, {
     y: 0.18,
     segs: 4,
@@ -3212,7 +3214,7 @@ function buildSwordCurved(g: Group, { mat, accent }: WeaponCtx) {
     width: 0.15,
     taper: 0.012,
     thick: 0.06,
-    bend: 0.15,
+    bend: -0.15,
   });
 }
 
@@ -3270,7 +3272,7 @@ function buildDaggerCurved(g: Group, { mat, accent }: WeaponCtx) {
     width: 0.13,
     taper: 0.015,
     thick: 0.055,
-    bend: 0.23,
+    bend: -0.23,
   });
 }
 

@@ -66,12 +66,22 @@ type GripRole = "lead" | "off";
 /** Bladed / hafted frame: length up +Y, hold point just under the guard. */
 const hafted = () => ({
   axis: new Vector3(0, 1, 0),
-  grip: new Vector3(0, -0.02, 0.05),
+  // Hand: wrist at origin, fist −Y, knuckles +Z. Sit the handle in the mitt
+  // (not on the wrist/back) so it reads as gripped in the palm/channel.
+  grip: new Vector3(0, -0.08, 0.1),
 });
 /** Gun frame: barrel forward +Z, hold point at the receiver. */
 const gunned = () => ({
   axis: new Vector3(0, 0, 1),
-  grip: new Vector3(0, 0, 0.03),
+  grip: new Vector3(0, -0.06, 0.08),
+});
+/**
+ * Pistols hang their rake grip below the origin — raise the prop so that
+ * handle sits in the mitt and the slide/barrel clear above the knuckles.
+ */
+const pistolled = () => ({
+  axis: new Vector3(0, 0, 1),
+  grip: new Vector3(0, 0.06, 0.1),
 });
 
 const WEAPON_GRIP: Record<HeldWeapon, { axis: Vector3; grip: Vector3 }> = {
@@ -100,9 +110,9 @@ const WEAPON_GRIP: Record<HeldWeapon, { axis: Vector3; grip: Vector3 }> = {
   staff: hafted(),
   wand: hafted(),
   wandCrystal: hafted(),
-  pistol: gunned(),
-  pistolFlint: gunned(),
-  pistolHeavy: gunned(),
+  pistol: pistolled(),
+  pistolFlint: pistolled(),
+  pistolHeavy: pistolled(),
   rifle: gunned(),
   rifleLong: gunned(),
   rifleCarbine: gunned(),
@@ -573,7 +583,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     },
     arms: { pose: "cast", sleeveColor: "#3d6e70", sleeveLength: 0.9 },
     legs: { pose: "ready", pantColor: "#2a4550", bootColor: "#322947" },
-    weapon: { type: "staff", hand: "right", color: "#8b5a2b" },
+    weapon: { type: "wand", hand: "right", color: "#8b5a2b" },
   },
 
   /** Helm-ready square brow + jaw blocks; short cropped fringe. */
@@ -601,7 +611,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#e4a672",
     },
     legs: { pose: "ready", pantColor: "#6a7484", bootColor: "#3a415c" },
-    weapon: { type: "sword", hand: "right", color: "#dfe4ea" },
+    weapon: { type: "swordBroad", hand: "right", color: "#dfe4ea" },
     offhand: { type: "shield", color: "#9aa4b0" },
   },
 
@@ -629,7 +639,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#c98a6a",
     },
     legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#1a1c2c" },
-    weapon: { type: "rifle", hand: "right", color: "#1a1c2c" },
+    weapon: { type: "rifleCarbine", hand: "right", color: "#1a1c2c" },
   },
 
   /** Lean sly cheeks + sharp chin; messy ash fringe. */
@@ -653,7 +663,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     },
     arms: { pose: "ready", sleeveColor: "#322947", sleeveLength: 0.55 },
     legs: { pose: "ready", pantColor: "#1a1c2c", bootColor: "#433455" },
-    weapon: { type: "sword", hand: "right", color: "#c7cfcc" },
+    weapon: { type: "daggerCurved", hand: "right", color: "#c7cfcc" },
   },
 
   /** Oversized forehead dome; wild red mohawk. */
@@ -679,7 +689,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#f0c8a0",
     },
     legs: { pose: "ready", pantColor: "#5a6a7a", bootColor: "#1a1c2c" },
-    weapon: { type: "staff", hand: "right", color: "#3d6e70" },
+    weapon: { type: "pistol", hand: "right", color: "#3d6e70" },
   },
 
   /** Soft serene cheeks; pale bob, gentle eyes. */
@@ -703,7 +713,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     },
     arms: { pose: "cast", sleeveColor: "#c7cfcc", sleeveLength: 0.92 },
     legs: { pose: "ready", pantColor: "#9aa4b0", bootColor: "#5a6a7a" },
-    weapon: { type: "staff", hand: "right", color: "#f5e07a" },
+    weapon: { type: "hammer", hand: "right", color: "#f5e07a" },
   },
 
   /** Weather-lean skull; forest braid. */
@@ -730,7 +740,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#d4a574",
     },
     legs: { pose: "ready", pantColor: "#2a4030", bootColor: "#322947" },
-    weapon: { type: "sword", hand: "right", color: "#8b5a2b" },
+    weapon: { type: "spearBarbed", hand: "right", color: "#8b5a2b" },
   },
 
   /** Wide brutal brow + thick jaw; wild black topknot. */
@@ -759,7 +769,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#c98a6a",
     },
     legs: { pose: "wide", pantColor: "#433455", bootColor: "#1a1c2c" },
-    weapon: { type: "sword", hand: "right", color: "#7a8090" },
+    weapon: { type: "greataxe", hand: "right", color: "#7a8090" },
   },
 
   /** Youthful soft skull + big eyes; aqua twin-tails. */
@@ -783,7 +793,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     },
     arms: { pose: "ready", sleeveColor: "#5a4a7a", sleeveLength: 0.88 },
     legs: { pose: "ready", pantColor: "#433455", bootColor: "#2a2540" },
-    weapon: { type: "staff", hand: "right", color: "#c7cfcc" },
+    weapon: { type: "wand", hand: "right", color: "#c7cfcc" },
   },
 
   /** Rugged jaw block + weathered brow; black messy under red bandana. */
@@ -812,8 +822,8 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#e4a672",
     },
     legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#8b5a2b" },
-    weapon: { type: "sword", hand: "left", color: "#c7cfcc" },
-    offhand: { type: "shield", color: "#e83b3b" },
+    weapon: { type: "swordCurved", hand: "left", color: "#c7cfcc" },
+    offhand: { type: "pistol", color: "#e83b3b" },
   },
 
   /** Muzzle-ready skull + snout stub under goat helm. */
@@ -840,7 +850,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#c98a6a",
     },
     legs: { pose: "wide", pantColor: "#322947", bootColor: "#1a1c2c" },
-    weapon: { type: "sword", hand: "right", color: "#9aa4b0" },
+    weapon: { type: "axeBearded", hand: "right", color: "#9aa4b0" },
   },
 
   /** Cylindrical great helm — cross slits, riveted bands. */
@@ -868,7 +878,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#e4a672",
     },
     legs: { pose: "ready", pantColor: "#6a7484", bootColor: "#3a415c" },
-    weapon: { type: "sword", hand: "right", color: "#dfe4ea" },
+    weapon: { type: "swordClaymore", hand: "right", color: "#dfe4ea" },
     offhand: { type: "shield", color: "#6a7484" },
   },
 
@@ -897,7 +907,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#e4a672",
     },
     legs: { pose: "ready", pantColor: "#5a6070", bootColor: "#3a415c" },
-    weapon: { type: "sword", hand: "right", color: "#dfe4ea" },
+    weapon: { type: "swordRapier", hand: "right", color: "#dfe4ea" },
     offhand: { type: "shield", color: "#8a4050" },
   },
 
@@ -924,8 +934,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#c98a6a",
     },
     legs: { pose: "ready", pantColor: "#4a5565", bootColor: "#2a3040" },
-    weapon: { type: "sword", hand: "right", color: "#c7cfcc" },
-    offhand: { type: "shield", color: "#7a8490" },
+    weapon: { type: "halberd", hand: "right", color: "#c7cfcc" },
   },
 
   /** Delicate tiara over long royal hair. */
@@ -947,7 +956,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     },
     arms: { pose: "cast", sleeveColor: "#c06090", sleeveLength: 0.92 },
     legs: { pose: "ready", pantColor: "#a04070", bootColor: "#f5e07a" },
-    weapon: { type: "staff", hand: "right", color: "#f5e07a" },
+    weapon: { type: "wandCrystal", hand: "right", color: "#f5e07a" },
   },
 
   /** Arched royal crown over short cropped hair. */
@@ -970,7 +979,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     },
     arms: { pose: "salute", sleeveColor: "#3a5080", sleeveLength: 0.9 },
     legs: { pose: "stand", pantColor: "#2a3555", bootColor: "#1a1c2c" },
-    weapon: { type: "staff", hand: "right", color: "#f5e07a" },
+    weapon: { type: "swordBroad", hand: "right", color: "#f5e07a" },
   },
 
   /** Sealed flight helmet with goggle visor. */
@@ -996,7 +1005,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#c98a6a",
     },
     legs: { pose: "ready", pantColor: "#1a1c2c", bootColor: "#3a4555" },
-    weapon: { type: "rifle", hand: "right", color: "#1a1c2c" },
+    weapon: { type: "pistolHeavy", hand: "right", color: "#1a1c2c" },
   },
 
   /** Kabuto with maedate crest + mempo. */
@@ -1023,7 +1032,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#e4a672",
     },
     legs: { pose: "ready", pantColor: "#2a2540", bootColor: "#1a1c2c" },
-    weapon: { type: "sword", hand: "right", color: "#c7cfcc" },
+    weapon: { type: "swordCurved", hand: "right", color: "#c7cfcc" },
   },
 
   /** Nasal helm with outward horns. */
@@ -1052,7 +1061,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#c98a6a",
     },
     legs: { pose: "wide", pantColor: "#433455", bootColor: "#1a1c2c" },
-    weapon: { type: "sword", hand: "right", color: "#9aa4b0" },
+    weapon: { type: "axeBearded", hand: "right", color: "#9aa4b0" },
     offhand: { type: "shield", color: "#6a7484" },
   },
 
@@ -1075,7 +1084,7 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     },
     arms: { pose: "cast", sleeveColor: "#3a6e8a", sleeveLength: 0.85 },
     legs: { pose: "stand", pantColor: "#2a5080", bootColor: "#f5e07a" },
-    weapon: { type: "staff", hand: "right", color: "#f5e07a" },
+    weapon: { type: "spear", hand: "right", color: "#f5e07a" },
   },
 
   /** Masked cowl with eye slit. */
@@ -1103,7 +1112,8 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
       handColor: "#e4a672",
     },
     legs: { pose: "crouch", pantColor: "#1a1c2c", bootColor: "#2a2540" },
-    weapon: { type: "sword", hand: "right", color: "#c7cfcc" },
+    weapon: { type: "swordCurved", hand: "right", color: "#c7cfcc" },
+    offhand: { type: "dagger", color: "#9aa4b0" },
   },
 };
 
