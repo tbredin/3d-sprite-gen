@@ -54,6 +54,7 @@ import { CaptionRefsPanel } from "./components/CaptionRefsPanel";
 import { fetchStatus, type StatusResponse } from "./api";
 import { buildVariationPrompt } from "./lib/variationPrompt";
 import {
+  DEFAULT_FACING,
   FACING_PAD,
   getFacing,
   loadFacingPersist,
@@ -72,6 +73,8 @@ import {
   PRESET_IDS,
   PRESET_LABELS,
   randomCharacter,
+  randomBodyScale,
+  randomCoupledProportions,
   rerollPart,
   rerollField,
   rerollPartColors,
@@ -79,6 +82,7 @@ import {
   applyBodyScale as setChibiBodyScale,
   BODY_SCALE_MIN,
   BODY_SCALE_MAX,
+  BODY_SCALE_DEFAULT,
   loadBodyScale,
   saveBodyScale,
   loadCharacterPersist,
@@ -554,14 +558,63 @@ export default function App() {
     saveBodyScale(scale);
   };
 
+  /** Knight preset + every Character-panel slider / lock back to defaults. */
+  const resetCharacterPanel = () => {
+    applyPreset("knight");
+    onBodyScaleChange(BODY_SCALE_DEFAULT);
+    setBodyScaleLocked(false);
+    setLocks({ ...EMPTY_LOCKS });
+    setFieldLocks({ ...EMPTY_FIELD_LOCKS });
+    setMirror(false);
+    setShowEyes(true);
+    setAllowHelmets(false);
+    setSize(48);
+    setCameraHeight(DEFAULT_CAMERA_HEIGHT);
+    saveCameraHeight(DEFAULT_CAMERA_HEIGHT);
+    setAutoRotate(false);
+    setHoldDir(0);
+    setOscillate(false);
+    setOscillateEndpoints([]);
+    const yaw = getFacing(DEFAULT_FACING).rotationY;
+    setFacing(DEFAULT_FACING);
+    setRotationX(0);
+    setRotationY(yaw);
+    spinYawRef.current = yaw;
+    const defaultOffhand = OFFHAND_VARIANT_IDS[0]!;
+    setOffhandVariant(0);
+    setOffhandVariantState(defaultOffhand);
+  };
+
   const applyRandom = () => {
     setPresetId("random");
+
+    const coupleBoth = !bodyScaleLocked && !locks.headSize;
+    const coupled = coupleBoth ? randomCoupledProportions() : null;
+    const nextBody = coupled
+      ? coupled.bodyScale
+      : !bodyScaleLocked
+        ? randomBodyScale(spec.head?.size ?? 1)
+        : null;
+
     setSpec((prev) => {
-      const next = randomCharacter(locks, prev, { allowHelmets }, fieldLocks);
+      const next = randomCharacter(
+        locks,
+        prev,
+        {
+          allowHelmets,
+          bodyScale: nextBody ?? bodyScale,
+          headProportions: coupled
+            ? { size: coupled.size, yScale: coupled.yScale }
+            : undefined,
+        },
+        fieldLocks,
+      );
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
     });
+
+    if (nextBody != null) onBodyScaleChange(nextBody);
   };
 
   const toggleLock = (part: keyof PartLocks) => {
@@ -579,7 +632,13 @@ export default function App() {
   const applyRerollPart = (part: PartId) => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollPart(prev, part, locks, { allowHelmets }, fieldLocks);
+      const next = rerollPart(
+        prev,
+        part,
+        locks,
+        { allowHelmets, bodyScale },
+        fieldLocks,
+      );
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -1223,6 +1282,16 @@ export default function App() {
             title="Character"
             open={characterOpen}
             onToggle={() => setCharacterOpen((v) => !v)}
+            actions={
+              <button
+                type="button"
+                className="ghost"
+                onClick={resetCharacterPanel}
+                title="Reset to the knight preset and default slider values"
+              >
+                Reset
+              </button>
+            }
           >
             <div className="char-toolbar">
               <div className="char-picker">
@@ -1429,7 +1498,7 @@ export default function App() {
                       </span>
                       <input
                         type="range"
-                        min={0.6}
+                        min={0.68}
                         max={1.4}
                         step={0.05}
                         value={Math.min(spec.face?.scale ?? 1, 1.4)}
@@ -1809,8 +1878,8 @@ export default function App() {
                             </span>
                             <input
                               type="range"
-                              min={0.8}
-                              max={1.35}
+                              min={0.92}
+                              max={1.3}
                               step={0.01}
                               value={spec.head?.size ?? 1}
                               disabled={locks.headSize}
@@ -1836,8 +1905,8 @@ export default function App() {
                             </span>
                             <input
                               type="range"
-                              min={0.85}
-                              max={1.25}
+                              min={0.91}
+                              max={1.21}
                               step={0.01}
                               value={spec.head?.yScale ?? 1}
                               disabled={locks.headSize}

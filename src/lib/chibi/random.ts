@@ -3,6 +3,10 @@ import { isHeadReplacement } from "./helmetMode";
 import { COMBAT_LEG_POSES } from "./legPoses";
 import type { LeadSide } from "./stance";
 import { DEFAULT_LEAD } from "./stance";
+import {
+  BODY_SCALE_MAX,
+  BODY_SCALE_MIN,
+} from "./units";
 import type {
   ArmPose,
   BackLoadout,
@@ -525,23 +529,99 @@ function randomFace(): NonNullable<CharacterSpec["face"]> {
     eyeColor: pick(EYES),
     // Match Dist / Size / Y slider ranges in App.
     spacing: snap05(0.6 + Math.random() * 0.85),
-    scale: snap05(0.6 + Math.random() * 0.8),
+    scale: snap05(0.68 + Math.random() * 0.72),
     y: snap05(-0.25 + Math.random() * 0.5),
   };
 }
 
 /** Match the Size / Height slider ranges in App. */
-function randomHeadProportions(): Pick<
+const HEAD_SIZE_MIN = 0.92;
+const HEAD_SIZE_MAX = 1.3;
+const HEAD_Y_MIN = 0.91;
+const HEAD_Y_MAX = 1.21;
+
+function clamp01(t: number): number {
+  return Math.min(1, Math.max(0, t));
+}
+
+function toUnit(v: number, min: number, max: number): number {
+  return (v - min) / (max - min);
+}
+
+function fromUnit(t: number, min: number, max: number): number {
+  return min + clamp01(t) * (max - min);
+}
+
+/**
+ * Sample [0,1] pulled toward `toward`. `pull` 0 = uniform, ~1 = near toward.
+ * Soft enough that extremes still happen, but opposite-end clashes are rare.
+ */
+function biasedUnit(toward: number, pull: number): number {
+  const uniform = Math.random();
+  if (pull <= 0) return uniform;
+  // Irwin-Hall-ish blob around `toward`, then mix with uniform.
+  const blob =
+    toward +
+    ((Math.random() + Math.random() + Math.random()) / 3 - 0.5) * (1.2 - pull);
+  return clamp01(uniform * (1 - pull) + clamp01(blob) * pull);
+}
+
+export type HeadProportions = Pick<
   NonNullable<CharacterSpec["head"]>,
   "size" | "yScale"
-> {
+>;
+
+/** Head Size/Height, optionally biased toward the current body scale. */
+function randomHeadProportions(bodyScale?: number): HeadProportions {
+  const toward =
+    bodyScale != null
+      ? toUnit(bodyScale, BODY_SCALE_MIN, BODY_SCALE_MAX)
+      : Math.random();
+  const pull = bodyScale != null ? 0.6 : 0;
   return {
-    size: snap01(0.8 + Math.random() * 0.55),
-    yScale: snap01(0.85 + Math.random() * 0.4),
+    size: snap01(
+      fromUnit(biasedUnit(toward, pull), HEAD_SIZE_MIN, HEAD_SIZE_MAX),
+    ),
+    yScale: snap01(HEAD_Y_MIN + Math.random() * (HEAD_Y_MAX - HEAD_Y_MIN)),
   };
 }
 
-function randomHead(skinHint?: string, allowHelmets = false): HeadBits {
+/** Body scale, optionally biased toward the current head size. */
+export function randomBodyScale(headSize?: number): number {
+  const toward =
+    headSize != null
+      ? toUnit(headSize, HEAD_SIZE_MIN, HEAD_SIZE_MAX)
+      : Math.random();
+  const pull = headSize != null ? 0.6 : 0;
+  return snap01(
+    fromUnit(biasedUnit(toward, pull), BODY_SCALE_MIN, BODY_SCALE_MAX),
+  );
+}
+
+/**
+ * Joint roll when head size and body scale are both free — share a size vibe
+ * so a huge body rarely pairs with a tiny head (and vice versa).
+ */
+export function randomCoupledProportions(): HeadProportions & {
+  bodyScale: number;
+} {
+  const vibe = biasedUnit(0.5, 0.2);
+  return {
+    bodyScale: snap01(
+      fromUnit(biasedUnit(vibe, 0.55), BODY_SCALE_MIN, BODY_SCALE_MAX),
+    ),
+    size: snap01(
+      fromUnit(biasedUnit(vibe, 0.55), HEAD_SIZE_MIN, HEAD_SIZE_MAX),
+    ),
+    yScale: snap01(HEAD_Y_MIN + Math.random() * (HEAD_Y_MAX - HEAD_Y_MIN)),
+  };
+}
+
+function randomHead(
+  skinHint?: string,
+  allowHelmets = false,
+  bodyScale?: number,
+): HeadBits {
   const skin = skinHint ?? pick(SKINS);
   // When helmets are off, keep overlay hats (cap, crowns, wizard…) but skip
   // closed / face-covering replacements (knight, samurai, sciFi…).
@@ -565,7 +645,7 @@ function randomHead(skinHint?: string, allowHelmets = false): HeadBits {
     head: {
       shape: pick(HEAD_SHAPES),
       scale: 0.94 + Math.random() * 0.08,
-      ...randomHeadProportions(),
+      ...randomHeadProportions(bodyScale),
     },
     hair,
     face: randomFace(),
@@ -798,6 +878,13 @@ function applyFieldLocks(
 export type RandomOptions = {
   /** Include closed/replacement helms. Default false. */
   allowHelmets?: boolean;
+  /** Current body scale — biases head size away from opposite extremes. */
+  bodyScale?: number;
+  /**
+   * Force head Size/Height (from a coupled roll with body scale). When set,
+   * overrides the usual head-proportion sample whenever head size is unlocked.
+   */
+  headProportions?: HeadProportions;
 };
 
 export function randomCharacter(
@@ -809,6 +896,7 @@ export function randomCharacter(
   const keep = locks ?? EMPTY_LOCKS;
   const prev = base;
   const allowHelmets = opts?.allowHelmets ?? false;
+  const bodyScale = opts?.bodyScale;
 
   const head = keep.head && prev ? {
     skin: prev.skin,
@@ -816,7 +904,7 @@ export function randomCharacter(
     hair: prev.hair,
     face: prev.face,
     helmet: prev.helmet,
-  } : randomHead(keep.head ? prev?.skin : undefined, allowHelmets);
+  } : randomHead(keep.head ? prev?.skin : undefined, allowHelmets, bodyScale);
 
   // Eyes lock overrides face whether or not the head was kept.
   if (keep.eyes && prev?.face) {
@@ -838,9 +926,11 @@ export function randomCharacter(
       size: prev.head.size,
       yScale: prev.head.yScale,
     };
+  } else if (opts?.headProportions) {
+    head.head = { ...head.head, ...opts.headProportions };
   } else if (keep.head && !keep.headSize) {
     // Head pinned but proportions free — resize the same skull.
-    head.head = { ...head.head, ...randomHeadProportions() };
+    head.head = { ...head.head, ...randomHeadProportions(bodyScale) };
   }
 
   const torso = keep.torso && prev
@@ -898,7 +988,11 @@ export function rerollPart(
   const rolled = (p: PartId) => p === part;
 
   if (part === "head") {
-    const head = randomHead(spec.skin, opts?.allowHelmets ?? false);
+    const head = randomHead(
+      spec.skin,
+      opts?.allowHelmets ?? false,
+      opts?.bodyScale,
+    );
     // Eyes are their own row — head 🎲 must never touch face / eye colour.
     head.face = spec.face;
     // Head-size lock keeps proportions even when the head dice is pressed.
@@ -908,6 +1002,8 @@ export function rerollPart(
         size: spec.head?.size,
         yScale: spec.head?.yScale,
       };
+    } else if (opts?.headProportions) {
+      head.head = { ...head.head, ...opts.headProportions };
     }
     return applyFieldLocks({ ...spec, ...head }, spec, pinned, rolled);
   }

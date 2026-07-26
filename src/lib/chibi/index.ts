@@ -121,6 +121,8 @@ export {
 export type { HelmetMount, HelmetMode } from "./helmetMode";
 export {
   randomCharacter,
+  randomBodyScale,
+  randomCoupledProportions,
   rerollPart,
   rerollField,
   rerollPartColors,
@@ -131,7 +133,14 @@ export {
   FIELD_LOCK_PART,
   isFieldLocked,
 } from "./random";
-export type { PartId, PartLocks, FieldLockId, FieldLocks, RandomOptions } from "./random";
+export type {
+  PartId,
+  PartLocks,
+  FieldLockId,
+  FieldLocks,
+  RandomOptions,
+  HeadProportions,
+} from "./random";
 export {
   loadCharacterPersist,
   saveCharacterPersist,
