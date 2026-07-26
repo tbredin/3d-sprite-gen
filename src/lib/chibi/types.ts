@@ -345,6 +345,44 @@ export type CharacterSpec = {
     type: WeaponType;
     color: string;
   };
+  /**
+   * World faction theming for rolls + AI prompts.
+   * `"none"` / omitted = no faction bias.
+   */
+  faction?: FactionId;
+};
+
+/** Playable + enemy-facing factions for the character creator. */
+export type FactionId =
+  | "none"
+  | "solar"
+  | "royal"
+  | "nature"
+  | "demon"
+  | "machine"
+  | "goblin"
+  | "light";
+
+export const FACTION_IDS: FactionId[] = [
+  "none",
+  "solar",
+  "royal",
+  "nature",
+  "demon",
+  "machine",
+  "goblin",
+  "light",
+];
+
+export const FACTION_LABELS: Record<FactionId, string> = {
+  none: "No faction",
+  solar: "Solar",
+  royal: "Royal",
+  nature: "Nature",
+  demon: "Demon",
+  machine: "Machine (Royal + Demon)",
+  goblin: "Goblin (Nature + Demon)",
+  light: "Light (Solar + Nature)",
 };
 
 export type PresetId =

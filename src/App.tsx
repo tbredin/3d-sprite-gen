@@ -120,7 +120,11 @@ import {
   setWeaponType,
   setOffhandType,
   setLegPose,
+  setFaction,
+  rerollFaction,
   isHeadReplacement,
+  FACTION_IDS,
+  FACTION_LABELS,
   type CharacterSpec,
   type PartId,
   type PartLocks,
@@ -139,6 +143,7 @@ import {
   type ArmPose,
   type LegPose,
   type WeaponType,
+  type FactionId,
 } from "./lib/chibi";
 import { remapSpecToPalette } from "./lib/chibi/paletteRemap";
 import {
@@ -396,6 +401,9 @@ export default function App() {
   const [allowHelmets, setAllowHelmets] = useState(
     characterPersist?.allowHelmets ?? false,
   );
+  const [factionLocked, setFactionLocked] = useState(
+    () => characterPersist?.factionLocked ?? false,
+  );
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
   );
@@ -573,8 +581,9 @@ export default function App() {
       mirror,
       partVisibility,
       allowHelmets,
+      factionLocked,
     });
-  }, [spec, locks, bodyScaleLocked, presetId, mirror, partVisibility, allowHelmets]);
+  }, [spec, locks, bodyScaleLocked, presetId, mirror, partVisibility, allowHelmets, factionLocked]);
 
   const applyPreset = (id: PresetId) => {
     setPresetId(id);
@@ -642,6 +651,7 @@ export default function App() {
         prev,
         {
           allowHelmets,
+          keepFaction: factionLocked,
           bodyScale: nextBody ?? bodyScale,
           headProportions: coupled
             ? { size: coupled.size, yScale: coupled.yScale }
@@ -1405,6 +1415,59 @@ export default function App() {
                 </select>
               </div>
               <div className="part-toggles">
+                <div className={`faction-control${factionLocked ? " is-locked" : ""}`}>
+                  <select
+                    className="part-inline-select faction-select"
+                    aria-label="Faction"
+                    title="Faction"
+                    value={spec.faction ?? "none"}
+                    disabled={factionLocked}
+                    onChange={(e) =>
+                      applyPartEdit((s) =>
+                        setFaction(s, e.target.value as FactionId),
+                      )
+                    }
+                  >
+                    {FACTION_IDS.map((id) => (
+                      <option key={id} value={id}>
+                        {FACTION_LABELS[id]}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className={`part-icon-btn part-row-lock${factionLocked ? " is-locked" : ""}`}
+                    onClick={() => setFactionLocked((v) => !v)}
+                    title={factionLocked ? "Unlock faction" : "Lock faction"}
+                    aria-label={factionLocked ? "Unlock faction" : "Lock faction"}
+                    aria-pressed={factionLocked}
+                  >
+                    {factionLocked ? "🔒" : "🔓"}
+                  </button>
+                  <button
+                    type="button"
+                    className="part-icon-btn part-row-reroll"
+                    onClick={() => {
+                      if (factionLocked) return;
+                      setPresetId("random");
+                      setSpec((prev) => {
+                        const next = rerollFaction(prev);
+                        setSpecText(JSON.stringify(next, null, 2));
+                        setSpecParseError(null);
+                        return next;
+                      });
+                    }}
+                    disabled={factionLocked}
+                    title={
+                      factionLocked
+                        ? "Unlock to reroll faction"
+                        : "Reroll faction"
+                    }
+                    aria-label="Reroll faction"
+                  >
+                    🎲
+                  </button>
+                </div>
                 <label className="part-chip">
                   <input
                     type="checkbox"

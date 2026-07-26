@@ -136,6 +136,8 @@ export {
   EMPTY_FIELD_LOCKS,
   FIELD_LOCK_PART,
   isFieldLocked,
+  setFaction,
+  rerollFaction,
 } from "./random";
 export type {
   PartId,
@@ -145,6 +147,11 @@ export type {
   RandomOptions,
   HeadProportions,
 } from "./random";
+export {
+  FACTION_THEMES,
+  factionTheme,
+  factionPromptBit,
+} from "./factions";
 export {
   loadCharacterPersist,
   saveCharacterPersist,
@@ -188,6 +195,8 @@ export {
   OFFHAND_TYPES,
   TWO_HANDED_TYPES,
   BACK_LOADOUTS,
+  FACTION_IDS,
+  FACTION_LABELS,
 } from "./types";
 export type {
   EyeStyle,
@@ -197,6 +206,7 @@ export type {
   TorsoStyle,
   BodyDetailStyle,
   WeaponType,
+  FactionId,
 } from "./types";
 export {
   setHeadShape,

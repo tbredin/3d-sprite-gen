@@ -903,6 +903,27 @@ button.ghost {
   flex: 0 0 auto;
 }
 
+.faction-control {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.faction-control.is-locked .faction-select {
+  opacity: 0.72;
+}
+
+.faction-select {
+  min-width: 7.5rem;
+  max-width: 11rem;
+}
+
+.faction-control .part-icon-btn {
+  align-self: center;
+}
+
 .panel label.part-chip {
   display: inline-flex;
   flex-direction: row;

@@ -7,6 +7,7 @@ import {
   BODY_SCALE_MAX,
   BODY_SCALE_MIN,
 } from "./units";
+import { factionTheme, pickFactionColor } from "./factions";
 import type {
   ArmPose,
   BackLoadout,
@@ -14,6 +15,7 @@ import type {
   BrowStyle,
   CharacterSpec,
   EyeStyle,
+  FactionId,
   HairStyle,
   HeadShape,
   HelmetStyle,
@@ -27,6 +29,7 @@ import {
   BODY_DETAIL_STYLES,
   BROW_STYLES,
   EYE_STYLES,
+  FACTION_IDS,
   HAIR_STYLES,
   HEAD_SHAPES,
   HELMET_STYLES,
@@ -537,11 +540,11 @@ function snap01(n: number): number {
   return Math.round(n / 0.01) * 0.01;
 }
 
-function randomFace(): NonNullable<CharacterSpec["face"]> {
+function randomFace(faction?: FactionId): NonNullable<CharacterSpec["face"]> {
   return {
     style: pick(EYE_STYLES),
     browStyle: pick(BROW_STYLES),
-    eyeColor: pick(EYES),
+    eyeColor: pickFactionColor(faction, "eye", EYES),
     // Match Dist / Size / Y slider ranges in App.
     spacing: snap05(0.6 + Math.random() * 0.85),
     scale: snap05(0.68 + Math.random() * 0.72),
@@ -636,6 +639,7 @@ function randomHead(
   skinHint?: string,
   allowHelmets = false,
   bodyScale?: number,
+  faction?: FactionId,
 ): HeadBits {
   const skin = skinHint ?? pick(SKINS);
   // When helmets are off, keep overlay hats (cap, crowns, wizard…) but skip
@@ -663,7 +667,7 @@ function randomHead(
       ...randomHeadProportions(bodyScale),
     },
     hair,
-    face: randomFace(),
+    face: randomFace(faction),
     helmet: {
       style: helmetStyle,
       ...defaultHelmetColors(helmetStyle),
@@ -671,10 +675,28 @@ function randomHead(
   };
 }
 
-function randomTorso(_helmetStyle?: HelmetStyle): TorsoBits {
-  const torsoStyle = pick(TORSO);
-  const cloth = pick(CLOTH);
-  const trim = pickTrim(cloth);
+function randomTorso(
+  _helmetStyle?: HelmetStyle,
+  faction?: FactionId,
+): TorsoBits {
+  const theme = factionTheme(faction);
+  const torsoPool: TorsoStyle[] = theme
+    ? [
+        ...TORSO,
+        ...(theme.armorBias > 0.5
+          ? (["chestplate", "fullPlate", "chestplate", "fullPlate"] as TorsoStyle[])
+          : []),
+        ...(theme.id === "light" || theme.id === "solar"
+          ? (["robe", "jacket", "robe"] as TorsoStyle[])
+          : []),
+      ]
+    : TORSO;
+  const torsoStyle = pick(torsoPool);
+  const cloth = pickFactionColor(faction, "cloth", CLOTH);
+  const trim =
+    pickFactionColor(faction, "trim", CLOTH) !== cloth
+      ? pickFactionColor(faction, "trim", CLOTH)
+      : pickTrim(cloth);
   const detailStyle = pick(BODY_DETAILS);
   const armored = torsoStyle === "chestplate" || torsoStyle === "fullPlate";
 
@@ -690,14 +712,17 @@ function randomTorso(_helmetStyle?: HelmetStyle): TorsoBits {
     hem = Math.random() < 0.8 ? pick(["loincloth", "skirt"] as HemStyle[]) : "none";
   }
 
-  const cape =
+  const baseCape =
     torsoStyle === "hoodedRobe"
-      ? Math.random() < 0.25
-      : Math.random() < (torsoStyle === "tank" ? 0.6 : 0.5);
+      ? 0.25
+      : torsoStyle === "tank"
+        ? 0.6
+        : 0.5;
+  const capeChance = theme ? Math.min(0.95, baseCape * 0.4 + theme.capeBias * 0.7) : baseCape;
+  const cape = Math.random() < capeChance;
 
-  // Prefer loud trim contrast so clothing reads after Endesga lock.
-  const hemColor = pickTrim(cloth) ?? pick(CLOTH);
-  const capeColor = pickTrim(cloth) ?? pick(CLOTH);
+  const hemColor = pickFactionColor(faction, "trim", CLOTH);
+  const capeColor = pickFactionColor(faction, "cloth", CLOTH);
   const pouches = Math.random() < 0.72;
   const backLoadout = pick(BACK_LOADOUT);
 
@@ -707,8 +732,9 @@ function randomTorso(_helmetStyle?: HelmetStyle): TorsoBits {
       color: cloth,
       trim,
       detailStyle,
-      // Gold is intentional on armor; cloth details inherit trim in geometry.
-      detailColor: armored && detailStyle !== "none" ? "#f5c542" : undefined,
+      detailColor: armored && detailStyle !== "none"
+        ? pickFactionColor(faction, "metal", ["#f5c542"])
+        : undefined,
     },
     accessories: {
       hem,
@@ -716,9 +742,9 @@ function randomTorso(_helmetStyle?: HelmetStyle): TorsoBits {
       cape,
       capeColor,
       pouches,
-      pouchColor: pickTrim(cloth) ?? pick(CLOTH),
+      pouchColor: pickFactionColor(faction, "trim", CLOTH),
       backLoadout,
-      backLoadoutColor: pick(CLOTH),
+      backLoadoutColor: pickFactionColor(faction, "metal", CLOTH),
     },
   };
 }
@@ -727,11 +753,12 @@ function randomArms(
   skin: string,
   sleeveHint?: string,
   leadHint?: LeadSide,
+  faction?: FactionId,
 ): ArmsBits {
   const leadSide = leadHint ?? pickLeadSide();
   const weaponType = pick(WEAPON);
   const poses = poseForWeapon(weaponType);
-  const cloth = sleeveHint ?? pick(CLOTH);
+  const cloth = sleeveHint ?? pickFactionColor(faction, "cloth", CLOTH);
   const sleeveLength =
     Math.random() < 0.2
       ? 0.1 + Math.random() * 0.2
@@ -743,12 +770,12 @@ function randomArms(
   if (ONE_HAND_MELEE.has(weaponType)) {
     const roll = Math.random();
     if (roll < 0.5) {
-      offhand = { type: "shield", color: pick(CLOTH) };
+      offhand = { type: "shield", color: pickFactionColor(faction, "metal", CLOTH) };
     } else if (roll < 0.78) {
-      offhand = { type: weaponType, color: pick(CLOTH) };
+      offhand = { type: weaponType, color: pickFactionColor(faction, "metal", CLOTH) };
     }
   } else if (PISTOL_TYPES.has(weaponType) && Math.random() < 0.4) {
-    offhand = { type: weaponType, color: pick(CLOTH) };
+    offhand = { type: weaponType, color: pickFactionColor(faction, "metal", CLOTH) };
   }
   return {
     leadSide,
@@ -761,19 +788,19 @@ function randomArms(
     weapon: {
       type: weaponType,
       hand: handForWeapon(weaponType, leadSide),
-      color: pick(CLOTH),
+      color: pickFactionColor(faction, "metal", CLOTH),
     },
     offhand,
     legPose: poses.leg,
   };
 }
 
-function randomLegs(poseHint?: LegPose): LegsBits {
-  const pantColor = pick(CLOTH);
+function randomLegs(poseHint?: LegPose, faction?: FactionId): LegsBits {
+  const pantColor = pickFactionColor(faction, "cloth", CLOTH);
   // Boots always contrast pants so footwear reads in the bake.
-  let bootColor = pick(BOOT);
+  let bootColor = pickFactionColor(faction, "metal", BOOT);
   for (let i = 0; i < 4 && bootColor === pantColor; i++) {
-    bootColor = pick(BOOT);
+    bootColor = pickFactionColor(faction, "metal", BOOT);
   }
   return {
     legs: {
@@ -922,6 +949,8 @@ export type RandomOptions = {
    * overrides the usual head-proportion sample whenever head size is unlocked.
    */
   headProportions?: HeadProportions;
+  /** Keep `base.faction` through the roll (faction lock). */
+  keepFaction?: boolean;
 };
 
 export function randomCharacter(
@@ -934,6 +963,9 @@ export function randomCharacter(
   const prev = base;
   const allowHelmets = opts?.allowHelmets ?? false;
   const bodyScale = opts?.bodyScale;
+  const faction: FactionId = opts?.keepFaction
+    ? (prev?.faction ?? "none")
+    : pick(FACTION_IDS);
 
   const head = keep.head && prev ? {
     skin: prev.skin,
@@ -941,14 +973,14 @@ export function randomCharacter(
     hair: prev.hair,
     face: prev.face,
     helmet: prev.helmet,
-  } : randomHead(keep.head ? prev?.skin : undefined, allowHelmets, bodyScale);
+  } : randomHead(keep.head ? prev?.skin : undefined, allowHelmets, bodyScale, faction);
 
   // Eyes lock overrides face whether or not the head was kept.
   if (keep.eyes && prev?.face) {
     head.face = prev.face;
   } else if (keep.head && !keep.eyes) {
     // Head pinned but eyes free — reshuffle face on the same skull.
-    head.face = randomFace();
+    head.face = randomFace(faction);
   }
 
   // Slider-row lock keeps Dist / Size / Y through any roll that moved the face.
@@ -972,7 +1004,7 @@ export function randomCharacter(
 
   const torso = keep.torso && prev
     ? { torso: prev.torso, accessories: prev.accessories }
-    : randomTorso(head.helmet?.style);
+    : randomTorso(head.helmet?.style, faction);
 
   const arms = keep.arms && prev
     ? {
@@ -986,6 +1018,7 @@ export function randomCharacter(
         head.skin,
         torso.torso.color,
         keep.legs && prev?.leadSide ? prev.leadSide : undefined,
+        faction,
       );
 
   // Soft coupling: sleeve often matches torso cloth when both unlock.
@@ -995,7 +1028,7 @@ export function randomCharacter(
 
   const legs = keep.legs && prev
     ? { legs: prev.legs }
-    : randomLegs(!keep.arms ? arms.legPose : undefined);
+    : randomLegs(!keep.arms ? arms.legPose : undefined, faction);
 
   return applyFieldLocks(
     {
@@ -1006,6 +1039,7 @@ export function randomCharacter(
       weapon: arms.weapon,
       offhand: arms.offhand,
       ...legs,
+      faction,
     },
     prev,
     (field) => isFieldLocked(field, keep, fieldLocks),
@@ -1029,6 +1063,7 @@ export function rerollPart(
       spec.skin,
       opts?.allowHelmets ?? false,
       opts?.bodyScale,
+      spec.faction,
     );
     // Eyes are their own row — head 🎲 must never touch face / eye colour.
     head.face = spec.face;
@@ -1045,7 +1080,7 @@ export function rerollPart(
     return applyFieldLocks({ ...spec, ...head }, spec, pinned, rolled);
   }
   if (part === "torso") {
-    const torso = randomTorso(spec.helmet?.style);
+    const torso = randomTorso(spec.helmet?.style, spec.faction);
     return applyFieldLocks(
       {
         ...spec,
@@ -1062,7 +1097,12 @@ export function rerollPart(
   }
   if (part === "arms") {
     // Keep leadSide so ipsilateral feet stay matched when only arms reroll.
-    const next = randomArms(spec.skin, spec.torso.color, spec.leadSide ?? DEFAULT_LEAD);
+    const next = randomArms(
+      spec.skin,
+      spec.torso.color,
+      spec.leadSide ?? DEFAULT_LEAD,
+      spec.faction,
+    );
     return applyFieldLocks(
       {
         ...spec,
@@ -1081,7 +1121,7 @@ export function rerollPart(
   return applyFieldLocks(
     {
       ...spec,
-      ...randomLegs(pick(COMBAT_LEG_POSES)),
+      ...randomLegs(pick(COMBAT_LEG_POSES), spec.faction),
     },
     spec,
     pinned,
@@ -1260,13 +1300,13 @@ export function rerollEyes(
 ): CharacterSpec {
   const current = spec.face?.eyeColor;
   const currentStyle = spec.face?.style ?? "classic";
-  let face = randomFace();
+  let face = randomFace(spec.faction);
   for (
     let i = 0;
     i < 10 && face.eyeColor === current && face.style === currentStyle;
     i++
   ) {
-    face = randomFace();
+    face = randomFace(spec.faction);
   }
   if (fieldLocks?.eyeStyle) {
     face.style = spec.face?.style ?? face.style;
@@ -1541,4 +1581,16 @@ export function setLegPose(spec: CharacterSpec, pose: LegPose): CharacterSpec {
   const next = structuredClone(spec);
   next.legs = { ...next.legs, pose };
   return next;
+}
+
+export function setFaction(spec: CharacterSpec, faction: FactionId): CharacterSpec {
+  const next = structuredClone(spec);
+  next.faction = faction;
+  return next;
+}
+
+/** Prefer a different faction id so the dice click visibly changes. */
+export function rerollFaction(spec: CharacterSpec): CharacterSpec {
+  const current = spec.faction ?? "none";
+  return setFaction(spec, pickOther(FACTION_IDS, current));
 }
