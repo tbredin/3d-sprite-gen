@@ -117,7 +117,42 @@ export type WeaponType =
   | "shield"
   | "axe"
   | "maul"
-  | "spear";
+  | "spear"
+  // Swords — one-handed blades with distinct guards / blade profiles.
+  | "swordBroad"
+  | "swordCurved"
+  | "swordRapier"
+  | "swordClaymore"
+  // Short blades.
+  | "dagger"
+  | "daggerCurved"
+  // Fist weapons — blades rake off a knuckle grip.
+  | "claw"
+  | "clawTwin"
+  // Casters shorter than `staff`.
+  | "wand"
+  | "wandCrystal"
+  // One-handed axes.
+  | "axeBearded"
+  | "axeHand"
+  // Two-handed axes.
+  | "greataxe"
+  | "greataxeDouble"
+  // Blunt.
+  | "maulSpiked"
+  | "hammer"
+  | "hammerWar"
+  | "hammerClub"
+  // Polearms.
+  | "spearBarbed"
+  | "halberd"
+  // Sidearms.
+  | "pistol"
+  | "pistolFlint"
+  | "pistolHeavy"
+  // Long guns.
+  | "rifleLong"
+  | "rifleCarbine";
 
 /**
  * Locked soft-diamond (`lozenge`) plus character-inspired rebuilds
@@ -413,25 +448,86 @@ export const TORSO_STYLES: TorsoStyle[] = [
 
 export const HEM_STYLES: HemStyle[] = ["none", "skirt", "loincloth"];
 
+/** Picker order — grouped by family so siblings sit next to each other. */
 export const WEAPON_TYPES: WeaponType[] = [
   "none",
   "sword",
+  "swordBroad",
+  "swordCurved",
+  "swordRapier",
+  "swordClaymore",
+  "dagger",
+  "daggerCurved",
+  "claw",
+  "clawTwin",
   "axe",
-  "staff",
-  "spear",
+  "axeBearded",
+  "axeHand",
+  "greataxe",
+  "greataxeDouble",
+  "hammer",
+  "hammerWar",
+  "hammerClub",
   "maul",
+  "maulSpiked",
+  "spear",
+  "spearBarbed",
+  "halberd",
+  "staff",
+  "wand",
+  "wandCrystal",
+  "pistol",
+  "pistolFlint",
+  "pistolHeavy",
   "rifle",
+  "rifleLong",
+  "rifleCarbine",
   "shield",
 ];
 
-/** One-handed props that can ride in the trail hand (no 2H maul/spear). */
+/**
+ * Weapons that occupy both hands: the trail hand is IK'd onto the shaft (or
+ * foregrip) and no off-hand prop is carried. Long guns count — a rifle needs a
+ * supporting hand the same way a maul does.
+ */
+export const TWO_HANDED_TYPES: WeaponType[] = [
+  "maul",
+  "maulSpiked",
+  "spear",
+  "spearBarbed",
+  "halberd",
+  "greataxe",
+  "greataxeDouble",
+  "rifle",
+  "rifleLong",
+  "rifleCarbine",
+];
+
+/** One-handed props that can ride in the trail hand (no two-handers). */
 export const OFFHAND_TYPES: WeaponType[] = [
   "none",
   "shield",
   "sword",
+  "swordBroad",
+  "swordCurved",
+  "swordRapier",
+  "swordClaymore",
+  "dagger",
+  "daggerCurved",
+  "claw",
+  "clawTwin",
   "axe",
+  "axeBearded",
+  "axeHand",
+  "hammer",
+  "hammerWar",
+  "hammerClub",
   "staff",
-  "rifle",
+  "wand",
+  "wandCrystal",
+  "pistol",
+  "pistolFlint",
+  "pistolHeavy",
 ];
 
 export const BACK_LOADOUTS: BackLoadout[] = [

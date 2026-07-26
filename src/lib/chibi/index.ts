@@ -170,6 +170,7 @@ export {
   HEM_STYLES,
   WEAPON_TYPES,
   OFFHAND_TYPES,
+  TWO_HANDED_TYPES,
   BACK_LOADOUTS,
 } from "./types";
 export type {
