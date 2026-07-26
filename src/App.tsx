@@ -94,6 +94,7 @@ import {
   BROW_STYLES,
   HAIR_STYLES,
   HELMET_STYLES,
+  isMonsterHelmet,
   TORSO_STYLES,
   BODY_DETAIL_STYLES,
   HEM_STYLES,
@@ -396,6 +397,9 @@ export default function App() {
   const [allowHelmets, setAllowHelmets] = useState(
     characterPersist?.allowHelmets ?? false,
   );
+  const [allowMonsters, setAllowMonsters] = useState(
+    characterPersist?.allowMonsters ?? false,
+  );
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
   );
@@ -573,8 +577,9 @@ export default function App() {
       mirror,
       partVisibility,
       allowHelmets,
+      allowMonsters,
     });
-  }, [spec, locks, bodyScaleLocked, presetId, mirror, partVisibility, allowHelmets]);
+  }, [spec, locks, bodyScaleLocked, presetId, mirror, partVisibility, allowHelmets, allowMonsters]);
 
   const applyPreset = (id: PresetId) => {
     setPresetId(id);
@@ -642,6 +647,7 @@ export default function App() {
         prev,
         {
           allowHelmets,
+          allowMonsters,
           bodyScale: nextBody ?? bodyScale,
           headProportions: coupled
             ? { size: coupled.size, yScale: coupled.yScale }
@@ -676,7 +682,7 @@ export default function App() {
         prev,
         part,
         locks,
-        { allowHelmets, bodyScale },
+        { allowHelmets, allowMonsters, bodyScale },
         fieldLocks,
       );
       setSpecText(JSON.stringify(next, null, 2));
@@ -699,7 +705,7 @@ export default function App() {
     }
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollField(prev, field, { allowHelmets });
+      const next = rerollField(prev, field, { allowHelmets, allowMonsters });
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -709,7 +715,7 @@ export default function App() {
   const applyRerollColors = (part: PartId) => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollPartColors(prev, part, locks);
+      const next = rerollPartColors(prev, part, locks, { allowMonsters });
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -1423,13 +1429,32 @@ export default function App() {
                       setAllowHelmets(next);
                       // Drop a closed helm immediately when turning off so the
                       // live character matches the preference before the next roll.
-                      if (!next && isHeadReplacement(spec.helmet?.style)) {
+                      if (
+                        !next &&
+                        isHeadReplacement(spec.helmet?.style) &&
+                        !isMonsterHelmet(spec.helmet?.style)
+                      ) {
                         applyPartEdit((s) => setHelmetStyle(s, "none"));
                       }
                     }}
                     title="Allow closed / face-covering helmets in random rolls. Hats, crowns, caps, and goggles stay available either way."
                   />
                   Helmets
+                </label>
+                <label className="part-chip">
+                  <input
+                    type="checkbox"
+                    checked={allowMonsters}
+                    onChange={() => {
+                      const next = !allowMonsters;
+                      setAllowMonsters(next);
+                      if (!next && isMonsterHelmet(spec.helmet?.style)) {
+                        applyPartEdit((s) => setHelmetStyle(s, "none"));
+                      }
+                    }}
+                    title="Allow animal and goblin head replacements (goat, bird, horse, snake, triceratops, goblins) and monster skin tones in random rolls."
+                  />
+                  Monster
                 </label>
                 <button
                   type="button"
@@ -1730,14 +1755,12 @@ export default function App() {
                               <CompactSelect<HelmetStyle>
                                 title="helmet"
                                 value={spec.helmet?.style ?? "none"}
-                                options={
-                                  allowHelmets
-                                    ? HELMET_STYLES
-                                    : HELMET_STYLES.filter(
-                                        (h) =>
-                                          h === "none" || !isHeadReplacement(h),
-                                      )
-                                }
+                                options={HELMET_STYLES.filter((h) => {
+                                  if (h === "none") return true;
+                                  if (isMonsterHelmet(h)) return allowMonsters;
+                                  if (isHeadReplacement(h)) return allowHelmets;
+                                  return true;
+                                })}
                                 disabled={fieldPinned("helmetStyle")}
                                 onPick={(v) =>
                                   applyPartEdit((s) => setHelmetStyle(s, v))

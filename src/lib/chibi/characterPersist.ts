@@ -47,6 +47,7 @@ export type PersistedCharacter = {
   /** Per-row show/hide for eyes + body parts. */
   partVisibility: PartVisibility;
   allowHelmets: boolean;
+  allowMonsters: boolean;
 };
 
 /**
@@ -318,6 +319,7 @@ export function loadCharacterPersist(): PersistedCharacter | null {
         parsed.showEyes,
       ),
       allowHelmets: bool(parsed.allowHelmets, false),
+      allowMonsters: bool(parsed.allowMonsters, false),
     };
   } catch {
     return null;
