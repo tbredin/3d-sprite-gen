@@ -164,6 +164,7 @@ export {
   PRESET_IDS,
   PRESET_LABELS,
   HEAD_SHAPES,
+  EYE_STYLES,
   HAIR_STYLES,
   HELMET_STYLES,
   TORSO_STYLES,
@@ -174,6 +175,7 @@ export {
   BACK_LOADOUTS,
 } from "./types";
 export type {
+  EyeStyle,
   HairStyle,
   HelmetStyle,
   TorsoStyle,
@@ -181,6 +183,7 @@ export type {
 } from "./types";
 export {
   setHeadShape,
+  setEyeStyle,
   setHairStyle,
   setHelmetStyle,
   setTorsoStyle,

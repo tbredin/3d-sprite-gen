@@ -17,6 +17,7 @@ import { EMPTY_LOCKS } from "./random";
 import type { PartLocks } from "./random";
 import {
   BACK_LOADOUTS,
+  EYE_STYLES,
   HAIR_STYLES,
   HEAD_SHAPES,
   HELMET_STYLES,
@@ -124,6 +125,8 @@ function sanitizeFace(raw: unknown): CharacterSpec["face"] | undefined {
   const o = dict(raw);
   if (!o) return undefined;
   const face: NonNullable<CharacterSpec["face"]> = {};
+  const style = oneOf(EYE_STYLES, o.style);
+  if (style) face.style = style;
   const eyeColor = str(o.eyeColor);
   if (eyeColor) face.eyeColor = eyeColor;
   const scale = num(o.scale, SCALE_MIN, SCALE_MAX);

@@ -7,6 +7,7 @@ import type {
   ArmPose,
   BackLoadout,
   CharacterSpec,
+  EyeStyle,
   HairStyle,
   HeadShape,
   HelmetStyle,
@@ -17,6 +18,7 @@ import type {
 } from "./types";
 import {
   BACK_LOADOUTS,
+  EYE_STYLES,
   HAIR_STYLES,
   HEAD_SHAPES,
   HELMET_STYLES,
@@ -490,6 +492,7 @@ function snap01(n: number): number {
 
 function randomFace(): NonNullable<CharacterSpec["face"]> {
   return {
+    style: pick(EYE_STYLES),
     eyeColor: pick(EYES),
     // Match Dist / Size / Y slider ranges in App.
     spacing: snap05(0.55 + Math.random() * 1.0),
@@ -1046,11 +1049,16 @@ export function rerollPartColors(
   return next;
 }
 
-/** Shuffle all eyes-row params (colour, spacing, size, y) — not Show. */
+/** Shuffle all eyes-row params (style, colour, spacing, size, y) — not Show. */
 export function rerollEyes(spec: CharacterSpec): CharacterSpec {
   const current = spec.face?.eyeColor;
+  const currentStyle = spec.face?.style ?? "classic";
   let face = randomFace();
-  for (let i = 0; i < 10 && face.eyeColor === current; i++) {
+  for (
+    let i = 0;
+    i < 10 && face.eyeColor === current && face.style === currentStyle;
+    i++
+  ) {
     face = randomFace();
   }
   return {
@@ -1158,6 +1166,16 @@ export function setHairStyle(spec: CharacterSpec, style: HairStyle): CharacterSp
     style,
     color: next.hair?.color ?? pick(HAIR_COLORS),
     complexity: next.hair?.complexity ?? 5,
+  };
+  return next;
+}
+
+export function setEyeStyle(spec: CharacterSpec, style: EyeStyle): CharacterSpec {
+  const next = structuredClone(spec);
+  next.face = {
+    ...next.face,
+    style,
+    eyeColor: next.face?.eyeColor ?? pick(EYES),
   };
   return next;
 }

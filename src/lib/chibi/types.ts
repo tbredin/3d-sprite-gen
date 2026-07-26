@@ -85,6 +85,18 @@ export type TorsoStyle =
   | "jacket"
   | "tank";
 
+/**
+ * Cartoon eye plate designs. Tuned for ~4–6 bake pixels at 48px / toward-br:
+ * mix of horizontal (classic, slit, wide) and vertical (tall, slash) reads.
+ */
+export type EyeStyle =
+  | "classic"
+  | "dot"
+  | "tall"
+  | "slit"
+  | "wide"
+  | "slash";
+
 export type ArmPose =
   | "idle"
   | "ready"
@@ -245,6 +257,8 @@ export type CharacterSpec = {
      */
   };
   face?: {
+    /** Pixel-art eye plate design (default `"classic"`). */
+    style?: EyeStyle;
     eyeColor?: string;
     /**
      * Optional multiplier for eye layout (default 1).
@@ -361,6 +375,15 @@ export const PRESET_LABELS: Record<PresetId, string> = {
  * These mirror the union members so the UI can offer every named variant
  * directly instead of a blind reroll.
  */
+export const EYE_STYLES: EyeStyle[] = [
+  "classic",
+  "dot",
+  "tall",
+  "slit",
+  "wide",
+  "slash",
+];
+
 export const HAIR_STYLES: HairStyle[] = [
   "bald",
   "bowl",

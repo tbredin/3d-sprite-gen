@@ -84,6 +84,7 @@ import {
   loadCharacterPersist,
   saveCharacterPersist,
   HEAD_SHAPES,
+  EYE_STYLES,
   HAIR_STYLES,
   HELMET_STYLES,
   TORSO_STYLES,
@@ -97,6 +98,7 @@ import {
   ARM_POSES,
   LEG_POSES,
   setHeadShape,
+  setEyeStyle,
   setHairStyle,
   setHelmetStyle,
   setTorsoStyle,
@@ -115,6 +117,7 @@ import {
   type FieldLocks,
   type PresetId,
   type HeadShape,
+  type EyeStyle,
   type HairStyle,
   type HelmetStyle,
   type TorsoStyle,
@@ -1302,6 +1305,13 @@ export default function App() {
                     />
                     Show
                   </label>
+                  <CompactSelect<EyeStyle>
+                    title="eye style"
+                    value={spec.face?.style ?? "classic"}
+                    options={EYE_STYLES}
+                    disabled={!showEyes || locks.eyes}
+                    onPick={(v) => applyPartEdit((s) => setEyeStyle(s, v))}
+                  />
                   <div className="part-actions">
                     <PaletteColorButton
                       value={spec.face?.eyeColor ?? "#1a1c2c"}

@@ -71,8 +71,9 @@ function characterBits(spec: CharacterSpec): string[] {
     bits.push(`holding a ${spec.weapon.type}`);
   }
 
-  if (spec.face?.eyeColor) {
-    bits.push("tiny 2x2 pixel eyes with no mouth or nose");
+  if (spec.face?.eyeColor || spec.face?.style) {
+    const style = spec.face?.style ?? "classic";
+    bits.push(`tiny ${style} pixel eyes with no mouth or nose`);
   }
 
   return bits;

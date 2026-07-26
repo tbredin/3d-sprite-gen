@@ -356,6 +356,7 @@ export function assembleCharacter(
   // Face stays un-outlined so eyes stay crisp (skipped under closed helms)
   if (showFace) {
     const face = generateFace({
+      style: spec.face?.style ?? "classic",
       eyeColor: spec.face?.eyeColor,
       // Independent of head.scale — scientist bumps eyes without touching hair.
       scale: spec.face?.scale ?? 1,

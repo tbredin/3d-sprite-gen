@@ -9,9 +9,9 @@ import {
   type Material,
 } from "three";
 import { toon } from "./materials";
-import { cartoonEyeMaterial, EYE_TEX_H, EYE_TEX_W } from "./faceTexture";
+import { cartoonEyeMaterial, eyeTexSize } from "./faceTexture";
 import { CHIBI, LAYOUT } from "./units";
-import type { HeadShape } from "./types";
+import type { EyeStyle, HeadShape } from "./types";
 
 function mesh(
   geo: BufferGeometry,
@@ -773,9 +773,10 @@ export function generateHead(opts: {
 
 /**
  * Cartoon face = two tiny eye plates; face-cheat shows only the nearer one.
- * Each eye is 2-wide × 25% taller; colour half faces gaze, white faces away.
+ * Style paints the plate; size/spacing/y stay shared layout knobs.
  */
 export function generateFace(opts: {
+  style?: EyeStyle;
   eyeColor?: string;
   scale?: number;
   /** Multiplier on baseline eye separation (default 1). */
@@ -787,17 +788,25 @@ export function generateFace(opts: {
 }): Group {
   const g = new Group();
   g.name = "face";
+  const style = opts.style ?? "classic";
   const faceScale = opts.scale ?? 1;
   const spacing = opts.spacing ?? 1;
   const yOffset = opts.y ?? 0;
   const headScale = opts.headScale ?? 1;
   const shape = opts.shape ?? DEFAULT_HEAD_SHAPE;
+  const tex = eyeTexSize(style);
+  // Classic world width is the Dist/Size baseline. Match ~area across styles so
+  // tall/slit stay in the same 4–6 bake-pixel band at 48px.
   const baseEyeW = 0.33 * (2 / 5);
-  const baseEyeH = baseEyeW * (EYE_TEX_H / EYE_TEX_W);
+  const classicAspect = eyeTexSize("classic").h / eyeTexSize("classic").w;
+  const refArea = baseEyeW * baseEyeW * classicAspect;
+  const aspect = tex.h / tex.w;
+  const styleEyeW = Math.sqrt(refArea / aspect);
+  const styleEyeH = styleEyeW * aspect;
   // Width tracks size 1:1; height only moves ⅓ as far from the baseline.
-  const eyeW = baseEyeW * faceScale;
-  const eyeH = baseEyeH * (1 + (faceScale - 1) / 3);
-  // Separation uses unscaled base width so size + distance stay independent.
+  const eyeW = styleEyeW * faceScale;
+  const eyeH = styleEyeH * (1 + (faceScale - 1) / 3);
+  // Separation uses classic base width so size + distance stay independent.
   const halfSep = baseEyeW * EYE_SEP_SCALE * spacing;
   const eyeColor = opts.eyeColor ?? "#1a1c2c";
 
@@ -813,7 +822,7 @@ export function generateFace(opts: {
     });
     const eye = new Mesh(
       new PlaneGeometry(eyeW, eyeH),
-      cartoonEyeMaterial(eyeColor, eyeSide),
+      cartoonEyeMaterial(eyeColor, eyeSide, "right", style),
     );
     eye.name = side < 0 ? "eye-left" : "eye-right";
     eye.position.set(anchor.x, anchor.y, anchor.z);
