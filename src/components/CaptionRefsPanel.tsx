@@ -632,9 +632,6 @@ export function CaptionRefsPanel() {
                         : "—"}
                     </span>
                   </div>
-                  <p className="meta captions-facing-hint">
-                    Appends e.g. “facing bottom-right”
-                  </p>
                 </div>
               </div>
               <div className="captions-editor-meta">
@@ -653,7 +650,7 @@ export function CaptionRefsPanel() {
                 ref={textareaRef}
                 className="captions-input"
                 value={draft}
-                rows={5}
+                rows={3}
                 spellCheck={false}
                 onChange={(e) => saveLocally(e.target.value)}
                 placeholder={current.auto_caption}

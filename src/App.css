@@ -2052,41 +2052,55 @@ button.swatch-btn {
 }
 
 .captions-hint {
-  margin: 0 0 0.35rem;
+  margin: 0 0 0.2rem;
   max-width: 52rem;
+  font-size: 0.58rem;
+  line-height: 1.25;
 }
 
 .captions-path {
   margin: 0;
-  word-break: break-all;
+  overflow: hidden;
+  font-size: 0.55rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .captions-dir-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-bottom: 0.75rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.2rem 0.4rem;
+  align-items: center;
+  margin-bottom: 0.35rem;
 }
 
 .captions-dir-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.25rem;
   align-items: center;
 }
 
-.captions-dir-input {
-  flex: 1 1 14rem;
+.captions-dir-row > .captions-label {
+  margin: 0;
+}
+
+.captions-dir-row > .captions-path {
+  grid-column: 2;
+}
+
+.panel-captions input.captions-dir-input {
+  width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  height: 1.7rem;
-  padding: 0 0.5rem;
+  height: 1.35rem !important;
+  padding: 0 0.35rem;
   border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
   border-radius: 4px;
   background: color-mix(in srgb, var(--panel) 70%, #0c0d12);
   color: var(--text);
   font: inherit;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
 }
 
 .captions-dir-input:focus {
@@ -2097,8 +2111,8 @@ button.swatch-btn {
 .captions-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.75rem;
+  gap: 0.25rem;
+  margin-bottom: 0.35rem;
 }
 
 .ghost-btn.is-active {
@@ -2109,8 +2123,8 @@ button.swatch-btn {
 
 .captions-layout {
   display: grid;
-  grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
-  gap: 0.85rem;
+  grid-template-columns: minmax(9rem, 13rem) minmax(0, 1fr);
+  gap: 0.5rem;
   align-items: start;
 }
 
@@ -2122,11 +2136,11 @@ button.swatch-btn {
 
 .captions-thumbs {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
-  gap: 0.4rem;
-  max-height: 28rem;
+  grid-template-columns: repeat(auto-fill, minmax(3.25rem, 1fr));
+  gap: 0.2rem;
+  max-height: 19rem;
   overflow: auto;
-  padding: 0.35rem;
+  padding: 0.2rem;
   border: 1px solid #3a415c;
   border-radius: 6px;
   background: #12141f;
@@ -2135,8 +2149,8 @@ button.swatch-btn {
 .captions-thumb {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.3rem;
+  gap: 0.1rem;
+  padding: 0.15rem;
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
@@ -2162,7 +2176,7 @@ button.swatch-btn {
 
 .captions-thumb-img {
   width: 100%;
-  height: 3.5rem;
+  height: 2.6rem;
   object-fit: contain;
   image-rendering: pixelated;
   background:
@@ -2177,7 +2191,7 @@ button.swatch-btn {
 }
 
 .captions-thumb-label {
-  font-size: 0.58rem;
+  font-size: 0.5rem;
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2187,7 +2201,7 @@ button.swatch-btn {
 .captions-editor {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.25rem;
   min-width: 0;
 }
 
@@ -2195,8 +2209,8 @@ button.swatch-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(100%, 16rem);
-  height: 12rem;
+  width: min(100%, 11rem);
+  height: 8rem;
   border: 1px solid #3a415c;
   border-radius: 6px;
   background: #12141f;
@@ -2212,13 +2226,14 @@ button.swatch-btn {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.35rem 0.75rem;
+  gap: 0.2rem 0.5rem;
+  font-size: 0.68rem;
 }
 
 .captions-label {
-  margin: 0.25rem 0 0;
+  margin: 0.1rem 0 0;
   font-family: "IBM Plex Mono", "Courier New", monospace;
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ink);
@@ -2228,17 +2243,21 @@ button.swatch-btn {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  min-height: 6rem;
+  min-height: 4rem;
   margin: 0;
-  padding: 0.65rem 0.75rem;
+  padding: 0.4rem 0.5rem;
   border: 1px solid #3a415c;
   border-radius: 4px;
   background: #0c0e16;
   color: var(--text);
   font: inherit;
-  font-size: 0.92rem;
-  line-height: 1.45;
+  font-size: 0.75rem;
+  line-height: 1.3;
   resize: vertical;
+}
+
+.panel-captions textarea.captions-input {
+  height: 4rem;
 }
 
 .captions-input:focus {
@@ -2248,34 +2267,38 @@ button.swatch-btn {
 
 .captions-auto-line {
   margin: 0;
-  line-height: 1.4;
+  overflow: hidden;
+  font-size: 0.55rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .captions-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.25rem;
   align-items: center;
 }
 
 .captions-preview-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.85rem;
+  gap: 0.5rem;
   align-items: flex-start;
 }
 
 .captions-facing {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.2rem;
 }
 
 .captions-facing-pad {
   display: grid;
-  grid-template-columns: repeat(3, 2.15rem);
-  grid-template-rows: repeat(3, 2.15rem);
-  gap: 0.25rem;
+  grid-template-columns: repeat(3, 1.55rem);
+  grid-template-rows: repeat(3, 1.55rem);
+  gap: 0.15rem;
   width: fit-content;
 }
 
@@ -2289,7 +2312,7 @@ button.swatch-btn {
   border-radius: 4px;
   background: #12141f;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.78rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -2312,19 +2335,26 @@ button.swatch-btn {
   align-items: center;
   justify-content: center;
   padding: 0 0.15rem;
-  font-size: 0.58rem;
+  font-size: 0.46rem;
   line-height: 1.15;
   text-align: center;
   color: var(--muted);
 }
 
-.captions-facing-hint {
-  margin: 0;
-}
-
 .panel-captions .collapse-header {
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: 0.25rem;
+}
+
+.panel-captions .ghost-btn,
+.panel-captions .timeline-play {
+  box-sizing: border-box;
+  height: 1.3rem !important;
+  min-height: 1.3rem;
+  min-width: 0;
+  padding: 0.12rem 0.35rem;
+  font-size: 0.58rem;
+  line-height: 1;
 }
 
 .captions-delete-btn:not(:disabled):hover {
