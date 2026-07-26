@@ -6,12 +6,14 @@ export type Palette = {
 };
 
 /** Discrete bake resolutions (also the stepped size slider values). */
-export const SPRITE_SIZES = [8, 16, 24, 32, 40, 48, 56, 64] as const;
+export const SPRITE_SIZE_MIN = 8;
+export const SPRITE_SIZE_MAX = 64;
+export const SPRITE_SIZE_STEP = 2;
+export const SPRITE_SIZES = Array.from(
+  { length: (SPRITE_SIZE_MAX - SPRITE_SIZE_MIN) / SPRITE_SIZE_STEP + 1 },
+  (_, i) => SPRITE_SIZE_MIN + i * SPRITE_SIZE_STEP,
+) as readonly number[];
 export type SpriteSize = (typeof SPRITE_SIZES)[number];
-
-export const SPRITE_SIZE_MIN = SPRITE_SIZES[0];
-export const SPRITE_SIZE_MAX = SPRITE_SIZES[SPRITE_SIZES.length - 1];
-export const SPRITE_SIZE_STEP = 8;
 
 export function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace("#", "");

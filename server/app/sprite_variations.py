@@ -448,7 +448,7 @@ def generate_variation(
     guidance_scale: float = DEFAULT_GUIDANCE,
 ) -> GenerateResult:
     ensure_dirs()
-    if size not in (8, 16, 24, 32, 40, 48, 56, 64):
+    if size < 8 or size > 64 or size % 2 != 0:
         raise ValueError(f"unsupported size {size}")
     if not palette_colors:
         raise ValueError("palette_colors required")

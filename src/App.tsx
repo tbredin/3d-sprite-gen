@@ -1317,7 +1317,7 @@ export default function App() {
                   onChange={(e) =>
                     setSize(Number(e.target.value) as SpriteSize)
                   }
-                  title={`Bake resolution (${SPRITE_SIZES.join(" / ")} px)`}
+                  title={`Bake resolution (${SPRITE_SIZE_MIN}–${SPRITE_SIZE_MAX} px, step ${SPRITE_SIZE_STEP})`}
                 />
               </div>
               <div className="field">

@@ -37,7 +37,7 @@ class StatusResponse(BaseModel):
     mesh_backend: str
     mesh_ready: bool
     message: str
-    sizes: List[int] = Field(default_factory=lambda: [8, 16, 24, 32, 40, 48, 56, 64])
+    sizes: List[int] = Field(default_factory=lambda: list(range(8, 65, 2)))
     default_palette: str = "endesga-64"
     sample_model: Optional[str] = None
     how_it_works: str = (
