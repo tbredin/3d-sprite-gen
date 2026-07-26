@@ -768,10 +768,13 @@ button.ghost {
   min-width: 0;
 }
 
-.char-preset-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.15rem;
+/* Preset label mirrors the part rows (dice + capitalized name). */
+.char-preset .part-title {
+  margin-bottom: 0.2rem;
+}
+
+.char-preset .part-name {
+  flex: 0 0 auto;
 }
 
 .panel button.field-matched {

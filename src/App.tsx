@@ -1292,61 +1292,6 @@ export default function App() {
             onToggle={() => setCharacterOpen((v) => !v)}
             actions={
               <>
-                <button
-                  type="button"
-                  className="part-icon-btn part-row-reroll"
-                  onClick={applyRandom}
-                  title="Random character"
-                  aria-label="Random character"
-                >
-                  🎲
-                </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={resetCharacterPanel}
-                  title="Reset to the knight preset and default slider values"
-                >
-                  Reset
-                </button>
-              </>
-            }
-          >
-            <div className="char-toolbar">
-              <div className="char-picker">
-                <div className="field char-preset">
-                  <div className="char-preset-heading">
-                    <span>Preset</span>
-                    <button
-                      type="button"
-                      className="part-icon-btn part-row-reroll"
-                      onClick={applyRandomPreset}
-                      title="Random preset"
-                      aria-label="Random preset"
-                    >
-                      🎲
-                    </button>
-                  </div>
-                  <select
-                    aria-label="Preset"
-                    value={presetId === "random" ? "" : presetId}
-                    onChange={(e) => applyPreset(e.target.value as PresetId)}
-                  >
-                    {presetId === "random" ? (
-                      <option value="" disabled>
-                        random
-                      </option>
-                    ) : null}
-                    {PRESET_IDS.map((id) => (
-                      <option key={id} value={id}>
-                        {PRESET_LABELS[id]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="part-toggles">
                 <label className="part-chip">
                   <input
                     type="checkbox"
@@ -1373,6 +1318,60 @@ export default function App() {
                   />
                   Helmets
                 </label>
+                <button
+                  type="button"
+                  className="part-icon-btn part-row-reroll"
+                  onClick={applyRandom}
+                  title="Random character"
+                  aria-label="Random character"
+                >
+                  🎲
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={resetCharacterPanel}
+                  title="Reset to the knight preset and default slider values"
+                >
+                  Reset
+                </button>
+              </>
+            }
+          >
+            <div className="char-toolbar">
+              <div className="char-picker">
+                <div className="field char-preset">
+                  <div className="part-title">
+                    <div className="part-row-controls">
+                      <button
+                        type="button"
+                        className="part-icon-btn part-row-reroll"
+                        onClick={applyRandomPreset}
+                        title="Random preset"
+                        aria-label="Random preset"
+                      >
+                        🎲
+                      </button>
+                    </div>
+                    <span className="part-name">preset</span>
+                  </div>
+                  <select
+                    aria-label="Preset"
+                    value={presetId === "random" ? "" : presetId}
+                    onChange={(e) => applyPreset(e.target.value as PresetId)}
+                  >
+                    {presetId === "random" ? (
+                      <option value="" disabled>
+                        random
+                      </option>
+                    ) : null}
+                    {PRESET_IDS.map((id) => (
+                      <option key={id} value={id}>
+                        {PRESET_LABELS[id]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
