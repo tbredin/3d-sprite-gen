@@ -9,9 +9,9 @@ import {
   type Material,
 } from "three";
 import { toon } from "./materials";
-import { cartoonEyeMaterial, EYE_TEX_H, EYE_TEX_W } from "./faceTexture";
+import { cartoonBrowMaterial, cartoonEyeMaterial, browTexSize, eyeTexSize } from "./faceTexture";
 import { CHIBI, LAYOUT } from "./units";
-import type { HeadShape } from "./types";
+import type { BrowStyle, EyeStyle, HeadShape } from "./types";
 
 function mesh(
   geo: BufferGeometry,
@@ -164,8 +164,12 @@ export const FACE_READABILITY = FACE_BY_SHAPE.lozenge;
 
 /** Horizontal spacing tuning (preserves prior art-direction). */
 const EYE_SEP_SCALE = 1.575 * 0.95 * 1.2 * 1.2 * 1.1 * 0.5;
-/** Eye row as a fraction of face-pad height (negative = lower on face). */
-const EYE_V_FRAC = -0.14;
+/** Baseline eye row — 25% higher than the original −0.14 sit. */
+const EYE_V_FRAC = -0.105;
+/** Extra world gap so tipped eye tops can't intersect the brow plate. */
+const BROW_CLEARANCE = 0.012;
+/** Extra outward puff so brows draw clearly in front of eyes. */
+const BROW_Z_PUFF = 0.012;
 /** Keep eyes inside the face-pad's lateral span. */
 const EYE_SEP_FACE_FRAC = 0.72;
 /**
@@ -772,11 +776,15 @@ export function generateHead(opts: {
 }
 
 /**
- * Cartoon face = two tiny eye plates; face-cheat shows only the nearer one.
- * Each eye is 2-wide × 25% taller; colour half faces gaze, white faces away.
+ * Cartoon face = two tiny eye plates (+ optional brows); face-cheat shows
+ * only the nearer side. Style paints the plates; size/spacing/y stay shared.
  */
 export function generateFace(opts: {
+  style?: EyeStyle;
+  browStyle?: BrowStyle;
   eyeColor?: string;
+  /** Brow fill — defaults to eye colour. */
+  browColor?: string;
   scale?: number;
   /** Multiplier on baseline eye separation (default 1). */
   spacing?: number;
@@ -787,19 +795,40 @@ export function generateFace(opts: {
 }): Group {
   const g = new Group();
   g.name = "face";
+  const style = opts.style ?? "classic";
+  const browStyle = opts.browStyle ?? "none";
   const faceScale = opts.scale ?? 1;
   const spacing = opts.spacing ?? 1;
   const yOffset = opts.y ?? 0;
   const headScale = opts.headScale ?? 1;
   const shape = opts.shape ?? DEFAULT_HEAD_SHAPE;
+  const tex = eyeTexSize(style);
+  // Classic world width is the Dist/Size baseline. Match ~area across styles so
+  // modest aspect leans stay in the same 4–6 bake-pixel band at 48px.
   const baseEyeW = 0.33 * (2 / 5);
-  const baseEyeH = baseEyeW * (EYE_TEX_H / EYE_TEX_W);
+  const classicAspect = eyeTexSize("classic").h / eyeTexSize("classic").w;
+  const refArea = baseEyeW * baseEyeW * classicAspect;
+  const aspect = tex.h / tex.w;
+  const styleEyeW = Math.sqrt(refArea / aspect);
+  const styleEyeH = styleEyeW * aspect;
   // Width tracks size 1:1; height only moves ⅓ as far from the baseline.
-  const eyeW = baseEyeW * faceScale;
-  const eyeH = baseEyeH * (1 + (faceScale - 1) / 3);
-  // Separation uses unscaled base width so size + distance stay independent.
+  const eyeW = styleEyeW * faceScale;
+  const eyeH = styleEyeH * (1 + (faceScale - 1) / 3);
+  // Separation uses classic base width so size + distance stay independent.
   const halfSep = baseEyeW * EYE_SEP_SCALE * spacing;
   const eyeColor = opts.eyeColor ?? "#1a1c2c";
+  const browColor = opts.browColor ?? eyeColor;
+
+  // Thin brow plate — slightly wider than the eye, cropped height.
+  const browW = eyeW * 1.15;
+  const browH =
+    browStyle === "none"
+      ? 0
+      : browW * (browTexSize(browStyle).h / browTexSize(browStyle).w);
+  // Local offset on the eye plate: above the eye top + small gap, slightly
+  // forward so opaque brow wins over the tipped eye edge.
+  const browLocalY =
+    browH > 0 ? eyeH * 0.5 + browH * 0.5 + BROW_CLEARANCE : 0;
 
   for (const side of [-1, 1] as const) {
     const eyeSide = side < 0 ? "left" : "right";
@@ -813,13 +842,25 @@ export function generateFace(opts: {
     });
     const eye = new Mesh(
       new PlaneGeometry(eyeW, eyeH),
-      cartoonEyeMaterial(eyeColor, eyeSide),
+      cartoonEyeMaterial(eyeColor, eyeSide, "right", style),
     );
     eye.name = side < 0 ? "eye-left" : "eye-right";
     eye.position.set(anchor.x, anchor.y, anchor.z);
     tipFace(eye);
     eye.renderOrder = 2;
     g.add(eye);
+
+    if (browStyle !== "none" && browH > 0) {
+      // Parent to the eye so Dist / Size / Y keep the brow glued on.
+      const brow = new Mesh(
+        new PlaneGeometry(browW, browH),
+        cartoonBrowMaterial(browColor, eyeSide, browStyle),
+      );
+      brow.name = side < 0 ? "brow-left" : "brow-right";
+      brow.position.set(0, browLocalY, BROW_Z_PUFF);
+      brow.renderOrder = 3;
+      eye.add(brow);
+    }
   }
 
   return g;

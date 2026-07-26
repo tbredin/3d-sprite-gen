@@ -84,6 +84,8 @@ import {
   loadCharacterPersist,
   saveCharacterPersist,
   HEAD_SHAPES,
+  EYE_STYLES,
+  BROW_STYLES,
   HAIR_STYLES,
   HELMET_STYLES,
   TORSO_STYLES,
@@ -97,6 +99,8 @@ import {
   ARM_POSES,
   LEG_POSES,
   setHeadShape,
+  setEyeStyle,
+  setBrowStyle,
   setHairStyle,
   setHelmetStyle,
   setTorsoStyle,
@@ -115,6 +119,8 @@ import {
   type FieldLocks,
   type PresetId,
   type HeadShape,
+  type EyeStyle,
+  type BrowStyle,
   type HairStyle,
   type HelmetStyle,
   type TorsoStyle,
@@ -352,7 +358,7 @@ export default function App() {
   const [showEyes, setShowEyes] = useState(characterPersist?.showEyes ?? true);
   /** Session preference: closed helms in random rolls. Hats/crowns stay allowed. */
   const [allowHelmets, setAllowHelmets] = useState(
-    characterPersist?.allowHelmets ?? true,
+    characterPersist?.allowHelmets ?? false,
   );
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
@@ -568,7 +574,7 @@ export default function App() {
 
   /** Effective lock for one dropdown: its own pin or its section's. */
   const fieldPinned = (field: FieldLockId) =>
-    fieldLocks[field] || locks[FIELD_LOCK_PART[field]];
+    fieldLocks[field] || Boolean(locks[FIELD_LOCK_PART[field]]);
 
   const applyRerollPart = (part: PartId) => {
     setPresetId("random");
@@ -614,7 +620,7 @@ export default function App() {
   const applyRerollEyes = () => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollEyes(prev);
+      const next = rerollEyes(prev, fieldLocks, locks);
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -638,6 +644,9 @@ export default function App() {
       return next;
     });
   };
+
+  /** Dist / Size / Y are pinned by the eyes section lock or their own row lock. */
+  const eyeSlidersDisabled = !showEyes || locks.eyes || locks.eyeLayout;
 
   const applySpecFromParsed = (parsed: unknown) => {
     if (!parsed || typeof parsed !== "object") {
@@ -1317,6 +1326,38 @@ export default function App() {
                     />
                     Show
                   </label>
+                  <FieldControlGroup
+                    field="eyeStyle"
+                    label="eye style"
+                    locked={fieldLocks.eyeStyle}
+                    pinned={fieldPinned("eyeStyle") || !showEyes}
+                    onToggle={toggleFieldLock}
+                    onReroll={applyRerollField}
+                  >
+                    <CompactSelect<EyeStyle>
+                      title="eye style"
+                      value={spec.face?.style ?? "classic"}
+                      options={EYE_STYLES}
+                      disabled={!showEyes || fieldPinned("eyeStyle")}
+                      onPick={(v) => applyPartEdit((s) => setEyeStyle(s, v))}
+                    />
+                  </FieldControlGroup>
+                  <FieldControlGroup
+                    field="browStyle"
+                    label="eyebrow style"
+                    locked={fieldLocks.browStyle}
+                    pinned={fieldPinned("browStyle") || !showEyes}
+                    onToggle={toggleFieldLock}
+                    onReroll={applyRerollField}
+                  >
+                    <CompactSelect<BrowStyle>
+                      title="eyebrow style"
+                      value={spec.face?.browStyle ?? "none"}
+                      options={BROW_STYLES}
+                      disabled={!showEyes || fieldPinned("browStyle")}
+                      onPick={(v) => applyPartEdit((s) => setBrowStyle(s, v))}
+                    />
+                  </FieldControlGroup>
                   <div className="part-actions">
                     <PaletteColorButton
                       value={spec.face?.eyeColor ?? "#1a1c2c"}
@@ -1333,87 +1374,107 @@ export default function App() {
                     />
                   </div>
                 </div>
-                <div
-                  className={`light-grid part-eye-sliders${showEyes && !locks.eyes ? "" : " is-disabled"}`}
-                >
-                  <label className="light-slider">
-                    <span
-                      className="light-slider-label"
-                      title="Distance between eyes"
-                    >
-                      Dist
-                    </span>
-                    <input
-                      type="range"
-                      min={0.55}
-                      max={1.55}
-                      step={0.05}
-                      value={spec.face?.spacing ?? 1}
-                      disabled={!showEyes || locks.eyes}
-                      onChange={(e) => {
-                        const spacing = Number(e.target.value);
-                        applyPartEdit((s) => ({
-                          ...s,
-                          face: { ...s.face, spacing },
-                        }));
-                      }}
-                      title="Distance between eyes"
-                    />
-                    <span className="slider-val">
-                      {(spec.face?.spacing ?? 1).toFixed(2)}
-                    </span>
-                  </label>
-                  <label className="light-slider">
-                    <span className="light-slider-label" title="Eye size">
-                      Size
-                    </span>
-                    <input
-                      type="range"
-                      min={0.55}
-                      max={1.65}
-                      step={0.05}
-                      value={spec.face?.scale ?? 1}
-                      disabled={!showEyes || locks.eyes}
-                      onChange={(e) => {
-                        const scale = Number(e.target.value);
-                        applyPartEdit((s) => ({
-                          ...s,
-                          face: { ...s.face, scale },
-                        }));
-                      }}
-                      title="Eye size"
-                    />
-                    <span className="slider-val">
-                      {(spec.face?.scale ?? 1).toFixed(2)}
-                    </span>
-                  </label>
-                  <label className="light-slider">
-                    <span
-                      className="light-slider-label"
-                      title="Vertical eye position"
-                    >
-                      Y
-                    </span>
-                    <input
-                      type="range"
-                      min={-0.25}
-                      max={0.25}
-                      step={0.05}
-                      value={spec.face?.y ?? 0}
-                      disabled={!showEyes || locks.eyes}
-                      onChange={(e) => {
-                        const y = Number(e.target.value);
-                        applyPartEdit((s) => ({
-                          ...s,
-                          face: { ...s.face, y },
-                        }));
-                      }}
-                      title="Vertical eye position"
-                    />
-                    <span className="slider-val">
-                      {(spec.face?.y ?? 0).toFixed(2)}
-                    </span>
-                  </label>
+                <div className="part-sliders-lockable">
+                  <button
+                    type="button"
+                    className={`part-icon-btn part-slider-lock${locks.eyeLayout ? " is-locked" : ""}`}
+                    onClick={() => toggleLock("eyeLayout")}
+                    title={
+                      locks.eyeLayout
+                        ? "Unlock eye distance, size & Y"
+                        : "Lock eye distance, size & Y (kept when the eyes reroll)"
+                    }
+                    aria-label={
+                      locks.eyeLayout
+                        ? "Unlock eye distance, size and Y"
+                        : "Lock eye distance, size and Y"
+                    }
+                    aria-pressed={locks.eyeLayout}
+                  >
+                    {locks.eyeLayout ? "🔒" : "🔓"}
+                  </button>
+                  <div
+                    className={`light-grid part-eye-sliders${eyeSlidersDisabled ? " is-disabled" : ""}`}
+                  >
+                    <label className="light-slider">
+                      <span
+                        className="light-slider-label"
+                        title="Distance between eyes"
+                      >
+                        Dist
+                      </span>
+                      <input
+                        type="range"
+                        min={0.6}
+                        max={1.45}
+                        step={0.05}
+                        value={spec.face?.spacing ?? 1}
+                        disabled={eyeSlidersDisabled}
+                        onChange={(e) => {
+                          const spacing = Number(e.target.value);
+                          applyPartEdit((s) => ({
+                            ...s,
+                            face: { ...s.face, spacing },
+                          }));
+                        }}
+                        title="Distance between eyes"
+                      />
+                      <span className="slider-val">
+                        {(spec.face?.spacing ?? 1).toFixed(2)}
+                      </span>
+                    </label>
+                    <label className="light-slider">
+                      <span className="light-slider-label" title="Eye size">
+                        Size
+                      </span>
+                      <input
+                        type="range"
+                        min={0.6}
+                        max={1.4}
+                        step={0.05}
+                        value={Math.min(spec.face?.scale ?? 1, 1.4)}
+                        disabled={eyeSlidersDisabled}
+                        onChange={(e) => {
+                          const scale = Number(e.target.value);
+                          applyPartEdit((s) => ({
+                            ...s,
+                            face: { ...s.face, scale },
+                          }));
+                        }}
+                        title="Eye size"
+                      />
+                      <span className="slider-val">
+                        {Math.min(spec.face?.scale ?? 1, 1.4).toFixed(2)}
+                      </span>
+                    </label>
+                    <label className="light-slider">
+                      <span
+                        className="light-slider-label"
+                        title="Vertical eye position"
+                      >
+                        Y
+                      </span>
+                      <input
+                        type="range"
+                        min={-0.25}
+                        max={0.25}
+                        step={0.05}
+                        value={spec.face?.y ?? 0}
+                        disabled={eyeSlidersDisabled}
+                        onChange={(e) => {
+                          const y = Number(e.target.value);
+                          applyPartEdit((s) => ({
+                            ...s,
+                            face: { ...s.face, y },
+                          }));
+                        }}
+                        title="Vertical eye position"
+                      />
+                      <span className="slider-val">
+                        {(spec.face?.y ?? 0).toFixed(2)}
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
