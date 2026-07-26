@@ -168,24 +168,6 @@ body {
   letter-spacing: 0.03em;
 }
 
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.45rem;
-}
-
-.panel-header .panel-title {
-  margin: 0;
-}
-
-.panel button.field-matched.char-reroll {
-  height: 1.5rem;
-  padding: 0 0.6rem;
-  font-size: 0.7rem;
-}
-
 .panel label,
 .panel .field {
   display: flex;
@@ -767,7 +749,7 @@ button.ghost {
 
 .char-toolbar {
   display: flex;
-  gap: 0.35rem 2.5rem;
+  gap: 0.35rem 1rem;
   align-items: center;
   margin: 0 0 0.35rem;
 }
@@ -780,13 +762,27 @@ button.ghost {
 
 .char-preset .part-name {
   flex: 0 0 auto;
+  font-size: 0.68rem;
 }
 
-.char-preset .part-inline-select,
-.panel .char-preset .part-inline-select {
+.char-preset select,
+.panel .char-preset select {
   flex: 0 0 8.5rem;
   width: 8.5rem;
   max-width: 8.5rem;
+  height: 1.2rem !important;
+  max-height: 1.2rem;
+  padding: 0 0.15rem !important;
+  font-size: 0.6rem !important;
+  line-height: 1.1;
+}
+
+.panel button.field-matched.char-reroll {
+  flex: 0 0 auto;
+  height: 1.2rem;
+  margin-left: 0.15rem;
+  padding: 0 0.4rem;
+  font-size: 0.7rem;
 }
 
 .panel button.field-matched {
@@ -799,10 +795,12 @@ button.ghost {
 
 .part-toggles {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   flex-wrap: nowrap;
-  gap: 0.1rem;
+  align-items: center;
+  gap: 0.35rem;
   margin: 0;
+  flex: 0 0 auto;
 }
 
 .panel label.part-chip {

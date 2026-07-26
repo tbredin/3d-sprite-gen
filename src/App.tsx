@@ -1111,18 +1111,7 @@ export default function App() {
       <main className="app-main">
       <div className="layout">
         <section className="panel panel-character">
-          <div className="panel-header">
-            <h2 className="panel-title">Character</h2>
-            <button
-              type="button"
-              className="field-matched char-reroll"
-              onClick={applyRandom}
-              title="Random character"
-              aria-label="Random character"
-            >
-              🎲 Random
-            </button>
-          </div>
+          <h2 className="panel-title">Character</h2>
 
           <div className="preview-row">
             <div className="preview-main">
@@ -1334,7 +1323,50 @@ export default function App() {
             open={characterOpen}
             onToggle={() => setCharacterOpen((v) => !v)}
             actions={
-              <>
+              <button
+                type="button"
+                className="ghost"
+                onClick={resetCharacterPanel}
+                title="Reset to the knight preset and default slider values"
+              >
+                Reset
+              </button>
+            }
+          >
+            <div className="char-toolbar">
+              <div className="char-preset part-row">
+                <div className="part-title">
+                  <div className="part-row-controls">
+                    <button
+                      type="button"
+                      className="part-icon-btn part-row-reroll"
+                      onClick={applyRandomPreset}
+                      title="Random preset"
+                      aria-label="Random preset"
+                    >
+                      🎲
+                    </button>
+                  </div>
+                  <span className="part-name">preset</span>
+                </div>
+                <select
+                  aria-label="Preset"
+                  value={presetId === "random" ? "" : presetId}
+                  onChange={(e) => applyPreset(e.target.value as PresetId)}
+                >
+                  {presetId === "random" ? (
+                    <option value="" disabled>
+                      random
+                    </option>
+                  ) : null}
+                  {PRESET_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {PRESET_LABELS[id]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="part-toggles">
                 <label className="part-chip">
                   <input
                     type="checkbox"
@@ -1363,57 +1395,13 @@ export default function App() {
                 </label>
                 <button
                   type="button"
-                  className="part-icon-btn part-row-reroll"
+                  className="field-matched char-reroll"
                   onClick={applyRandom}
                   title="Random character"
                   aria-label="Random character"
                 >
                   🎲
                 </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={resetCharacterPanel}
-                  title="Reset to the knight preset and default slider values"
-                >
-                  Reset
-                </button>
-              </>
-            }
-          >
-            <div className="char-toolbar">
-              <div className="char-preset part-row">
-                <div className="part-title">
-                  <div className="part-row-controls">
-                    <button
-                      type="button"
-                      className="part-icon-btn part-row-reroll"
-                      onClick={applyRandomPreset}
-                      title="Random preset"
-                      aria-label="Random preset"
-                    >
-                      🎲
-                    </button>
-                  </div>
-                  <span className="part-name">preset</span>
-                </div>
-                  <select
-                    className="part-inline-select"
-                    aria-label="Preset"
-                    value={presetId === "random" ? "" : presetId}
-                    onChange={(e) => applyPreset(e.target.value as PresetId)}
-                  >
-                  {presetId === "random" ? (
-                    <option value="" disabled>
-                      random
-                    </option>
-                  ) : null}
-                  {PRESET_IDS.map((id) => (
-                    <option key={id} value={id}>
-                      {PRESET_LABELS[id]}
-                    </option>
-                  ))}
-                </select>
               </div>
             </div>
 
