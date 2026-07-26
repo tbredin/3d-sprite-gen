@@ -86,16 +86,29 @@ export type TorsoStyle =
   | "tank";
 
 /**
- * Cartoon eye plate designs. Tuned for ~4–6 bake pixels at 48px / toward-br:
- * mix of horizontal (classic, slit, wide) and vertical (tall, slash) reads.
+ * Cartoon eye plate designs. Subtle variants of the classic 2-column plate —
+ * modest horizontal / vertical leans for ~4–6 bake pixels at 48px.
  */
 export type EyeStyle =
   | "classic"
-  | "dot"
-  | "tall"
-  | "slit"
-  | "wide"
-  | "slash";
+  | "square"
+  | "flat"
+  | "lean"
+  | "spark"
+  | "lid";
+
+/**
+ * Subtle brow strokes above the eyes. `"none"` hides brows.
+ * Kept thin so they read as 1–2 bake pixels at 48px.
+ */
+export type BrowStyle =
+  | "none"
+  | "thin"
+  | "soft"
+  | "angled"
+  | "short"
+  | "thick"
+  | "arched";
 
 export type ArmPose =
   | "idle"
@@ -259,6 +272,8 @@ export type CharacterSpec = {
   face?: {
     /** Pixel-art eye plate design (default `"classic"`). */
     style?: EyeStyle;
+    /** Subtle brow stroke above each eye (default `"none"`). */
+    browStyle?: BrowStyle;
     eyeColor?: string;
     /**
      * Optional multiplier for eye layout (default 1).
@@ -377,11 +392,21 @@ export const PRESET_LABELS: Record<PresetId, string> = {
  */
 export const EYE_STYLES: EyeStyle[] = [
   "classic",
-  "dot",
-  "tall",
-  "slit",
-  "wide",
-  "slash",
+  "square",
+  "flat",
+  "lean",
+  "spark",
+  "lid",
+];
+
+export const BROW_STYLES: BrowStyle[] = [
+  "none",
+  "thin",
+  "soft",
+  "angled",
+  "short",
+  "thick",
+  "arched",
 ];
 
 export const HAIR_STYLES: HairStyle[] = [

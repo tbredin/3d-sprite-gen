@@ -6,6 +6,7 @@ import { DEFAULT_LEAD } from "./stance";
 import type {
   ArmPose,
   BackLoadout,
+  BrowStyle,
   CharacterSpec,
   EyeStyle,
   HairStyle,
@@ -18,6 +19,7 @@ import type {
 } from "./types";
 import {
   BACK_LOADOUTS,
+  BROW_STYLES,
   EYE_STYLES,
   HAIR_STYLES,
   HEAD_SHAPES,
@@ -34,11 +36,13 @@ export type PartId = "head" | "torso" | "arms" | "legs";
 export const PART_IDS: PartId[] = ["head", "torso", "arms", "legs"];
 
 /**
- * Per-part locks; `eyes` and `headSize` are independent of `head` so the face
- * and head proportions can stay pinned while the skull itself rerolls.
+ * Per-part locks; `eyes`, `eyeLayout` and `headSize` are independent of `head`
+ * so the face, eye layout and head proportions can stay pinned while the skull
+ * itself rerolls. `eyeLayout` covers the Dist / Size / Y sliders only.
  */
 export type PartLocks = Record<PartId, boolean> & {
   eyes: boolean;
+  eyeLayout: boolean;
   headSize: boolean;
 };
 
@@ -48,8 +52,23 @@ export const EMPTY_LOCKS: PartLocks = {
   arms: false,
   legs: false,
   eyes: false,
+  eyeLayout: false,
   headSize: false,
 };
+
+/** Eye layout fields pinned by the slider-row lock. */
+function keepEyeLayout(
+  face: NonNullable<CharacterSpec["face"]>,
+  prev: CharacterSpec["face"],
+): NonNullable<CharacterSpec["face"]> {
+  if (!prev) return face;
+  return {
+    ...face,
+    spacing: prev.spacing,
+    scale: prev.scale,
+    y: prev.y,
+  };
+}
 
 /**
  * Fine-grained locks — one per dropdown on the part rows. A field survives a
@@ -63,6 +82,8 @@ export type FieldLockId =
   | "headShape"
   | "hairStyle"
   | "helmetStyle"
+  | "eyeStyle"
+  | "browStyle"
   | "torsoStyle"
   | "hem"
   | "cape"
@@ -73,10 +94,15 @@ export type FieldLockId =
   | "offhandAngle"
   | "legPose";
 
-export const FIELD_LOCK_PART: Record<FieldLockId, PartId> = {
+/** Parent section lock that also pins this field. */
+export type FieldLockPart = PartId | "eyes";
+
+export const FIELD_LOCK_PART: Record<FieldLockId, FieldLockPart> = {
   headShape: "head",
   hairStyle: "head",
   helmetStyle: "head",
+  eyeStyle: "eyes",
+  browStyle: "eyes",
   torsoStyle: "torso",
   hem: "torso",
   cape: "torso",
@@ -94,6 +120,8 @@ export const EMPTY_FIELD_LOCKS: FieldLocks = {
   headShape: false,
   hairStyle: false,
   helmetStyle: false,
+  eyeStyle: false,
+  browStyle: false,
   torsoStyle: false,
   hem: false,
   cape: false,
@@ -493,10 +521,11 @@ function snap01(n: number): number {
 function randomFace(): NonNullable<CharacterSpec["face"]> {
   return {
     style: pick(EYE_STYLES),
+    browStyle: pick(BROW_STYLES),
     eyeColor: pick(EYES),
     // Match Dist / Size / Y slider ranges in App.
-    spacing: snap05(0.55 + Math.random() * 1.0),
-    scale: snap05(0.55 + Math.random() * 1.1),
+    spacing: snap05(0.6 + Math.random() * 0.85),
+    scale: snap05(0.6 + Math.random() * 0.8),
     y: snap05(-0.25 + Math.random() * 0.5),
   };
 }
@@ -512,7 +541,7 @@ function randomHeadProportions(): Pick<
   };
 }
 
-function randomHead(skinHint?: string, allowHelmets = true): HeadBits {
+function randomHead(skinHint?: string, allowHelmets = false): HeadBits {
   const skin = skinHint ?? pick(SKINS);
   // When helmets are off, keep overlay hats (cap, crowns, wizard…) but skip
   // closed / face-covering replacements (knight, samurai, sciFi…).
@@ -741,6 +770,17 @@ function applyFieldLocks(
     next.legs = { ...next.legs, pose: prev.legs.pose };
   }
 
+  // Eyes can reshuffle even when the head section is pinned — restore styles.
+  if (pinned("eyeStyle") && prev.face?.style) {
+    next.face = { ...next.face, style: prev.face.style };
+  }
+  if (pinned("browStyle") && prev.face) {
+    next.face = {
+      ...next.face,
+      browStyle: prev.face.browStyle ?? "none",
+    };
+  }
+
   return next;
 }
 
@@ -752,11 +792,11 @@ function applyFieldLocks(
  * `eyes` lock is independent of `head`: locked eyes keep colour / spacing /
  * scale / y through full-character rolls (Play random).
  *
- * `allowHelmets` (default true) is a session preference, not a lock: when
+ * `allowHelmets` (default false) is a session preference, not a lock: when
  * false, closed / face-covering helms are skipped but overlay hats remain.
  */
 export type RandomOptions = {
-  /** Include closed/replacement helms. Default true. */
+  /** Include closed/replacement helms. Default false. */
   allowHelmets?: boolean;
 };
 
@@ -768,7 +808,7 @@ export function randomCharacter(
 ): CharacterSpec {
   const keep = locks ?? EMPTY_LOCKS;
   const prev = base;
-  const allowHelmets = opts?.allowHelmets ?? true;
+  const allowHelmets = opts?.allowHelmets ?? false;
 
   const head = keep.head && prev ? {
     skin: prev.skin,
@@ -784,6 +824,11 @@ export function randomCharacter(
   } else if (keep.head && !keep.eyes) {
     // Head pinned but eyes free — reshuffle face on the same skull.
     head.face = randomFace();
+  }
+
+  // Slider-row lock keeps Dist / Size / Y through any roll that moved the face.
+  if (keep.eyeLayout && !keep.eyes && head.face) {
+    head.face = keepEyeLayout(head.face, prev?.face);
   }
 
   // Head-size lock overrides proportions whether or not the head was kept.
@@ -853,7 +898,7 @@ export function rerollPart(
   const rolled = (p: PartId) => p === part;
 
   if (part === "head") {
-    const head = randomHead(spec.skin, opts?.allowHelmets ?? true);
+    const head = randomHead(spec.skin, opts?.allowHelmets ?? false);
     // Eyes are their own row — head 🎲 must never touch face / eye colour.
     head.face = spec.face;
     // Head-size lock keeps proportions even when the head dice is pressed.
@@ -932,8 +977,18 @@ export function rerollField(
         spec,
         pickOther(HAIR_STYLES, spec.hair?.style ?? "bald"),
       );
+    case "eyeStyle":
+      return setEyeStyle(
+        spec,
+        pickOther(EYE_STYLES, spec.face?.style ?? "classic"),
+      );
+    case "browStyle":
+      return setBrowStyle(
+        spec,
+        pickOther(BROW_STYLES, spec.face?.browStyle ?? "none"),
+      );
     case "helmetStyle": {
-      const allowHelmets = opts?.allowHelmets ?? true;
+      const allowHelmets = opts?.allowHelmets ?? false;
       const pool = allowHelmets
         ? HELMET_STYLES
         : HELMET_STYLES.filter((h) => h === "none" || !isHeadReplacement(h));
@@ -1050,7 +1105,11 @@ export function rerollPartColors(
 }
 
 /** Shuffle all eyes-row params (style, colour, spacing, size, y) — not Show. */
-export function rerollEyes(spec: CharacterSpec): CharacterSpec {
+export function rerollEyes(
+  spec: CharacterSpec,
+  fieldLocks?: FieldLocks,
+  locks?: PartLocks,
+): CharacterSpec {
   const current = spec.face?.eyeColor;
   const currentStyle = spec.face?.style ?? "classic";
   let face = randomFace();
@@ -1061,9 +1120,15 @@ export function rerollEyes(spec: CharacterSpec): CharacterSpec {
   ) {
     face = randomFace();
   }
+  if (fieldLocks?.eyeStyle) {
+    face.style = spec.face?.style ?? face.style;
+  }
+  if (fieldLocks?.browStyle) {
+    face.browStyle = spec.face?.browStyle ?? face.browStyle;
+  }
   return {
     ...spec,
-    face,
+    face: locks?.eyeLayout ? keepEyeLayout(face, spec.face) : face,
   };
 }
 
@@ -1175,6 +1240,19 @@ export function setEyeStyle(spec: CharacterSpec, style: EyeStyle): CharacterSpec
   next.face = {
     ...next.face,
     style,
+    eyeColor: next.face?.eyeColor ?? pick(EYES),
+  };
+  return next;
+}
+
+export function setBrowStyle(
+  spec: CharacterSpec,
+  browStyle: BrowStyle,
+): CharacterSpec {
+  const next = structuredClone(spec);
+  next.face = {
+    ...next.face,
+    browStyle,
     eyeColor: next.face?.eyeColor ?? pick(EYES),
   };
   return next;

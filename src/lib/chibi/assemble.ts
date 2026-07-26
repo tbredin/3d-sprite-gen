@@ -357,7 +357,9 @@ export function assembleCharacter(
   if (showFace) {
     const face = generateFace({
       style: spec.face?.style ?? "classic",
+      browStyle: spec.face?.browStyle ?? "none",
       eyeColor: spec.face?.eyeColor,
+      browColor: spec.hair?.color ?? spec.face?.eyeColor,
       // Independent of head.scale — scientist bumps eyes without touching hair.
       scale: spec.face?.scale ?? 1,
       spacing: spec.face?.spacing ?? 1,
@@ -367,6 +369,7 @@ export function assembleCharacter(
     });
     // Hide the eye(s) sitting directly behind a lens (goggles/scouter) so the
     // lens reads as an opaque cover instead of an eye poking through the glass.
+    // Brows are parented under their eye, so they hide with it.
     const hiddenEyes = eyesHiddenByHelmet(spec.helmet?.style);
     if (hiddenEyes.size > 0) {
       for (const child of face.children) {

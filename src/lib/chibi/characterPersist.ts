@@ -17,6 +17,7 @@ import { EMPTY_LOCKS } from "./random";
 import type { PartLocks } from "./random";
 import {
   BACK_LOADOUTS,
+  BROW_STYLES,
   EYE_STYLES,
   HAIR_STYLES,
   HEAD_SHAPES,
@@ -127,6 +128,8 @@ function sanitizeFace(raw: unknown): CharacterSpec["face"] | undefined {
   const face: NonNullable<CharacterSpec["face"]> = {};
   const style = oneOf(EYE_STYLES, o.style);
   if (style) face.style = style;
+  const browStyle = oneOf(BROW_STYLES, o.browStyle);
+  if (browStyle) face.browStyle = browStyle;
   const eyeColor = str(o.eyeColor);
   if (eyeColor) face.eyeColor = eyeColor;
   const scale = num(o.scale, SCALE_MIN, SCALE_MAX);
@@ -259,6 +262,7 @@ function sanitizeLocks(raw: unknown): PartLocks {
     arms: bool(o.arms, false),
     legs: bool(o.legs, false),
     eyes: bool(o.eyes, false),
+    eyeLayout: bool(o.eyeLayout, false),
     headSize: bool(o.headSize, false),
   };
 }
@@ -284,7 +288,7 @@ export function loadCharacterPersist(): PersistedCharacter | null {
       presetId: sanitizePresetId(parsed.presetId),
       mirror: bool(parsed.mirror, false),
       showEyes: bool(parsed.showEyes, true),
-      allowHelmets: bool(parsed.allowHelmets, true),
+      allowHelmets: bool(parsed.allowHelmets, false),
     };
   } catch {
     return null;

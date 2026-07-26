@@ -19,15 +19,20 @@ const SHOW_BOTH_ABOVE = 0.82;
  *
  * Away: hide both. Mostly front-on: both eyes. Near profile: camera-nearest only.
  * Gaze colour sits on the screen-facing half of each visible eye.
+ * Matching brows follow the same visibility.
  *
  * `headRotationY` is the head's effective yaw (body yaw plus any sticky head
  * lean), so eye culling follows where the head actually points.
  */
 export function applySpriteFaceCheat(root: Object3D, headRotationY: number) {
   const eyes: Mesh[] = [];
+  const brows: Mesh[] = [];
   root.traverse((obj) => {
     if (obj.name === "eye-left" || obj.name === "eye-right") {
       eyes.push(obj as Mesh);
+    }
+    if (obj.name === "brow-left" || obj.name === "brow-right") {
+      brows.push(obj as Mesh);
     }
   });
   if (!eyes.length) return;
@@ -41,18 +46,26 @@ export function applySpriteFaceCheat(root: Object3D, headRotationY: number) {
   const rightZ = -Math.sin(headRotationY);
   const rightTowardCam = rightX * tx + rightZ * tz;
 
+  const setSideVisible = (side: "left" | "right", visible: boolean) => {
+    for (const eye of eyes) {
+      if (eye.name === `eye-${side}`) eye.visible = visible;
+    }
+    for (const brow of brows) {
+      if (brow.name === `brow-${side}`) brow.visible = visible;
+    }
+  };
+
   if (towardCam < HIDE_BOTH_BELOW) {
-    for (const eye of eyes) eye.visible = false;
+    setSideVisible("left", false);
+    setSideVisible("right", false);
     return;
   }
 
   // Front-ish cone shows both; near-profile (one eye) is the default.
   const showBoth = towardCam >= SHOW_BOTH_ABOVE;
   const preferRight = rightTowardCam >= 0;
-  for (const eye of eyes) {
-    const isRight = eye.name === "eye-right";
-    eye.visible = showBoth || isRight === preferRight;
-  }
+  setSideVisible("left", showBoth || !preferRight);
+  setSideVisible("right", showBoth || preferRight);
 
   const camRightX = -tz;
   const camRightZ = tx;

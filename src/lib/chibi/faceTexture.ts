@@ -4,178 +4,102 @@ import {
   NearestFilter,
   SRGBColorSpace,
 } from "three";
-import type { EyeStyle } from "./types";
+import type { BrowStyle, EyeStyle } from "./types";
 
 const WHITE = "#f7f4ec";
 
 /** Gaze in the face plane — coloured half faces this way. */
 export type EyeLook = "left" | "right";
 
-/** Which side of the face this eye sits on (drives bottom slant / mirroring). */
+/** Which side of the face this eye sits on (drives bottom slant). */
 export type EyeSide = "left" | "right";
 
 /**
- * Logical cell size for blocky styles. High enough that nearest filtering
- * stays crisp when the plane is tiny in the 48px bake.
+ * Shared paint layout. All styles stay near the classic 2-column eye —
+ * modest horizontal / vertical leans only, no dots or extreme bars.
  */
-const CELL = 16;
+type EyeLayout = {
+  cols: number;
+  /** Vertical body above the slant tip. */
+  body: number;
+  /** Bottom slant drop toward the face midline (0 = flat). */
+  drop: number;
+  /** Fraction of width filled with iris colour (rest is sclera). */
+  irisFrac: number;
+  /** Skip this many rows from the top (sleepy lid). */
+  topCrop: number;
+};
 
-/** Classic slanted 2-column eye (legacy proportions). */
-const CLASSIC_COL = 40;
-const CLASSIC_BODY = 50;
-const CLASSIC_DROP = Math.round(
-  CLASSIC_COL * Math.tan((22.5 * Math.PI) / 180),
-);
+const LAYOUTS: Record<EyeStyle, EyeLayout> = {
+  // Original slanted 2-col plate.
+  classic: {
+    cols: 40,
+    body: 50,
+    drop: Math.round(40 * Math.tan((22.5 * Math.PI) / 180)),
+    irisFrac: 0.5,
+    topCrop: 0,
+  },
+  // Same idea, flat bottom — blockier / more square.
+  square: {
+    cols: 40,
+    body: 56,
+    drop: 0,
+    irisFrac: 0.5,
+    topCrop: 0,
+  },
+  // Slightly wider & shorter — horizontal lean.
+  flat: {
+    cols: 48,
+    body: 36,
+    drop: Math.round(48 * Math.tan((12 * Math.PI) / 180)),
+    irisFrac: 0.5,
+    topCrop: 0,
+  },
+  // Modestly taller — gentle vertical lean (not a 1×N bar).
+  lean: {
+    cols: 36,
+    body: 58,
+    drop: Math.round(36 * Math.tan((22.5 * Math.PI) / 180)),
+    irisFrac: 0.5,
+    topCrop: 0,
+  },
+  // Mostly iris with a small sclera glint on the gaze side.
+  spark: {
+    cols: 40,
+    body: 50,
+    drop: Math.round(40 * Math.tan((22.5 * Math.PI) / 180)),
+    irisFrac: 0.75,
+    topCrop: 0,
+  },
+  // Half-lidded: shorter plate, same 2-col split.
+  lid: {
+    cols: 40,
+    body: 28,
+    drop: Math.round(40 * Math.tan((18 * Math.PI) / 180)),
+    irisFrac: 0.5,
+    topCrop: 0,
+  },
+};
 
 type TexSize = { w: number; h: number };
 
 /** Texture pixel size per style — also drives plane aspect in `generateFace`. */
 export function eyeTexSize(style: EyeStyle): TexSize {
-  switch (style) {
-    case "classic":
-      return { w: CLASSIC_COL, h: CLASSIC_BODY + CLASSIC_DROP };
-    case "dot":
-      // Compact 2×2 solid — reads as a single fat pixel blob at 48px.
-      return { w: 2 * CELL, h: 2 * CELL };
-    case "tall":
-      // Narrow vertical bar (1×3).
-      return { w: 1 * CELL, h: 3 * CELL };
-    case "slit":
-      // Thin horizontal lid (4×1) with gaze-side white tip.
-      return { w: 4 * CELL, h: 1 * CELL };
-    case "wide":
-      // Flat horizontal 3×2 split.
-      return { w: 3 * CELL, h: 2 * CELL };
-    case "slash":
-      // Square diagonal band.
-      return { w: 3 * CELL, h: 3 * CELL };
-  }
+  const { cols, body, drop } = LAYOUTS[style];
+  return { w: cols, h: body + drop };
 }
 
 /** @deprecated Prefer `eyeTexSize(style)` — kept for callers that assume classic. */
-export const EYE_TEX_W = CLASSIC_COL;
-export const EYE_TEX_H = CLASSIC_BODY + CLASSIC_DROP;
+export const EYE_TEX_W = LAYOUTS.classic.cols;
+export const EYE_TEX_H = LAYOUTS.classic.body + LAYOUTS.classic.drop;
 
-function classicBottomY(x: number, side: EyeSide): number {
-  const t = CLASSIC_COL <= 1 ? 0 : x / (CLASSIC_COL - 1);
+function bottomY(x: number, side: EyeSide, layout: EyeLayout): number {
+  const { cols, body, drop } = layout;
+  if (drop <= 0 || cols <= 1) return body;
+  const t = x / (cols - 1);
   // Left eye: outer (x=0) high, inner (x=max) low. Right eye: mirrored.
-  if (side === "left") return CLASSIC_BODY + t * CLASSIC_DROP;
-  return CLASSIC_BODY + (1 - t) * CLASSIC_DROP;
-}
-
-function paintClassic(
-  ctx: CanvasRenderingContext2D,
-  eyeColor: string,
-  look: EyeLook,
-  side: EyeSide,
-) {
-  const { w, h } = eyeTexSize("classic");
-  ctx.clearRect(0, 0, w, h);
-  const half = CLASSIC_COL / 2;
-
-  for (const x of Array.from({ length: CLASSIC_COL }, (_, i) => i)) {
-    const y1 = Math.round(classicBottomY(x, side));
-    const colourLeft = look === "right";
-    ctx.fillStyle =
-      x < half ? (colourLeft ? eyeColor : WHITE) : colourLeft ? WHITE : eyeColor;
-    ctx.fillRect(x, 0, 1, y1);
-  }
-}
-
-function fillCell(
-  ctx: CanvasRenderingContext2D,
-  col: number,
-  row: number,
-  color: string,
-) {
-  ctx.fillStyle = color;
-  ctx.fillRect(col * CELL, row * CELL, CELL, CELL);
-}
-
-function paintDot(
-  ctx: CanvasRenderingContext2D,
-  eyeColor: string,
-  _look: EyeLook,
-  _side: EyeSide,
-) {
-  const { w, h } = eyeTexSize("dot");
-  ctx.clearRect(0, 0, w, h);
-  // Solid 2×2 block — survives NN downscale as ~1–2 bake pixels.
-  for (let row = 0; row < 2; row++) {
-    for (let col = 0; col < 2; col++) fillCell(ctx, col, row, eyeColor);
-  }
-}
-
-function paintTall(
-  ctx: CanvasRenderingContext2D,
-  eyeColor: string,
-  look: EyeLook,
-  _side: EyeSide,
-) {
-  const { w, h } = eyeTexSize("tall");
-  ctx.clearRect(0, 0, w, h);
-  // Vertical stack: colour body + white tip on the gaze-facing end.
-  // look=right → white at bottom; look=left → white at top (reads as glance).
-  const whiteRow = look === "right" ? 2 : 0;
-  for (let row = 0; row < 3; row++) {
-    fillCell(ctx, 0, row, row === whiteRow ? WHITE : eyeColor);
-  }
-}
-
-function paintSlit(
-  ctx: CanvasRenderingContext2D,
-  eyeColor: string,
-  look: EyeLook,
-  _side: EyeSide,
-) {
-  const { w, h } = eyeTexSize("slit");
-  ctx.clearRect(0, 0, w, h);
-  // Horizontal lid: colour run with a single white tip toward gaze.
-  const whiteCol = look === "right" ? 3 : 0;
-  for (let col = 0; col < 4; col++) {
-    fillCell(ctx, col, 0, col === whiteCol ? WHITE : eyeColor);
-  }
-}
-
-function paintWide(
-  ctx: CanvasRenderingContext2D,
-  eyeColor: string,
-  look: EyeLook,
-  _side: EyeSide,
-) {
-  const { w, h } = eyeTexSize("wide");
-  ctx.clearRect(0, 0, w, h);
-  // Flat 3×2: iris column + sclera column(s), flipped by gaze.
-  const colourLeft = look === "right";
-  for (let row = 0; row < 2; row++) {
-    for (let col = 0; col < 3; col++) {
-      const isColour = colourLeft ? col === 0 : col === 2;
-      fillCell(ctx, col, row, isColour ? eyeColor : WHITE);
-    }
-  }
-}
-
-function paintSlash(
-  ctx: CanvasRenderingContext2D,
-  eyeColor: string,
-  look: EyeLook,
-  side: EyeSide,
-) {
-  const { w, h } = eyeTexSize("slash");
-  ctx.clearRect(0, 0, w, h);
-  // 3×3 diagonal colour band with a white trailing edge for gaze.
-  // Face side mirrors so both eyes lean toward the midline the same way.
-  const flip = (look === "left") !== (side === "right");
-
-  for (let i = 0; i < 3; i++) {
-    const col = flip ? 2 - i : i;
-    fillCell(ctx, col, i, eyeColor);
-    // White highlight one cell "behind" the slash toward gaze.
-    const whiteCol = flip ? col + 1 : col - 1;
-    if (whiteCol >= 0 && whiteCol < 3) {
-      fillCell(ctx, whiteCol, i, WHITE);
-    }
-  }
+  if (side === "left") return body + t * drop;
+  return body + (1 - t) * drop;
 }
 
 function paintEye(
@@ -185,25 +109,22 @@ function paintEye(
   side: EyeSide,
   style: EyeStyle,
 ) {
-  switch (style) {
-    case "classic":
-      paintClassic(ctx, eyeColor, look, side);
-      break;
-    case "dot":
-      paintDot(ctx, eyeColor, look, side);
-      break;
-    case "tall":
-      paintTall(ctx, eyeColor, look, side);
-      break;
-    case "slit":
-      paintSlit(ctx, eyeColor, look, side);
-      break;
-    case "wide":
-      paintWide(ctx, eyeColor, look, side);
-      break;
-    case "slash":
-      paintSlash(ctx, eyeColor, look, side);
-      break;
+  const layout = LAYOUTS[style];
+  const { w, h } = eyeTexSize(style);
+  ctx.clearRect(0, 0, w, h);
+
+  const irisW = Math.max(1, Math.round(layout.cols * layout.irisFrac));
+  const colourLeft = look === "right";
+  // Iris sits on the gaze side; sclera fills the rest.
+  const irisStart = colourLeft ? 0 : layout.cols - irisW;
+  const irisEnd = irisStart + irisW;
+
+  for (const x of Array.from({ length: layout.cols }, (_, i) => i)) {
+    const y1 = Math.round(bottomY(x, side, layout));
+    const isIris = x >= irisStart && x < irisEnd;
+    ctx.fillStyle = isIris ? eyeColor : WHITE;
+    const y0 = layout.topCrop;
+    if (y1 > y0) ctx.fillRect(x, y0, 1, y1 - y0);
   }
 }
 
@@ -265,4 +186,152 @@ export function setEyeLook(mat: MeshBasicMaterial, look: EyeLook) {
   paintEye(ctx, eyeColor, look, side, style);
   map.needsUpdate = true;
   mat.userData.eyeLook = look;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Eyebrows — thin strokes above the eyes. Grids are cropped to opaque cells  */
+/* only so tipped eye tops can't show through empty brow texels.              */
+/* -------------------------------------------------------------------------- */
+
+const BROW_CELL = 16;
+
+/**
+ * Logical stroke for each brow style. `rows` is the tight crop height —
+ * every row is used (no empty padding above/below).
+ * Col 0 = inner (midline), cols-1 = outer.
+ */
+function browStroke(
+  style: Exclude<BrowStyle, "none">,
+): { cols: number; rows: number; cells: Array<{ c: number; r: number }> } {
+  switch (style) {
+    case "thin":
+      return {
+        cols: 5,
+        rows: 1,
+        cells: [0, 1, 2, 3, 4].map((c) => ({ c, r: 0 })),
+      };
+    case "soft":
+      return {
+        cols: 4,
+        rows: 1,
+        cells: [0, 1, 2, 3].map((c) => ({ c, r: 0 })),
+      };
+    case "angled":
+      // Gentle outer lift — still only 2 rows tall.
+      return {
+        cols: 5,
+        rows: 2,
+        cells: [
+          { c: 0, r: 1 },
+          { c: 1, r: 1 },
+          { c: 2, r: 1 },
+          { c: 3, r: 0 },
+          { c: 4, r: 0 },
+        ],
+      };
+    case "short":
+      return {
+        cols: 3,
+        rows: 1,
+        cells: [0, 1, 2].map((c) => ({ c, r: 0 })),
+      };
+    case "thick":
+      return {
+        cols: 5,
+        rows: 2,
+        cells: [0, 1, 2, 3, 4].flatMap((c) => [
+          { c, r: 0 },
+          { c, r: 1 },
+        ]),
+      };
+    case "arched":
+      // Soft arch: ends lower, middle higher — 2 rows.
+      return {
+        cols: 5,
+        rows: 2,
+        cells: [
+          { c: 0, r: 1 },
+          { c: 1, r: 0 },
+          { c: 2, r: 0 },
+          { c: 3, r: 0 },
+          { c: 4, r: 1 },
+        ],
+      };
+  }
+}
+
+export function browTexSize(style: Exclude<BrowStyle, "none">): TexSize {
+  const { cols, rows } = browStroke(style);
+  return { w: cols * BROW_CELL, h: rows * BROW_CELL };
+}
+
+function fillBrowCell(
+  ctx: CanvasRenderingContext2D,
+  col: number,
+  row: number,
+  color: string,
+) {
+  ctx.fillStyle = color;
+  ctx.fillRect(col * BROW_CELL, row * BROW_CELL, BROW_CELL, BROW_CELL);
+}
+
+/**
+ * Paint a brow into a tight crop. `side` mirrors angled / arched shapes so
+ * the outer tip lifts away from the midline.
+ */
+function paintBrow(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  side: EyeSide,
+  style: Exclude<BrowStyle, "none">,
+) {
+  const { cols, cells } = browStroke(style);
+  const { w, h } = browTexSize(style);
+  ctx.clearRect(0, 0, w, h);
+
+  for (const { c, r } of cells) {
+    // Texture x: left brow paints inner toward +x (face midline).
+    const canvasCol = side === "left" ? cols - 1 - c : c;
+    fillBrowCell(ctx, canvasCol, r, color);
+  }
+}
+
+export function makeCartoonBrowTexture(
+  color: string,
+  side: EyeSide,
+  style: Exclude<BrowStyle, "none">,
+): CanvasTexture {
+  const { w, h } = browTexSize(style);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  paintBrow(ctx, color, side, style);
+
+  const tex = new CanvasTexture(canvas);
+  tex.colorSpace = SRGBColorSpace;
+  tex.minFilter = NearestFilter;
+  tex.magFilter = NearestFilter;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+export function cartoonBrowMaterial(
+  color: string,
+  side: EyeSide,
+  style: Exclude<BrowStyle, "none">,
+): MeshBasicMaterial {
+  const map = makeCartoonBrowTexture(color, side, style);
+  const mat = new MeshBasicMaterial({
+    map,
+    transparent: true,
+    alphaTest: 0.5,
+    depthWrite: true,
+    toneMapped: false,
+  });
+  mat.userData.browColor = color;
+  mat.userData.browSide = side;
+  mat.userData.browStyle = style;
+  return mat;
 }
