@@ -355,6 +355,8 @@ export function applyPartOutline(
   decodePixel?: (r: number, g: number, b: number, a: number) => number,
   pass: OutlinePassSettings = DEFAULT_OUTLINE_PASS,
   materialColorBuffer?: Uint8Array | Uint8ClampedArray,
+  /** When set, soft texture-seam blends snap back to the palette lock. */
+  paletteColors?: string[],
 ): ImageData {
   if (!pass.silhouette && !pass.partSeams && !pass.textureSeams) return data;
 
@@ -362,6 +364,9 @@ export function applyPartOutline(
   const [sr, sg, sb] = hexToRgb(colors.silhouette);
   const [pr, pg, pb] = hexToRgb(colors.partSeams);
   const [tr, tg, tb] = hexToRgb(colors.textureSeams);
+  const paletteRgb = paletteColors?.length
+    ? paletteColors.map(hexToRgb)
+    : undefined;
   const opaque = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     opaque[i] = px[i * 4 + 3] >= 8 ? 1 : 0;
@@ -470,12 +475,20 @@ export function applyPartOutline(
   }
 
   // Paint order: texture seams, then part seams, then silhouette on top so
-  // geometry / rim wins where passes overlap.
+  // geometry / rim wins where passes overlap. Texture seams blend at 50% so
+  // material edges read softer than solid part seams.
+  const TEXTURE_SEAM_OPACITY = 0.5;
   for (const i of textureSeamPixels) {
     const o = i * 4;
-    px[o] = tr;
-    px[o + 1] = tg;
-    px[o + 2] = tb;
+    let r = Math.round(px[o]! * (1 - TEXTURE_SEAM_OPACITY) + tr * TEXTURE_SEAM_OPACITY);
+    let g = Math.round(px[o + 1]! * (1 - TEXTURE_SEAM_OPACITY) + tg * TEXTURE_SEAM_OPACITY);
+    let b = Math.round(px[o + 2]! * (1 - TEXTURE_SEAM_OPACITY) + tb * TEXTURE_SEAM_OPACITY);
+    if (paletteRgb) {
+      [r, g, b] = nearestPaletteColor(r, g, b, paletteRgb);
+    }
+    px[o] = r;
+    px[o + 1] = g;
+    px[o + 2] = b;
     px[o + 3] = 255;
   }
   for (const i of partSeamPixels) {

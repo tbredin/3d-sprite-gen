@@ -395,6 +395,7 @@ function BakeCapture({
             idFlipped ? decodePartGroupPixel : undefined,
             pass,
             matFlipped,
+            colors,
           );
 
           const out = document.createElement("canvas");
