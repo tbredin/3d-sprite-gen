@@ -12,6 +12,9 @@
   --swatch-border: #3a415c;
   /* ~10% brighter than --swatch-border so mini outlines still read on the palette icon. */
   --swatch-border-mini: color-mix(in srgb, var(--swatch-border) 90%, white);
+  /* Native range thumbs are ~1rem; 25% smaller. */
+  --range-thumb: 0.75rem;
+  --range-track: 0.2rem;
   font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
   color: var(--text);
   background:
@@ -223,10 +226,48 @@ body {
 }
 
 .panel input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
   height: auto;
   padding: 0.35rem 0;
   background: transparent;
   border: 0;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: var(--range-track);
+  border-radius: 999px;
+  background: #3a415c;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--range-thumb);
+  height: var(--range-thumb);
+  margin-top: calc((var(--range-track) - var(--range-thumb)) / 2);
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-track {
+  height: var(--range-track);
+  border: 0;
+  border-radius: 999px;
+  background: #3a415c;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: var(--range-thumb);
+  height: var(--range-thumb);
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: none;
+  cursor: pointer;
 }
 
 .panel textarea:focus,
@@ -718,7 +759,7 @@ button.ghost {
 .panel .light-slider input[type="range"] {
   grid-column: auto;
   width: 100%;
-  height: 0.8rem;
+  height: var(--range-thumb);
   margin: 0;
   padding: 0;
   accent-color: var(--ink);
@@ -728,8 +769,18 @@ button.ghost {
   accent-color: #c4a574;
 }
 
+.light-left input[type="range"]::-webkit-slider-thumb,
+.light-left input[type="range"]::-moz-range-thumb {
+  background: #c4a574;
+}
+
 .light-right input[type="range"] {
   accent-color: #7a9bb8;
+}
+
+.light-right input[type="range"]::-webkit-slider-thumb,
+.light-right input[type="range"]::-moz-range-thumb {
+  background: #7a9bb8;
 }
 
 .slider-val {
@@ -1815,8 +1866,8 @@ button.swatch-btn {
 .panel-timeline .timeline-setting input[type="range"] {
   width: 100%;
   margin: 0;
-  padding: 0.15rem 0;
-  height: 0.8rem;
+  padding: 0;
+  height: var(--range-thumb);
 }
 
 .timeline-hint {
