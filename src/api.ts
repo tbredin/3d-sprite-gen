@@ -213,6 +213,7 @@ export type RefCaptionItem = {
 export type RefsCatalog = {
   refs_dir: string;
   trigger: string;
+  palette_name?: string | null;
   count: number;
   custom_count: number;
   auto_count: number;
@@ -224,13 +225,33 @@ function refPath(name: string, suffix = ""): string {
   return `/api/refs/${encodeURIComponent(name)}${suffix}`;
 }
 
-export async function listRefs(): Promise<RefsCatalog> {
-  const res = await fetch("/api/refs");
+export type ListRefsOpts = {
+  paletteSlug?: string;
+  paletteName?: string;
+};
+
+function refsQuery(opts?: ListRefsOpts): string {
+  const params = new URLSearchParams();
+  if (opts?.paletteSlug?.trim()) {
+    params.set("palette_slug", opts.paletteSlug.trim());
+  }
+  if (opts?.paletteName?.trim()) {
+    params.set("palette_name", opts.paletteName.trim());
+  }
+  const q = params.toString();
+  return q ? `?${q}` : "";
+}
+
+export async function listRefs(opts?: ListRefsOpts): Promise<RefsCatalog> {
+  const res = await fetch(`/api/refs${refsQuery(opts)}`);
   if (!res.ok) throw new Error(`refs list ${res.status}`);
   return res.json();
 }
 
-export async function setRefsDir(path: string): Promise<RefsCatalog> {
+export async function setRefsDir(
+  path: string,
+  opts?: ListRefsOpts,
+): Promise<RefsCatalog> {
   const res = await fetch("/api/refs/dir", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -240,16 +261,19 @@ export async function setRefsDir(path: string): Promise<RefsCatalog> {
     const text = await res.text();
     throw new Error(text || `set refs dir ${res.status}`);
   }
-  return res.json();
+  // Directory switch returns a catalog; re-list with palette so autos update.
+  void (await res.json());
+  return listRefs(opts);
 }
 
-export async function browseRefsDir(): Promise<RefsCatalog> {
+export async function browseRefsDir(opts?: ListRefsOpts): Promise<RefsCatalog> {
   const res = await fetch("/api/refs/browse", { method: "POST" });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(text || `browse refs ${res.status}`);
   }
-  return res.json();
+  void (await res.json());
+  return listRefs(opts);
 }
 
 export async function saveRefCaption(

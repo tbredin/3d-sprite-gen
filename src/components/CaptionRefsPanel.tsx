@@ -89,7 +89,13 @@ function loadOpen(): boolean {
   }
 }
 
-export function CaptionRefsPanel() {
+export function CaptionRefsPanel({
+  paletteSlug = "endesga-64",
+  paletteName,
+}: {
+  paletteSlug?: string;
+  paletteName?: string | null;
+}) {
   const [open, setOpen] = useState(loadOpen);
   const [catalog, setCatalog] = useState<RefsCatalog | null>(null);
   const [index, setIndex] = useState(0);
@@ -105,19 +111,29 @@ export function CaptionRefsPanel() {
   const [filter, setFilter] = useState<"all" | "auto" | "custom">("all");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const paletteOpts = useMemo(
+    () => ({
+      paletteSlug,
+      paletteName: paletteName?.trim() || undefined,
+    }),
+    [paletteSlug, paletteName],
+  );
+
   const refresh = useCallback(async () => {
     let data: RefsCatalog;
     try {
       const storedDir = localStorage.getItem(DIR_STORAGE_KEY);
-      data = storedDir ? await setRefsDir(storedDir) : await listRefs();
+      data = storedDir
+        ? await setRefsDir(storedDir, paletteOpts)
+        : await listRefs(paletteOpts);
     } catch {
-      data = await listRefs();
+      data = await listRefs(paletteOpts);
     }
     data = applyLocalCaptions(data);
     setCatalog(data);
     setPathDraft(data.refs_dir);
     return data;
-  }, []);
+  }, [paletteOpts]);
 
   useEffect(() => {
     try {
@@ -379,7 +395,7 @@ export function CaptionRefsPanel() {
     setLoadingDir(true);
     setError(null);
     try {
-      applyDirectory(await setRefsDir(path));
+      applyDirectory(await setRefsDir(path, paletteOpts));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -391,7 +407,7 @@ export function CaptionRefsPanel() {
     setBrowsing(true);
     setError(null);
     try {
-      applyDirectory(await browseRefsDir());
+      applyDirectory(await browseRefsDir(paletteOpts));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (!/cancel/i.test(message)) setError(message);

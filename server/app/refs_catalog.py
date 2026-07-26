@@ -39,12 +39,14 @@ def _safe_ref_path(name: str) -> Path:
     return path
 
 
-def _item_from_path(path: Path) -> dict[str, Any]:
+def _item_from_path(path: Path, *, palette_name: str = "") -> dict[str, Any]:
     sidecar = path.with_suffix(".txt")
     has_custom = sidecar.is_file() and bool(sidecar.read_text(encoding="utf-8").strip())
     # UI: raw sidecar / auto without forced trigger. Training still injects it.
-    auto = caption_from_filename(path.name, TRIGGER)
-    caption = load_ref_caption(path, TRIGGER, ensure_trigger=False)
+    auto = caption_from_filename(path.name, TRIGGER, palette_name=palette_name)
+    caption = load_ref_caption(
+        path, TRIGGER, ensure_trigger=False, palette_name=palette_name
+    )
     enc = quote(path.name, safe="")
     return {
         "name": path.name,
@@ -57,15 +59,16 @@ def _item_from_path(path: Path) -> dict[str, Any]:
     }
 
 
-def list_refs() -> dict[str, Any]:
+def list_refs(*, palette_name: str = "") -> dict[str, Any]:
     folder = house_lora.refs_dir()
     files = house_lora._train_pngs()
-    items = [_item_from_path(path) for path in files]
+    items = [_item_from_path(path, palette_name=palette_name) for path in files]
     custom = sum(1 for i in items if i["has_custom"])
     lora = house_lora.refresh_status()
     return {
         "refs_dir": str(folder),
         "trigger": TRIGGER,
+        "palette_name": palette_name or None,
         "count": len(items),
         "custom_count": custom,
         "auto_count": len(items) - custom,
@@ -74,9 +77,9 @@ def list_refs() -> dict[str, Any]:
     }
 
 
-def get_ref(name: str) -> dict[str, Any]:
+def get_ref(name: str, *, palette_name: str = "") -> dict[str, Any]:
     path = _safe_ref_path(name)
-    item = _item_from_path(path)
+    item = _item_from_path(path, palette_name=palette_name)
     item["trigger"] = TRIGGER
     return item
 

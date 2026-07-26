@@ -1,4 +1,4 @@
-"""Derive per-frame training captions from curated sprite filenames."""
+"""Derive per-frame training captions for curated sprite refs."""
 
 from __future__ import annotations
 
@@ -34,37 +34,36 @@ _FACING_STRIP_RE = re.compile(
 )
 
 
-def _humanize_stem(stem: str) -> str:
-    """Turn 'Seraï Cyborg' / 'BriskMan3 Variant' into a readable subject."""
-    s = stem.strip()
-    s = re.sub(r"\s+", " ", s)
-    # Split CamelCase leftovers (BriskMan3 → Brisk Man3)
-    s = re.sub(r"([a-z])([A-Z])", r"\1 \2", s)
-    s = re.sub(r"([A-Za-z])(\d)", r"\1 \2", s)
-    return s.strip()
-
-
-def caption_from_filename(filename: str, trigger: str = "") -> str:
+def caption_from_filename(
+    filename: str = "",
+    trigger: str = "",
+    *,
+    palette_name: str = "",
+) -> str:
     """
     Build an SDXL caption for house-style LoRA training.
 
-    Trigger is injected at train time via ``load_ref_caption(..., ensure_trigger=True)``,
-    not baked into the editable auto template.
+    No character/filename tags — keep the template style-only. Trigger is
+    injected at train time via ``load_ref_caption(..., ensure_trigger=True)``.
     """
-    del trigger  # kept for call-site compatibility
-    subject = _humanize_stem(Path(filename).stem)
+    del filename, trigger  # kept for call-site compatibility
     parts: list[str] = [
         "isometric pixel art character sprite",
         "SNES-era JRPG",
-        "Sea of Stars spirit",
     ]
-    if subject:
-        parts.append(subject)
+    label = (palette_name or "").strip()
+    if label:
+        # Avoid "Endesga 64 palette palette" if the name already ends with it.
+        if label.lower().endswith("palette"):
+            parts.append(label)
+        else:
+            parts.append(f"{label} palette")
+    else:
+        parts.append("limited palette")
     parts.extend(
         [
             "readable silhouette",
             "hand-authored pixel details",
-            "limited palette",
             "single isolated character",
             "game sprite",
         ]
@@ -137,8 +136,9 @@ def load_ref_caption(
     trigger: str,
     *,
     ensure_trigger: bool = True,
+    palette_name: str = "",
 ) -> str:
-    """Prefer an optional .txt sidecar; otherwise derive from the filename.
+    """Prefer an optional .txt sidecar; otherwise derive from the style template.
 
     When ``ensure_trigger`` is True (training), prepend the style token if
     missing. The caption UI saves/displays text without forcing the trigger.
@@ -150,7 +150,7 @@ def load_ref_caption(
             if ensure_trigger and trigger and trigger.lower() not in text.lower():
                 return f"{trigger}, {text}"
             return text
-    auto = caption_from_filename(path.name, trigger)
+    auto = caption_from_filename(path.name, trigger, palette_name=palette_name)
     if ensure_trigger and trigger and trigger.lower() not in auto.lower():
         return f"{trigger}, {auto}"
     return auto

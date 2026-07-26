@@ -131,9 +131,20 @@ class RefsDirBody(BaseModel):
 
 
 @app.get("/api/refs")
-def refs_list() -> dict:
-    """Training frames + captions under curated-iso / HOUSE_LORA_REFS."""
-    return refs_catalog.list_refs()
+async def refs_list(
+    palette_slug: str = "",
+    palette_name: str = "",
+) -> dict:
+    """Training frames + captions under the active refs directory."""
+    name = (palette_name or "").strip()
+    slug = (palette_slug or "").strip()
+    if not name and slug:
+        try:
+            pal = await palette_util.load_palette(slug)
+            name = str(pal.get("name") or slug)
+        except Exception:  # noqa: BLE001
+            name = slug
+    return refs_catalog.list_refs(palette_name=name)
 
 
 @app.put("/api/refs/dir")
