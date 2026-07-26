@@ -750,31 +750,24 @@ button.ghost {
 .char-toolbar {
   display: flex;
   gap: 0.35rem 2.5rem;
-  align-items: end;
+  align-items: center;
   margin: 0 0 0.35rem;
 }
 
-.char-picker {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 0.35rem;
-  align-items: end;
+.char-preset {
+  flex: 1 1 auto;
   min-width: 0;
-  margin: 0;
-  flex: 1 1 100%;
-}
-
-.char-picker .field {
-  min-width: 0;
-}
-
-/* Preset label mirrors the part rows (dice + capitalized name). */
-.char-preset .part-title {
-  margin-bottom: 0.2rem;
+  padding-left: 0;
 }
 
 .char-preset .part-name {
   flex: 0 0 auto;
+}
+
+.char-preset select {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
 }
 
 .panel button.field-matched {

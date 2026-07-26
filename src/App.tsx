@@ -1339,39 +1339,37 @@ export default function App() {
             }
           >
             <div className="char-toolbar">
-              <div className="char-picker">
-                <div className="field char-preset">
-                  <div className="part-title">
-                    <div className="part-row-controls">
-                      <button
-                        type="button"
-                        className="part-icon-btn part-row-reroll"
-                        onClick={applyRandomPreset}
-                        title="Random preset"
-                        aria-label="Random preset"
-                      >
-                        🎲
-                      </button>
-                    </div>
-                    <span className="part-name">preset</span>
+              <div className="char-preset part-row">
+                <div className="part-title">
+                  <div className="part-row-controls">
+                    <button
+                      type="button"
+                      className="part-icon-btn part-row-reroll"
+                      onClick={applyRandomPreset}
+                      title="Random preset"
+                      aria-label="Random preset"
+                    >
+                      🎲
+                    </button>
                   </div>
-                  <select
-                    aria-label="Preset"
-                    value={presetId === "random" ? "" : presetId}
-                    onChange={(e) => applyPreset(e.target.value as PresetId)}
-                  >
-                    {presetId === "random" ? (
-                      <option value="" disabled>
-                        random
-                      </option>
-                    ) : null}
-                    {PRESET_IDS.map((id) => (
-                      <option key={id} value={id}>
-                        {PRESET_LABELS[id]}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="part-name">preset</span>
                 </div>
+                <select
+                  aria-label="Preset"
+                  value={presetId === "random" ? "" : presetId}
+                  onChange={(e) => applyPreset(e.target.value as PresetId)}
+                >
+                  {presetId === "random" ? (
+                    <option value="" disabled>
+                      random
+                    </option>
+                  ) : null}
+                  {PRESET_IDS.map((id) => (
+                    <option key={id} value={id}>
+                      {PRESET_LABELS[id]}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
