@@ -147,6 +147,7 @@ import {
   type OutlinePassSettings,
   type Palette,
   type SpriteSize,
+  normalizePaletteHex,
 } from "./lib/palette";
 import {
   DEFAULT_RIM_LIGHTS,
@@ -955,44 +956,65 @@ export default function App() {
             {__GIT_BRANCH__}
           </p>
         </div>
-        <div className="palette-slug-row">
-          <label className="field-label" htmlFor="palette-slug-input">
-            Palette
-          </label>
-          <input
-            id="palette-slug-input"
-            type="text"
-            value={paletteSlugDraft}
-            onChange={(e) => setPaletteSlugDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applyPaletteSlug();
-            }}
-            placeholder="endesga-64"
-            spellCheck={false}
-            title="Lospec palette slug (bake + AI)"
-          />
-          <button type="button" className="ghost-btn" onClick={applyPaletteSlug}>
-            Apply
-          </button>
-          <a
-            className="palette-lospec-link"
-            href={`https://lospec.com/palette-list/${encodeURIComponent(paletteSlug)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`Open ${paletteSlug} on Lospec`}
-          >
-            Lospec
-          </a>
-          <a
-            className="palette-lospec-link"
-            href="https://lospec.com/palette-list"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Browse the Lospec palette index"
-          >
-            Browse all
-          </a>
-          <span className="meta">{palette?.name ?? "…"}</span>
+        <div className="header-palette">
+          <div className="palette-slug-row">
+            <label className="field-label" htmlFor="palette-slug-input">
+              Palette
+            </label>
+            <input
+              id="palette-slug-input"
+              type="text"
+              value={paletteSlugDraft}
+              onChange={(e) => setPaletteSlugDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyPaletteSlug();
+              }}
+              placeholder="endesga-64"
+              spellCheck={false}
+              title="Lospec palette slug (bake + AI)"
+            />
+            <button type="button" className="ghost-btn" onClick={applyPaletteSlug}>
+              Apply
+            </button>
+            <a
+              className="palette-lospec-link"
+              href={`https://lospec.com/palette-list/${encodeURIComponent(paletteSlug)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Open ${paletteSlug} on Lospec`}
+            >
+              Lospec
+            </a>
+            <a
+              className="palette-lospec-link"
+              href="https://lospec.com/palette-list"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Browse the Lospec palette index"
+            >
+              Browse all
+            </a>
+            <span className="meta">{palette?.name ?? "…"}</span>
+          </div>
+          {palette ? (
+            <div
+              className="header-palette-minis"
+              role="img"
+              aria-label={`${palette.name} palette colours`}
+            >
+              {palette.colors.map((c, i) => {
+                const hex = normalizePaletteHex(c);
+                return (
+                  <span
+                    key={`${hex}-${i}`}
+                    className="part-color-mini"
+                    style={{ background: `#${hex}` }}
+                    title={`#${hex}`}
+                  />
+                );
+              })}
+            </div>
+          ) : null}
         </div>
       </header>
 
