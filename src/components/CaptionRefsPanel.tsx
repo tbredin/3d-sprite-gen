@@ -4,6 +4,7 @@ import {
   deleteRef,
   listRefs,
   rebuildHouseLora,
+  removeRefBackground,
   setRefsDir,
   type LoraStatus,
   type RefCaptionItem,
@@ -96,6 +97,7 @@ export function CaptionRefsPanel() {
   const [browsing, setBrowsing] = useState(false);
   const [loadingDir, setLoadingDir] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [removingBg, setRemovingBg] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [filter, setFilter] = useState<"all" | "auto" | "custom">("all");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -236,6 +238,37 @@ export function CaptionRefsPanel() {
         },
       };
     });
+  };
+
+  const onRemoveBackground = async () => {
+    if (!current) return;
+    setRemovingBg(true);
+    setError(null);
+    try {
+      const updated = await removeRefBackground(current.name);
+      setCatalog((prev) => {
+        if (!prev) return prev;
+        const nextItems = prev.items.map((item) =>
+          item.name === updated.name || item.name === current.name
+            ? { ...item, ...updated }
+            : item,
+        );
+        return {
+          ...prev,
+          items: nextItems,
+          lora: {
+            ...prev.lora,
+            dirty: true,
+            state: prev.lora.lora_exists ? "dirty" : prev.lora.state,
+            message: "Refs changed — rebuild LoRA to apply.",
+          },
+        };
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRemovingBg(false);
+    }
   };
 
   const onDeleteRef = async () => {
@@ -599,8 +632,17 @@ export function CaptionRefsPanel() {
                 </button>
                 <button
                   type="button"
+                  className="ghost-btn"
+                  disabled={removingBg || deleting}
+                  onClick={() => void onRemoveBackground()}
+                  title="Detect the solid edge backdrop colour and make it transparent"
+                >
+                  {removingBg ? "Removing…" : "Remove background"}
+                </button>
+                <button
+                  type="button"
                   className="ghost-btn captions-delete-btn"
-                  disabled={deleting}
+                  disabled={deleting || removingBg}
                   onClick={() => void onDeleteRef()}
                   title="Permanently delete this image from the training folder"
                 >

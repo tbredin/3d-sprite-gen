@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from collections import Counter
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -15,6 +16,9 @@ from .captions import (
 )
 
 TRIGGER = house_lora.TRIGGER
+
+# Colour distance for chroma-key matches (RGB Euclidean, 0–441).
+_BG_TOLERANCE = 28
 
 
 def _safe_ref_path(name: str) -> Path:
@@ -111,6 +115,129 @@ def delete_ref(name: str) -> dict[str, Any]:
         deleted.append(sidecar.name)
     house_lora.mark_refs_changed()
     return {"deleted": deleted, "name": name}
+
+
+def remove_background(name: str) -> dict[str, Any]:
+    """Detect the solid backdrop colour and punch it to transparent."""
+    path = _safe_ref_path(name)
+    from PIL import Image
+
+    img = Image.open(path).convert("RGBA")
+    pixels = img.load()
+    width, height = img.size
+    if width == 0 or height == 0:
+        raise ValueError("Image is empty.")
+
+    bg = _detect_background_colour(pixels, width, height)
+    if bg is None:
+        raise ValueError("No opaque background colour found on the edges.")
+
+    cleared = _flood_clear_background(pixels, width, height, bg, _BG_TOLERANCE)
+    if cleared == 0:
+        raise ValueError(
+            f"Detected background rgb{bg} but no matching edge pixels were cleared."
+        )
+
+    # Always write PNG so alpha is preserved even if the source was opaque JPG-like.
+    out = path if path.suffix.lower() == ".png" else path.with_suffix(".png")
+    img.save(out, format="PNG")
+    if out != path and path.exists():
+        path.unlink()
+        # Point catalog at the new basename when format changed.
+        name = out.name
+
+    house_lora.mark_refs_changed()
+    item = get_ref(name)
+    item["background_removed"] = {
+        "rgb": list(bg),
+        "cleared": cleared,
+        "tolerance": _BG_TOLERANCE,
+    }
+    # Cache-bust the preview URL after rewriting the file.
+    item["image"] = f"{item['image']}?v={int(out.stat().st_mtime)}"
+    return item
+
+
+def _colour_dist(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
+    return (
+        (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2
+    ) ** 0.5
+
+
+def _detect_background_colour(
+    pixels: Any,
+    width: int,
+    height: int,
+) -> tuple[int, int, int] | None:
+    """Pick a solid backdrop colour from the image border.
+
+    Requires the candidate to dominate the opaque edge samples so black
+    silhouette outlines on already-transparent sprites are not treated as BG.
+    """
+    samples: list[tuple[int, int, int]] = []
+    for x in range(width):
+        for y in (0, height - 1):
+            r, g, b, a = pixels[x, y]
+            if a >= 200:
+                samples.append((r, g, b))
+    for y in range(height):
+        for x in (0, width - 1):
+            r, g, b, a = pixels[x, y]
+            if a >= 200:
+                samples.append((r, g, b))
+
+    if not samples:
+        return None
+
+    colour, count = Counter(samples).most_common(1)[0]
+    # Need a real backdrop, not a few outline pixels on the rim.
+    if count < max(24, int(len(samples) * 0.35)):
+        return None
+    return colour
+
+
+def _flood_clear_background(
+    pixels: Any,
+    width: int,
+    height: int,
+    bg: tuple[int, int, int],
+    tolerance: float,
+) -> int:
+    """Clear edge-connected pixels matching the background colour."""
+    visited = [[False] * width for _ in range(height)]
+    stack: list[tuple[int, int]] = []
+
+    def maybe_push(x: int, y: int) -> None:
+        if x < 0 or y < 0 or x >= width or y >= height or visited[y][x]:
+            return
+        r, g, b, a = pixels[x, y]
+        if a < 8:
+            visited[y][x] = True
+            return
+        if _colour_dist((r, g, b), bg) <= tolerance:
+            stack.append((x, y))
+            visited[y][x] = True
+
+    for x in range(width):
+        maybe_push(x, 0)
+        maybe_push(x, height - 1)
+    for y in range(height):
+        maybe_push(0, y)
+        maybe_push(width - 1, y)
+
+    cleared = 0
+    while stack:
+        x, y = stack.pop()
+        pixels[x, y] = (0, 0, 0, 0)
+        cleared += 1
+        for nx, ny in (
+            (x - 1, y),
+            (x + 1, y),
+            (x, y - 1),
+            (x, y + 1),
+        ):
+            maybe_push(nx, ny)
+    return cleared
 
 
 def set_refs_directory(path: str) -> dict[str, Any]:

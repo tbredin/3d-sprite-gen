@@ -286,6 +286,17 @@ export async function deleteRef(name: string): Promise<{ deleted: string[]; name
   return res.json();
 }
 
+export async function removeRefBackground(name: string): Promise<RefCaptionItem> {
+  const res = await fetch(refPath(name, "/remove-background"), {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `remove background ${res.status}`);
+  }
+  return res.json();
+}
+
 export async function fetchLoraStatus(): Promise<LoraStatus> {
   const res = await fetch("/api/lora/status");
   if (!res.ok) throw new Error(`lora status ${res.status}`);

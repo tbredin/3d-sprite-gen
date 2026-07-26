@@ -164,6 +164,17 @@ def refs_image(name: str) -> FileResponse:
     return FileResponse(path, media_type=media, filename=path.name)
 
 
+@app.post("/api/refs/{name}/remove-background")
+def refs_remove_background(name: str) -> dict:
+    """Detect the solid backdrop colour and punch it to transparent."""
+    try:
+        return refs_catalog.remove_background(name)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"unknown ref {name}") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
 @app.get("/api/refs/{name}")
 def refs_get(name: str) -> dict:
     try:
