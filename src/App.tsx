@@ -941,11 +941,20 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>3d Sprite Gen</h1>
-        <p className="tagline">
-          Procedural chibi → iso bake at {size}×{size}px · free / local
-          {status ? ` · ${status.mesh_backend}` : ""}
-        </p>
+        <div className="header-brand">
+          <h1>3d Sprite Gen</h1>
+          <p className="tagline">
+            Procedural chibi → iso bake at {size}×{size}px · free / local
+            {status ? ` · ${status.mesh_backend}` : ""}
+          </p>
+          <p
+            className={`tagline feature-boost-note${
+              __GIT_BRANCH__ !== "main" ? " branch-not-main" : ""
+            }`}
+          >
+            {__GIT_BRANCH__}
+          </p>
+        </div>
         <div className="palette-slug-row">
           <label className="field-label" htmlFor="palette-slug-input">
             Palette
@@ -976,13 +985,6 @@ export default function App() {
           </a>
           <span className="meta">{palette?.name ?? "…"}</span>
         </div>
-        <p
-          className={`tagline feature-boost-note${
-            __GIT_BRANCH__ !== "main" ? " branch-not-main" : ""
-          }`}
-        >
-          {__GIT_BRANCH__}
-        </p>
       </header>
 
       <main className="app-main">
@@ -2460,24 +2462,26 @@ export default function App() {
         </section>
       </div>
 
-      <VariationTimeline
-        sourceDataUrl={sourcePreview}
-        size={size}
-        paletteSlug={paletteSlug}
-        outlineHex={outlineColors.silhouette}
-        buildPrompt={(steer) =>
-          buildVariationPrompt(spec, {
-            facing,
-            size,
-            paletteSlug,
-            paletteName: palette?.name,
-            steer,
-          })
-        }
-        onRollRandom={applyRandom}
-      />
-
-      <CaptionRefsPanel />
+      <section className="panel panel-variations">
+        <h2 className="panel-title">Variations</h2>
+        <VariationTimeline
+          sourceDataUrl={sourcePreview}
+          size={size}
+          paletteSlug={paletteSlug}
+          outlineHex={outlineColors.silhouette}
+          buildPrompt={(steer) =>
+            buildVariationPrompt(spec, {
+              facing,
+              size,
+              paletteSlug,
+              paletteName: palette?.name,
+              steer,
+            })
+          }
+          onRollRandom={applyRandom}
+        />
+        <CaptionRefsPanel />
+      </section>
       </main>
     </div>
   );
