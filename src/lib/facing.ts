@@ -117,6 +117,18 @@ export const FACING_PAD: FacingPadCell[] = [
 /** Radians per second for continuous / hold-to-rotate turntable. */
 export const ROTATE_FACING_SPEED = (Math.PI * 2) / 6;
 
+/**
+ * Signed shortest angular delta from `a` → `b` (radians, −π…π).
+ * Used by the oscillate mode so the model sweeps the shorter arc between the
+ * two selected facings.
+ */
+export function shortestAngleDelta(a: number, b: number): number {
+  let d = (b - a) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
 /** How often the quantized PNG rebakes while the turntable is moving. */
 export const ANIMATED_BAKE_INTERVAL_MS = 100;
 

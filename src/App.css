@@ -291,6 +291,18 @@ body {
   color: var(--ink);
 }
 
+.iso-facing-center.is-oscillate {
+  border-color: var(--focus);
+  color: var(--focus);
+  background: color-mix(in srgb, var(--focus) 20%, #12141f);
+}
+
+/* Numbered sweep endpoints while oscillate mode is on. */
+.iso-facing-btn.is-endpoint {
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-weight: 700;
+}
+
 .iso-facing-status {
   margin: 0;
   font-size: 0.65rem;

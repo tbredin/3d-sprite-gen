@@ -99,6 +99,14 @@ type BakeProps = {
   spinSpeed?: number;
   /** Mirrors the live spin yaw so drag can snap off the turntable. */
   spinYawRef?: MutableRefObject<number>;
+  /** Ping-pong sweep between two facings (overrides constant spin). */
+  oscillate?: boolean;
+  /** Yaw (rad) of the first oscillate endpoint. */
+  oscillateFrom?: number;
+  /** Signed shortest arc (rad) from the first to the second endpoint. */
+  oscillateDelta?: number;
+  /** Angular speed (rad/s) of the oscillation sweep. */
+  oscillateSpeed?: number;
   spec: CharacterSpec;
   /** Continuous body scale — reassembles character without remounting the canvas. */
   bodyScale?: number;
@@ -458,6 +466,10 @@ function CharacterPivot({
   rotationX,
   rotationY,
   spinYawRef,
+  oscillate,
+  oscillateFrom,
+  oscillateDelta,
+  oscillateSpeed,
   spec,
   bodyScale,
   mirror,
@@ -469,6 +481,10 @@ function CharacterPivot({
   rotationX: number;
   rotationY: number;
   spinYawRef?: MutableRefObject<number>;
+  oscillate: boolean;
+  oscillateFrom: number;
+  oscillateDelta: number;
+  oscillateSpeed: number;
   spec: CharacterSpec;
   bodyScale: number;
   mirror: boolean;
@@ -477,6 +493,10 @@ function CharacterPivot({
   const groupRef = useRef<Group>(null);
   const yawRef = useRef(rotationY);
   const wasRotateMode = useRef(rotateMode);
+  /** Normalized position along the sweep arc: 0 = `from`, 1 = second endpoint. */
+  const phaseRef = useRef(0);
+  /** Sweep direction: +1 toward the second endpoint, −1 back toward `from`. */
+  const dirRef = useRef<1 | -1>(1);
 
   useLayoutEffect(() => {
     if (rotateMode && !wasRotateMode.current) {
@@ -494,9 +514,38 @@ function CharacterPivot({
     }
   }, [rotateMode, rotationX, rotationY, spinYawRef]);
 
+  // Seed the sweep phase from the current live yaw so entering oscillate mode
+  // (or changing endpoints) starts from the nearest point on the arc, no jump.
+  useLayoutEffect(() => {
+    if (!oscillate || Math.abs(oscillateDelta) < 1e-4) return;
+    let t = (yawRef.current - oscillateFrom) / oscillateDelta;
+    t = Math.max(0, Math.min(1, t));
+    phaseRef.current = t;
+    dirRef.current = t < 1 ? 1 : -1;
+  }, [oscillate, oscillateFrom, oscillateDelta]);
+
   useFrame((_, dt) => {
     const g = groupRef.current;
     if (!g) return;
+    if (oscillate) {
+      const span = Math.abs(oscillateDelta);
+      if (span > 1e-4) {
+        // Constant angular speed regardless of arc length.
+        phaseRef.current += (dt * oscillateSpeed * dirRef.current) / span;
+        if (phaseRef.current >= 1) {
+          phaseRef.current = 1;
+          dirRef.current = -1;
+        } else if (phaseRef.current <= 0) {
+          phaseRef.current = 0;
+          dirRef.current = 1;
+        }
+        const yaw = oscillateFrom + oscillateDelta * phaseRef.current;
+        yawRef.current = yaw;
+        if (spinYawRef) spinYawRef.current = yaw;
+        g.rotation.set(rotationX, yaw, 0);
+      }
+      return;
+    }
     if (spinSpeed !== 0) {
       yawRef.current += dt * spinSpeed;
       if (spinYawRef) spinYawRef.current = yawRef.current;
@@ -539,6 +588,10 @@ export function BakeCanvas({
   rotateMode = false,
   spinSpeed = 0,
   spinYawRef,
+  oscillate = false,
+  oscillateFrom = 0,
+  oscillateDelta = 0,
+  oscillateSpeed = 0,
   spec,
   bodyScale = 1,
   mirror = false,
@@ -635,6 +688,10 @@ export function BakeCanvas({
         rotationX={rotationX}
         rotationY={rotationY}
         spinYawRef={spinYawRef}
+        oscillate={oscillate}
+        oscillateFrom={oscillateFrom}
+        oscillateDelta={oscillateDelta}
+        oscillateSpeed={oscillateSpeed}
         spec={spec}
         bodyScale={bodyScale}
         mirror={mirror}

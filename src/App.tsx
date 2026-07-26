@@ -54,13 +54,14 @@ import { CaptionRefsPanel } from "./components/CaptionRefsPanel";
 import { fetchStatus, type StatusResponse } from "./api";
 import { buildVariationPrompt } from "./lib/variationPrompt";
 import {
-  DEFAULT_FACING,
   FACING_PAD,
   getFacing,
   loadFacingPersist,
   saveFacingPersist,
+  shortestAngleDelta,
   ROTATE_FACING_SPEED,
   type FacingId,
+  type NamedFacingId,
 } from "./lib/facing";
 import {
   EMPTY_LOCKS,
@@ -317,6 +318,10 @@ export default function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
+  /** Ping-pong mode: model sweeps back and forth between two picked facings. */
+  const [oscillate, setOscillate] = useState(false);
+  /** The two facings that bound the oscillation (order = selection order). */
+  const [oscillateEndpoints, setOscillateEndpoints] = useState<NamedFacingId[]>([]);
   /** Last session's character, or null on a first / cleared visit. */
   const [characterPersist] = useState(() => loadCharacterPersist());
   const [presetId, setPresetId] = useState<PresetId | "random">(
@@ -405,12 +410,24 @@ export default function App() {
       : autoRotate
         ? ROTATE_FACING_SPEED
         : 0;
-  const spinning = spinSpeed !== 0;
+  // Oscillation needs exactly two distinct endpoints to sweep between.
+  const oscillateActive = oscillate && oscillateEndpoints.length === 2;
+  const oscillateFrom = oscillateActive
+    ? getFacing(oscillateEndpoints[0]!).rotationY
+    : 0;
+  const oscillateDelta = oscillateActive
+    ? shortestAngleDelta(
+        oscillateFrom,
+        getFacing(oscillateEndpoints[1]!).rotationY,
+      )
+    : 0;
+  const spinning = spinSpeed !== 0 || oscillateActive;
   const rotateMode = spinning;
 
   const stopSpinAndCommit = () => {
     setAutoRotate(false);
     setHoldDir(0);
+    setOscillate(false);
     const yaw = spinYawRef.current;
     setFacing("custom");
     setRotationY(yaw);
@@ -420,6 +437,7 @@ export default function App() {
     if (id === "custom") return;
     setAutoRotate(false);
     setHoldDir(0);
+    setOscillate(false);
     setFacing(id);
     setRotationX(0);
     const yaw = getFacing(id).rotationY;
@@ -433,15 +451,54 @@ export default function App() {
       return;
     }
     setHoldDir(0);
+    setOscillate(false);
     spinYawRef.current = rotationY;
     setFacing("custom");
     setAutoRotate(true);
+  };
+
+  /**
+   * Center pad button toggles oscillate mode. Turning it on parks the model in
+   * "custom" (live) yaw so the pivot drives the sweep; turning it off commits
+   * the current live yaw so drag/other controls pick up seamlessly.
+   */
+  const toggleOscillate = () => {
+    if (oscillate) {
+      const yaw = spinYawRef.current;
+      setOscillate(false);
+      setFacing("custom");
+      setRotationY(yaw);
+      return;
+    }
+    setAutoRotate(false);
+    setHoldDir(0);
+    if (!spinning) spinYawRef.current = rotationY;
+    setFacing("custom");
+    setOscillate(true);
+  };
+
+  /** While oscillating, the 8 pad buttons pick the two sweep endpoints. */
+  const toggleOscillateEndpoint = (id: NamedFacingId) => {
+    setOscillateEndpoints((prev) => {
+      if (prev.includes(id)) return prev.filter((e) => e !== id);
+      // Keep a rolling window of the two most recent picks.
+      return [...prev, id].slice(-2);
+    });
+  };
+
+  const onFacingButton = (id: NamedFacingId) => {
+    if (oscillate) {
+      toggleOscillateEndpoint(id);
+      return;
+    }
+    applyFacing(id);
   };
 
   const onHoldRotateStart = (dir: -1 | 1) => (e: ReactPointerEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     if (!spinning) spinYawRef.current = rotationY;
+    setOscillate(false);
     setFacing("custom");
     setHoldDir(dir);
   };
@@ -713,6 +770,7 @@ export default function App() {
     if (spinning) {
       setAutoRotate(false);
       setHoldDir(0);
+      setOscillate(false);
       setFacing("custom");
       setRotationY(rotY);
     }
@@ -957,8 +1015,12 @@ export default function App() {
                     rotationY={rotationY}
                     spinning={spinning}
                     rotateMode={rotateMode}
-                    spinSpeed={spinSpeed}
+                    spinSpeed={oscillateActive ? 0 : spinSpeed}
                     spinYawRef={spinYawRef}
+                    oscillate={oscillateActive}
+                    oscillateFrom={oscillateFrom}
+                    oscillateDelta={oscillateDelta}
+                    oscillateSpeed={ROTATE_FACING_SPEED}
                     spec={spec}
                     bodyScale={bodyScale}
                     mirror={mirror}
@@ -1027,35 +1089,61 @@ export default function App() {
                   role="group"
                   aria-labelledby="iso-facing-label"
                 >
-                  {FACING_PAD.map((cell) => (
-                    <button
-                      key={cell.id}
-                      type="button"
-                      className={`iso-facing-btn${
-                        facing === cell.id ? " is-active" : ""
-                      }`}
-                      style={{ gridRow: cell.row, gridColumn: cell.col }}
-                      title={cell.title}
-                      aria-label={cell.title}
-                      aria-pressed={facing === cell.id}
-                      onClick={() => applyFacing(cell.id)}
-                    >
-                      {cell.glyph}
-                    </button>
-                  ))}
+                  {FACING_PAD.map((cell) => {
+                    const endpointIndex = oscillate
+                      ? oscillateEndpoints.indexOf(cell.id)
+                      : -1;
+                    const isEndpoint = endpointIndex !== -1;
+                    const isActive = oscillate
+                      ? isEndpoint
+                      : facing === cell.id;
+                    return (
+                      <button
+                        key={cell.id}
+                        type="button"
+                        className={`iso-facing-btn${
+                          isActive ? " is-active" : ""
+                        }${isEndpoint ? " is-endpoint" : ""}`}
+                        style={{ gridRow: cell.row, gridColumn: cell.col }}
+                        title={
+                          oscillate
+                            ? `Oscillate endpoint — ${cell.title}`
+                            : cell.title
+                        }
+                        aria-label={cell.title}
+                        aria-pressed={isActive}
+                        onClick={() => onFacingButton(cell.id)}
+                      >
+                        {isEndpoint ? endpointIndex + 1 : cell.glyph}
+                      </button>
+                    );
+                  })}
                   <button
                     type="button"
                     className={`iso-facing-btn iso-facing-center${
-                      facing === "custom" ? " is-custom" : ""
-                    }`}
-                    title="Reset to default facing (toward · bottom-right)"
-                    aria-label="Reset to default facing"
-                    onClick={() => applyFacing(DEFAULT_FACING)}
+                      oscillate ? " is-oscillate" : ""
+                    }${!oscillate && facing === "custom" ? " is-custom" : ""}`}
+                    title={
+                      oscillate
+                        ? "Oscillate mode on — pick two directions to sweep between (click again to turn off)"
+                        : "Oscillate: sweep between two directions"
+                    }
+                    aria-label="Toggle oscillate mode"
+                    aria-pressed={oscillate}
+                    onClick={toggleOscillate}
                   >
-                    {facing === "custom" ? "·" : "⌂"}
+                    ⇄
                   </button>
                 </div>
-                {facing === "custom" ? (
+                {oscillate ? (
+                  <span className="meta iso-facing-status">
+                    {oscillateActive
+                      ? "Oscillating ⇄"
+                      : `Pick ${2 - oscillateEndpoints.length} more direction${
+                          oscillateEndpoints.length === 1 ? "" : "s"
+                        }`}
+                  </span>
+                ) : facing === "custom" ? (
                   <span className="meta iso-facing-status">Custom</span>
                 ) : null}
               </div>
