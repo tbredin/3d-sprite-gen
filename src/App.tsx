@@ -983,6 +983,15 @@ export default function App() {
           >
             Lospec
           </a>
+          <a
+            className="palette-lospec-link"
+            href="https://lospec.com/palette-list"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Browse the Lospec palette index"
+          >
+            Browse all
+          </a>
           <span className="meta">{palette?.name ?? "…"}</span>
         </div>
       </header>
