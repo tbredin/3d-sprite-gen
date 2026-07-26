@@ -29,6 +29,7 @@ DEFAULT_STEPS = 500
 MIN_REFS = 3
 
 _lock = threading.Lock()
+_active_refs_dir: Optional[Path] = None
 _state: dict[str, Any] = {
     "state": "missing",  # missing | ready | dirty | training | error
     "message": "No SDXL house LoRA yet.",
@@ -47,6 +48,8 @@ _state: dict[str, Any] = {
 
 
 def refs_dir() -> Path:
+    if _active_refs_dir is not None and _active_refs_dir.is_dir():
+        return _active_refs_dir
     env = os.environ.get("HOUSE_LORA_REFS", "").strip()
     if env:
         return Path(env).expanduser().resolve()
@@ -57,6 +60,17 @@ def refs_dir() -> Path:
     if curated.is_dir():
         return curated.resolve()
     return linked
+
+
+def set_refs_dir(path: str | Path) -> Path:
+    """Switch the active refs directory for this server process."""
+    global _active_refs_dir
+    folder = Path(path).expanduser().resolve()
+    if not folder.is_dir():
+        raise FileNotFoundError(f"Directory not found: {folder}")
+    _active_refs_dir = folder
+    mark_refs_changed()
+    return folder
 
 
 def _train_pngs() -> list[Path]:
@@ -175,7 +189,10 @@ def mark_refs_changed() -> None:
             _state["message"] = "Refs ready — rebuild LoRA to create house style."
 
 
-def start_rebuild(max_steps: int = DEFAULT_STEPS) -> dict[str, Any]:
+def start_rebuild(
+    max_steps: int = DEFAULT_STEPS,
+    caption_overrides: Optional[dict[str, str]] = None,
+) -> dict[str, Any]:
     files = _train_pngs()
     if len(files) < MIN_REFS:
         raise ValueError(
@@ -203,7 +220,11 @@ def start_rebuild(max_steps: int = DEFAULT_STEPS) -> dict[str, Any]:
 
     thread = threading.Thread(
         target=_train_worker,
-        kwargs={"files": files, "max_steps": max_steps},
+        kwargs={
+            "files": files,
+            "max_steps": max_steps,
+            "caption_overrides": caption_overrides or {},
+        },
         daemon=True,
         name="house-lora-sdxl",
     )
@@ -220,7 +241,22 @@ def _set_progress(step: int, max_steps: int, message: str) -> None:
         _state["state"] = "training"
 
 
-def _train_worker(files: list[Path], max_steps: int) -> None:
+def _training_caption(path: Path, overrides: dict[str, str]) -> str:
+    from .captions import load_ref_caption
+
+    text = str(overrides.get(path.name) or "").strip()
+    if not text:
+        return load_ref_caption(path, TRIGGER)
+    if TRIGGER.lower() not in text.lower():
+        return f"{TRIGGER}, {text}"
+    return text
+
+
+def _train_worker(
+    files: list[Path],
+    max_steps: int,
+    caption_overrides: dict[str, str],
+) -> None:
     try:
         from . import sprite_variations as variations
 
@@ -228,9 +264,12 @@ def _train_worker(files: list[Path], max_steps: int) -> None:
         variations.unload_pipeline()
 
         _set_progress(0, max_steps, f"Training SDXL LoRA on {len(files)} frames…")
-        train_house_lora(files=files, max_steps=max_steps, progress_cb=_set_progress)
-
-        from .captions import load_ref_caption
+        train_house_lora(
+            files=files,
+            max_steps=max_steps,
+            progress_cb=_set_progress,
+            caption_overrides=caption_overrides,
+        )
 
         meta = {
             "trigger": TRIGGER,
@@ -243,7 +282,7 @@ def _train_worker(files: list[Path], max_steps: int) -> None:
             "refs_dir": str(refs_dir()),
             "refs": [p.name for p in files],
             "sample_captions": {
-                p.name: load_ref_caption(p, TRIGGER) for p in files[:8]
+                p.name: _training_caption(p, caption_overrides) for p in files[:8]
             },
             "steps": max_steps,
             "trained_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -362,6 +401,7 @@ def train_house_lora(
     files: list[Path],
     max_steps: int = DEFAULT_STEPS,
     progress_cb: Optional[Callable[[int, int, str], None]] = None,
+    caption_overrides: Optional[dict[str, str]] = None,
 ) -> Path:
     """Train a small SDXL UNet LoRA on curated frames."""
     import numpy as np
@@ -377,7 +417,6 @@ def train_house_lora(
     from torch.utils.data import DataLoader, Dataset
     from transformers import CLIPTextModel, CLIPTextModelWithProjection, CLIPTokenizer
 
-    from .captions import load_ref_caption
     from .sprite_variations import device_name
 
     device = device_name()
@@ -389,7 +428,8 @@ def train_house_lora(
             self.paths = paths
             self.pad = pad
             self.size = size
-            self.captions = [load_ref_caption(p, TRIGGER) for p in paths]
+            overrides = caption_overrides or {}
+            self.captions = [_training_caption(p, overrides) for p in paths]
 
         def __len__(self) -> int:
             return len(self.paths)

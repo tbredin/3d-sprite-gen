@@ -2677,7 +2677,10 @@ export default function App() {
         onRollRandom={applyRandom}
       />
 
-      <CaptionRefsPanel />
+      <CaptionRefsPanel
+        paletteSlug={paletteSlug}
+        paletteName={palette?.name}
+      />
       </main>
     </div>
   );

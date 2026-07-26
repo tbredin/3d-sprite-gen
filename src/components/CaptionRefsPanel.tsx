@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  clearRefCaption,
+  browseRefsDir,
   deleteRef,
+  flipRefHorizontal,
   listRefs,
   rebuildHouseLora,
-  saveRefCaption,
+  removeRefBackground,
+  setRefsDir,
   type LoraStatus,
   type RefCaptionItem,
   type RefsCatalog,
 } from "../api";
 import {
   applyFacingClause,
+  mirrorFacingInCaption,
   parseFacingId,
   REF_FACING_OPTIONS,
   type RefFacingId,
@@ -19,10 +22,62 @@ import { CollapseSection } from "./CollapseSection";
 
 const STYLE_HINT =
   "Prefer visual tags (hair, colours, outfit, pose) over character names. " +
-  "Use the facing pad instead of typing direction. The style trigger is added " +
-  "automatically at train time — you don’t need it in the text.";
+  "Use the facing pad instead of typing direction. Captions and facing " +
+  "auto-save in this browser for each source filepath.";
 
 const OPEN_STORAGE_KEY = "3d-sprite-gen:caption-refs-open-v1";
+const DIR_STORAGE_KEY = "3d-sprite-gen:caption-refs-dir-v1";
+const CAPTION_STORAGE_PREFIX = "3d-sprite-gen:ref-caption:";
+
+function captionStorageKey(dir: string, name: string): string {
+  return `${CAPTION_STORAGE_PREFIX}${dir.replace(/\/+$/, "")}/${name}`;
+}
+
+function readLocalCaption(dir: string, name: string): string | null {
+  try {
+    return localStorage.getItem(captionStorageKey(dir, name));
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalCaption(dir: string, name: string, caption: string): void {
+  try {
+    localStorage.setItem(captionStorageKey(dir, name), caption);
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function clearLocalCaption(dir: string, name: string): void {
+  try {
+    localStorage.removeItem(captionStorageKey(dir, name));
+  } catch {
+    /* ignore */
+  }
+}
+
+function applyLocalCaptions(data: RefsCatalog): RefsCatalog {
+  const items = data.items.map((item) => {
+    const stored = readLocalCaption(data.refs_dir, item.name);
+    if (stored === null) {
+      return { ...item, has_custom: false };
+    }
+    return {
+      ...item,
+      caption: stored,
+      facing: parseFacingId(stored),
+      has_custom: true,
+    };
+  });
+  const custom = items.filter((item) => item.has_custom).length;
+  return {
+    ...data,
+    items,
+    custom_count: custom,
+    auto_count: items.length - custom,
+  };
+}
 
 function loadOpen(): boolean {
   try {
@@ -34,23 +89,51 @@ function loadOpen(): boolean {
   }
 }
 
-export function CaptionRefsPanel() {
+export function CaptionRefsPanel({
+  paletteSlug = "endesga-64",
+  paletteName,
+}: {
+  paletteSlug?: string;
+  paletteName?: string | null;
+}) {
   const [open, setOpen] = useState(loadOpen);
   const [catalog, setCatalog] = useState<RefsCatalog | null>(null);
   const [index, setIndex] = useState(0);
   const [draft, setDraft] = useState("");
+  const [pathDraft, setPathDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [browsing, setBrowsing] = useState(false);
+  const [loadingDir, setLoadingDir] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [removingBg, setRemovingBg] = useState(false);
+  const [flipping, setFlipping] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [filter, setFilter] = useState<"all" | "auto" | "custom">("all");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const paletteOpts = useMemo(
+    () => ({
+      paletteSlug,
+      paletteName: paletteName?.trim() || undefined,
+    }),
+    [paletteSlug, paletteName],
+  );
+
   const refresh = useCallback(async () => {
-    const data = await listRefs();
+    let data: RefsCatalog;
+    try {
+      const storedDir = localStorage.getItem(DIR_STORAGE_KEY);
+      data = storedDir
+        ? await setRefsDir(storedDir, paletteOpts)
+        : await listRefs(paletteOpts);
+    } catch {
+      data = await listRefs(paletteOpts);
+    }
+    data = applyLocalCaptions(data);
     setCatalog(data);
+    setPathDraft(data.refs_dir);
     return data;
-  }, []);
+  }, [paletteOpts]);
 
   useEffect(() => {
     try {
@@ -94,40 +177,34 @@ export function CaptionRefsPanel() {
     setError(null);
   }, [current?.name, current?.caption]);
 
-  const dirtyDraft =
-    current != null && draft.trim() !== current.caption.trim();
-
   const activeFacing = parseFacingId(draft);
 
   const go = (delta: number) => {
     if (items.length === 0) return;
-    if (dirtyDraft) {
-      const ok = window.confirm("Discard unsaved caption changes?");
-      if (!ok) return;
-    }
     setIndex((i) => (i + delta + items.length) % items.length);
   };
 
   const onSelectThumb = (name: string) => {
     const next = items.findIndex((i) => i.name === name);
     if (next < 0 || next === index) return;
-    if (dirtyDraft) {
-      const ok = window.confirm("Discard unsaved caption changes?");
-      if (!ok) return;
-    }
     setIndex(next);
   };
 
-  const onFacing = (id: RefFacingId) => {
-    setDraft((prev) => applyFacingClause(prev, id));
-    textareaRef.current?.focus();
-  };
-
-  const patchCatalogItem = (updated: RefCaptionItem) => {
+  const saveLocally = (caption: string) => {
+    if (!current || !catalog) return;
+    writeLocalCaption(catalog.refs_dir, current.name, caption);
+    setDraft(caption);
     setCatalog((prev) => {
       if (!prev) return prev;
       const nextItems = prev.items.map((i) =>
-        i.name === updated.name ? { ...i, ...updated } : i,
+        i.name === current.name
+          ? {
+              ...i,
+              caption,
+              facing: parseFacingId(caption),
+              has_custom: true,
+            }
+          : i,
       );
       return {
         ...prev,
@@ -138,41 +215,123 @@ export function CaptionRefsPanel() {
           ...prev.lora,
           dirty: true,
           state: prev.lora.lora_exists ? "dirty" : prev.lora.state,
-          message: prev.lora.lora_exists
-            ? "Captions or refs changed — rebuild LoRA to apply."
-            : prev.lora.message,
+          message: "Local captions changed — rebuild LoRA to apply.",
         },
       };
     });
   };
 
-  const onSave = async () => {
+  const onFacing = (id: RefFacingId) => {
     if (!current) return;
-    setSaving(true);
+    saveLocally(applyFacingClause(draft, id));
+    textareaRef.current?.focus();
+  };
+
+  const onResetAuto = () => {
+    if (!current || !catalog) return;
+    clearLocalCaption(catalog.refs_dir, current.name);
+    const caption = current.auto_caption;
+    setDraft(caption);
+    setCatalog((prev) => {
+      if (!prev) return prev;
+      const nextItems = prev.items.map((item) =>
+        item.name === current.name
+          ? {
+              ...item,
+              caption,
+              facing: parseFacingId(caption),
+              has_custom: false,
+            }
+          : item,
+      );
+      return {
+        ...prev,
+        items: nextItems,
+        custom_count: nextItems.filter((item) => item.has_custom).length,
+        auto_count: nextItems.filter((item) => !item.has_custom).length,
+        lora: {
+          ...prev.lora,
+          dirty: true,
+          state: prev.lora.lora_exists ? "dirty" : prev.lora.state,
+          message: "Local captions changed — rebuild LoRA to apply.",
+        },
+      };
+    });
+  };
+
+  const onRemoveBackground = async () => {
+    if (!current) return;
+    setRemovingBg(true);
     setError(null);
     try {
-      const updated = await saveRefCaption(current.name, draft);
-      patchCatalogItem(updated);
-      setDraft(updated.caption);
+      const updated = await removeRefBackground(current.name);
+      setCatalog((prev) => {
+        if (!prev) return prev;
+        const nextItems = prev.items.map((item) =>
+          item.name === updated.name || item.name === current.name
+            ? { ...item, ...updated }
+            : item,
+        );
+        return {
+          ...prev,
+          items: nextItems,
+          lora: {
+            ...prev.lora,
+            dirty: true,
+            state: prev.lora.lora_exists ? "dirty" : prev.lora.state,
+            message: "Refs changed — rebuild LoRA to apply.",
+          },
+        };
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setSaving(false);
+      setRemovingBg(false);
     }
   };
 
-  const onResetAuto = async () => {
+  const onFlipHorizontal = async () => {
     if (!current) return;
-    setSaving(true);
+    setFlipping(true);
     setError(null);
     try {
-      const updated = await clearRefCaption(current.name);
-      patchCatalogItem(updated);
-      setDraft(updated.caption);
+      const updated = await flipRefHorizontal(current.name);
+      const flippedCaption = mirrorFacingInCaption(draft);
+      if (catalog) {
+        writeLocalCaption(catalog.refs_dir, updated.name, flippedCaption);
+      }
+      setDraft(flippedCaption);
+      setCatalog((prev) => {
+        if (!prev) return prev;
+        const nextItems = prev.items.map((item) => {
+          if (item.name !== updated.name && item.name !== current.name) {
+            return item;
+          }
+          return {
+            ...item,
+            ...updated,
+            caption: flippedCaption,
+            facing: parseFacingId(flippedCaption),
+            has_custom: true,
+          };
+        });
+        return {
+          ...prev,
+          items: nextItems,
+          custom_count: nextItems.filter((item) => item.has_custom).length,
+          auto_count: nextItems.filter((item) => !item.has_custom).length,
+          lora: {
+            ...prev.lora,
+            dirty: true,
+            state: prev.lora.lora_exists ? "dirty" : prev.lora.state,
+            message: "Refs changed — rebuild LoRA to apply.",
+          },
+        };
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setSaving(false);
+      setFlipping(false);
     }
   };
 
@@ -187,6 +346,7 @@ export function CaptionRefsPanel() {
     setError(null);
     try {
       const name = current.name;
+      if (catalog) clearLocalCaption(catalog.refs_dir, name);
       await deleteRef(name);
       const data = await refresh();
       const filtered =
@@ -212,15 +372,58 @@ export function CaptionRefsPanel() {
     const facing = parseFacingId(draft);
     let next = current.auto_caption;
     if (facing) next = applyFacingClause(next, facing);
-    setDraft(next);
+    saveLocally(next);
     textareaRef.current?.focus();
+  };
+
+  const applyDirectory = (data: RefsCatalog) => {
+    const hydrated = applyLocalCaptions(data);
+    setCatalog(hydrated);
+    setPathDraft(hydrated.refs_dir);
+    setFilter("all");
+    setIndex(0);
+    try {
+      localStorage.setItem(DIR_STORAGE_KEY, hydrated.refs_dir);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const onLoadPath = async () => {
+    const path = pathDraft.trim();
+    if (!path) return;
+    setLoadingDir(true);
+    setError(null);
+    try {
+      applyDirectory(await setRefsDir(path, paletteOpts));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoadingDir(false);
+    }
+  };
+
+  const onBrowse = async () => {
+    setBrowsing(true);
+    setError(null);
+    try {
+      applyDirectory(await browseRefsDir(paletteOpts));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (!/cancel/i.test(message)) setError(message);
+    } finally {
+      setBrowsing(false);
+    }
   };
 
   const onRebuild = async () => {
     setRebuilding(true);
     setError(null);
     try {
-      await rebuildHouseLora(500);
+      const captions = Object.fromEntries(
+        (catalog?.items ?? []).map((item) => [item.name, item.caption]),
+      );
+      await rebuildHouseLora(500, captions);
       const poll = async () => {
         const data = await refresh();
         const state = data.lora.state;
@@ -240,19 +443,13 @@ export function CaptionRefsPanel() {
     }
   };
 
-  const saveRef = useRef(onSave);
   const goRef = useRef(go);
-  saveRef.current = onSave;
   goRef.current = go;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "TEXTAREA" || tag === "INPUT") {
-        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-          e.preventDefault();
-          void saveRef.current();
-        }
         if ((e.metaKey || e.ctrlKey) && e.key === "ArrowRight") {
           e.preventDefault();
           goRef.current(1);
@@ -318,9 +515,48 @@ export function CaptionRefsPanel() {
         }
       >
       <p className="hint captions-hint">{STYLE_HINT}</p>
-      {catalog ? (
-        <p className="meta captions-path">{catalog.refs_dir}</p>
-      ) : null}
+      <div className="captions-dir-row">
+        <label className="captions-label" htmlFor="refs-dir-path">
+          Source folder
+        </label>
+        <div className="captions-dir-controls">
+          <input
+            id="refs-dir-path"
+            className="captions-dir-input"
+            value={pathDraft}
+            spellCheck={false}
+            onChange={(e) => setPathDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void onLoadPath();
+              }
+            }}
+            placeholder="/path/to/sprites"
+          />
+          <button
+            type="button"
+            className="ghost-btn"
+            disabled={loadingDir || !pathDraft.trim()}
+            onClick={() => void onLoadPath()}
+          >
+            {loadingDir ? "Loading…" : "Load"}
+          </button>
+          <button
+            type="button"
+            className="timeline-play"
+            disabled={browsing}
+            onClick={() => void onBrowse()}
+          >
+            {browsing ? "Browsing…" : "Browse…"}
+          </button>
+        </div>
+        {catalog ? (
+          <p className="meta captions-path">
+            Captions auto-save locally under {catalog.refs_dir}
+          </p>
+        ) : null}
+      </div>
 
       <div className="captions-filters">
         {(["all", "auto", "custom"] as const).map((f) => (
@@ -329,12 +565,6 @@ export function CaptionRefsPanel() {
             type="button"
             className={`ghost-btn${filter === f ? " is-active" : ""}`}
             onClick={() => {
-              if (
-                dirtyDraft &&
-                !window.confirm("Discard unsaved caption changes?")
-              ) {
-                return;
-              }
               setFilter(f);
               setIndex(0);
             }}
@@ -418,16 +648,13 @@ export function CaptionRefsPanel() {
                         : "—"}
                     </span>
                   </div>
-                  <p className="meta captions-facing-hint">
-                    Appends e.g. “facing bottom-right”
-                  </p>
                 </div>
               </div>
               <div className="captions-editor-meta">
                 <strong>{current.name}</strong>
                 <span className="meta">
-                  {current.has_custom ? "Custom sidecar" : "Auto from filename"}
-                  {dirtyDraft ? " · unsaved" : ""}
+                  {current.has_custom ? "Locally saved" : "Auto from filename"}
+                  {" · auto-saved"}
                   {` · ${index + 1}/${items.length}`}
                 </span>
               </div>
@@ -439,9 +666,9 @@ export function CaptionRefsPanel() {
                 ref={textareaRef}
                 className="captions-input"
                 value={draft}
-                rows={5}
+                rows={3}
                 spellCheck={false}
-                onChange={(e) => setDraft(e.target.value)}
+                onChange={(e) => saveLocally(e.target.value)}
                 placeholder={current.auto_caption}
               />
               <p className="meta captions-auto-line">
@@ -450,16 +677,7 @@ export function CaptionRefsPanel() {
               <div className="captions-actions">
                 <button
                   type="button"
-                  className="timeline-play"
-                  disabled={saving || !dirtyDraft}
-                  onClick={() => void onSave()}
-                >
-                  {saving ? "Saving…" : "Save"}
-                </button>
-                <button
-                  type="button"
                   className="ghost-btn"
-                  disabled={saving}
                   onClick={onFillAuto}
                 >
                   Fill auto
@@ -467,16 +685,34 @@ export function CaptionRefsPanel() {
                 <button
                   type="button"
                   className="ghost-btn"
-                  disabled={saving || !current.has_custom}
-                  onClick={() => void onResetAuto()}
-                  title="Delete .txt sidecar"
+                  disabled={!current.has_custom}
+                  onClick={onResetAuto}
+                  title="Remove the locally saved caption"
                 >
                   Reset to auto
                 </button>
                 <button
                   type="button"
+                  className="ghost-btn"
+                  disabled={removingBg || deleting}
+                  onClick={() => void onRemoveBackground()}
+                  title="Detect the solid edge backdrop colour and make it transparent"
+                >
+                  {removingBg ? "Removing…" : "Remove background"}
+                </button>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  disabled={flipping || deleting}
+                  onClick={() => void onFlipHorizontal()}
+                  title="Mirror the image left/right and update the facing caption"
+                >
+                  {flipping ? "Flipping…" : "Flip L/R"}
+                </button>
+                <button
+                  type="button"
                   className="ghost-btn captions-delete-btn"
-                  disabled={saving || deleting}
+                  disabled={deleting || removingBg || flipping}
                   onClick={() => void onDeleteRef()}
                   title="Permanently delete this image from the training folder"
                 >
@@ -500,8 +736,7 @@ export function CaptionRefsPanel() {
                 </button>
               </div>
               <p className="meta">
-                ⌘/Ctrl+Enter save · ←/→ or j/k next · sidecars save as{" "}
-                <code>{current.stem}.txt</code>
+                Auto-saved in browser storage by full filepath · ←/→ or j/k next
               </p>
             </>
           ) : (

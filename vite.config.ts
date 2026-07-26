@@ -29,7 +29,7 @@ export default defineConfig({
     port: 5184,
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:8788",
+        target: process.env.VITE_API_TARGET ?? "http://127.0.0.1:8788",
         changeOrigin: true,
         timeout: 900_000,
         proxyTimeout: 900_000,

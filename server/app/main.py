@@ -100,12 +100,22 @@ def lora_status() -> dict:
     return house_lora.refresh_status()
 
 
+class LoraRebuildBody(BaseModel):
+    captions: dict[str, str] = Field(default_factory=dict)
+
+
 @app.post("/api/lora/rebuild")
-async def lora_rebuild(max_steps: int = 500) -> dict:
+async def lora_rebuild(
+    max_steps: int = 500,
+    body: Optional[LoraRebuildBody] = None,
+) -> dict:
     """Train / rebuild the SDXL house LoRA on curated-iso (background)."""
     steps = max(50, min(2000, int(max_steps)))
     try:
-        return house_lora.start_rebuild(max_steps=steps)
+        return house_lora.start_rebuild(
+            max_steps=steps,
+            caption_overrides=body.captions if body else None,
+        )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     except RuntimeError as exc:
@@ -116,10 +126,43 @@ class CaptionBody(BaseModel):
     caption: str = ""
 
 
+class RefsDirBody(BaseModel):
+    path: str
+
+
 @app.get("/api/refs")
-def refs_list() -> dict:
-    """Training frames + captions under curated-iso / HOUSE_LORA_REFS."""
-    return refs_catalog.list_refs()
+async def refs_list(
+    palette_slug: str = "",
+    palette_name: str = "",
+) -> dict:
+    """Training frames + captions under the active refs directory."""
+    name = (palette_name or "").strip()
+    slug = (palette_slug or "").strip()
+    if not name and slug:
+        try:
+            pal = await palette_util.load_palette(slug)
+            name = str(pal.get("name") or slug)
+        except Exception:  # noqa: BLE001
+            name = slug
+    return refs_catalog.list_refs(palette_name=name)
+
+
+@app.put("/api/refs/dir")
+def refs_set_dir(body: RefsDirBody) -> dict:
+    """Load images from another directory."""
+    try:
+        return refs_catalog.set_refs_directory(body.path)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+@app.post("/api/refs/browse")
+async def refs_browse() -> dict:
+    """Open a native folder picker and load its images."""
+    try:
+        return await asyncio.to_thread(refs_catalog.browse_refs_directory)
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @app.get("/api/refs/{name}/image")
@@ -130,6 +173,26 @@ def refs_image(name: str) -> FileResponse:
         raise HTTPException(404, f"unknown ref {name}") from exc
     media = "image/webp" if path.suffix.lower() == ".webp" else "image/png"
     return FileResponse(path, media_type=media, filename=path.name)
+
+
+@app.post("/api/refs/{name}/remove-background")
+def refs_remove_background(name: str) -> dict:
+    """Detect the solid backdrop colour and punch it to transparent."""
+    try:
+        return refs_catalog.remove_background(name)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"unknown ref {name}") from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/refs/{name}/flip-horizontal")
+def refs_flip_horizontal(name: str) -> dict:
+    """Mirror a training ref left/right."""
+    try:
+        return refs_catalog.flip_horizontal(name)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, f"unknown ref {name}") from exc
 
 
 @app.get("/api/refs/{name}")
