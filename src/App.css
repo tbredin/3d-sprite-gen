@@ -764,10 +764,11 @@ button.ghost {
   flex: 0 0 auto;
 }
 
-.char-preset select {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: auto;
+.char-preset .part-inline-select,
+.panel .char-preset .part-inline-select {
+  flex: 0 0 8.5rem;
+  width: 8.5rem;
+  max-width: 8.5rem;
 }
 
 .panel button.field-matched {

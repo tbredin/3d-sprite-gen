@@ -1354,11 +1354,12 @@ export default function App() {
                   </div>
                   <span className="part-name">preset</span>
                 </div>
-                <select
-                  aria-label="Preset"
-                  value={presetId === "random" ? "" : presetId}
-                  onChange={(e) => applyPreset(e.target.value as PresetId)}
-                >
+                  <select
+                    className="part-inline-select"
+                    aria-label="Preset"
+                    value={presetId === "random" ? "" : presetId}
+                    onChange={(e) => applyPreset(e.target.value as PresetId)}
+                  >
                   {presetId === "random" ? (
                     <option value="" disabled>
                       random
