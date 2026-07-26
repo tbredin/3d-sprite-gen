@@ -1011,10 +1011,11 @@ button.ghost {
 }
 
 .part-block {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: 3px 0;
+  padding: 3px 1px 3px 3px;
   border: 1px solid #3a415c;
   background: #12141f;
 }
@@ -1072,6 +1073,10 @@ button.ghost {
   flex: 0 0 auto;
 }
 
+.part-block .part-title {
+  margin-inline-end: 0.75rem;
+}
+
 .part-name {
   flex: 0 0 2.6rem;
   margin-left: 1px;
@@ -1089,22 +1094,33 @@ button.ghost {
 }
 
 .panel label.part-visibility {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin: 0;
-  padding: 0;
+  padding: 1px;
   flex: 0 0 auto;
   line-height: 0;
+  transform: translate(-50%, -50%);
+  background: #12141f;
   cursor: pointer;
 }
 
+.part-block.is-locked label.part-visibility {
+  background: #0d0f18;
+}
+
 .part-visibility input {
-  width: 0.72rem;
-  height: 0.72rem;
+  width: 0.6rem;
+  height: 0.6rem;
   margin: 0;
   padding: 0;
   flex: none;
+  margin-top: -1px;
   accent-color: var(--ink);
   cursor: pointer;
 }
@@ -2009,14 +2025,14 @@ button.swatch-btn {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  max-width: 6.5rem;
+  box-sizing: border-box;
+  width: 6rem;
+  min-width: 6rem;
+  max-width: 6rem;
   padding: 0.08rem;
   border: 1px solid transparent;
   border-radius: 3px;
-  flex: 0 0 auto;
-  flex-basis: -webkit-fill-available;
-  flex-basis: -moz-available;
-  flex-basis: fill-available;
+  flex: 0 0 6rem;
 }
 
 .timeline-tile.is-selected {
@@ -2046,7 +2062,7 @@ button.swatch-btn {
 .timeline-thumb {
   width: 100%;
   height: auto;
-  max-width: 6rem;
+  max-width: none;
   cursor: pointer;
 }
 
@@ -2070,7 +2086,16 @@ button.swatch-btn {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0.15rem 0.25rem;
+  min-width: 0;
   line-height: 1.1;
+}
+
+.timeline-tile-meta .meta,
+.timeline-tag {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .timeline-tile-meta .meta {
@@ -2089,6 +2114,7 @@ button.swatch-btn {
   display: flex;
   flex-wrap: wrap;
   gap: 0.12rem;
+  min-width: 0;
 }
 
 /* Beat `.panel button` height (2rem) — match lighting micro density */
