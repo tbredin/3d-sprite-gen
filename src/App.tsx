@@ -124,6 +124,7 @@ import {
   type LegPose,
   type WeaponType,
 } from "./lib/chibi";
+import { remapSpecToPalette } from "./lib/chibi/paletteRemap";
 import {
   BAYER_STRENGTH_MAX,
   BAYER_STRENGTH_MIN,
@@ -400,6 +401,8 @@ export default function App() {
     rotY: number;
   } | null>(null);
   const spinYawRef = useRef(facingPersist.rotationY);
+  /** Skip remapping on the initial palette load so persisted specs stay intact. */
+  const prevPaletteSlugRef = useRef<string | null>(null);
 
   // Sprite scales with bake size; frame stays at 64px-bake display to avoid CLS.
   const spritePx = size * 4;
@@ -914,6 +917,18 @@ export default function App() {
         setOutlineColors(loadOutlineColors(p.colors));
         setEdgeOutline(loadEdgeOutlineSettings(p.colors));
         setOutlineProfiles(loadOutlineProfiles(p.colors));
+
+        const prevSlug = prevPaletteSlugRef.current;
+        prevPaletteSlugRef.current = paletteSlug;
+        // Remap 3D material colours to nearest palette entries when the
+        // user actually switches palettes (not on first mount / same slug).
+        if (prevSlug !== null && prevSlug !== paletteSlug) {
+          setSpec((prev) => {
+            const next = remapSpecToPalette(prev, p.colors);
+            setSpecText(JSON.stringify(next, null, 2));
+            return next;
+          });
+        }
       })
       .catch((e) => setError(String(e)));
   }, [paletteSlug]);
@@ -960,7 +975,7 @@ export default function App() {
             }}
             placeholder="endesga-64"
             spellCheck={false}
-            title="Lospec palette slug (bake + AI)"
+            title="Lospec palette slug (bake, model remap, AI)"
           />
           <button type="button" className="ghost-btn" onClick={applyPaletteSlug}>
             Apply
