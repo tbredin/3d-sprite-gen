@@ -23,11 +23,13 @@ import {
   VARIATION_STEPS_MAX,
   VARIATION_STEPS_MIN,
 } from "../lib/variationSettings";
+import { CollapseSection } from "./CollapseSection";
 
 const CONCURRENCY = 3;
 const PREVIEW_GAP = 8;
 const IDLE_REROLL_TICK_MS = 30 * 1000;
 const SELECTED_IDS_STORAGE_KEY = "3d-sprite-gen:variation-selected-ids-v1";
+const OPEN_STORAGE_KEY = "3d-sprite-gen:ai-variations-open-v1";
 
 const DEFAULT_STEPS = 30;
 const DEFAULT_GUIDANCE = 7;
@@ -40,6 +42,16 @@ const MAX_STEPS = VARIATION_STEPS_MAX;
 const GUIDANCE_MIN = VARIATION_GUIDANCE_MIN;
 const GUIDANCE_MAX = VARIATION_GUIDANCE_MAX;
 const GUIDANCE_STEP = VARIATION_GUIDANCE_STEP;
+
+function loadOpen(): boolean {
+  try {
+    const raw = localStorage.getItem(OPEN_STORAGE_KEY);
+    if (raw === null) return true;
+    return raw === "1" || raw === "true";
+  } catch {
+    return true;
+  }
+}
 
 function loadSelectedIds(): Set<string> {
   try {
@@ -152,6 +164,7 @@ export function VariationTimeline({
   buildPrompt,
   onRollRandom,
 }: Props) {
+  const [open, setOpen] = useState(loadOpen);
   const [mode, setMode] = useState<StreamMode>("stopped");
   const [items, setItems] = useState<VariationMeta[]>([]);
   const [status, setStatus] = useState<VariationStatus | null>(null);
@@ -197,6 +210,14 @@ export function VariationTimeline({
   );
   /** Persisted Steps/CFG win over server defaults on first status fetch. */
   const hadPersistedSettingsRef = useRef(loadVariationSettings() != null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(OPEN_STORAGE_KEY, open ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [open]);
 
   sourceRef.current = sourceDataUrl;
   itemsRef.current = items;
@@ -638,134 +659,137 @@ export function VariationTimeline({
   };
 
   return (
-    <section className="panel panel-timeline">
-      <div className="timeline-header">
-        <h2 className="panel-title">AI variations</h2>
-        <div className="timeline-controls">
-          <button
-            type="button"
-            className={`timeline-play${remixing ? " is-playing" : ""}`}
-            onClick={onRemix}
-            disabled={!remixing && selectedCount === 0}
-            title={
-              remixing
-                ? "Stop remixing selected variations"
-                : selectedCount === 0
-                  ? "Select variations to remix"
-                  : `Remix ${selectedCount} selected (max steps, random CFG, up to ${formatHoursLabel(maxHours)})`
-            }
-          >
-            Remix{selectedCount > 0 ? ` (${selectedCount})` : ""}
-          </button>
-          <button
-            type="button"
-            className={`timeline-play${playing || idleRerolling ? " is-playing" : ""}`}
-            onClick={onPlayPause}
-            title={
-              playing
-                ? `Pause to idle-reroll from locked timeline images (up to ${formatHoursLabel(maxHours)})`
-                : idleRerolling
-                  ? "Resume stream from 3D bake"
-                  : "Play stream"
-            }
-          >
-            {playing ? "Pause" : "Play"}
-          </button>
-          <button
-            type="button"
-            className={`timeline-play${playingRandom ? " is-playing" : ""}`}
-            onClick={onPlayRandom}
-            title={
-              playingRandom
-                ? "Stop rolling random characters"
-                : "Snap current bake, then roll a new character to tweak while AI runs"
-            }
-          >
-            Play random
-          </button>
-          <button
-            type="button"
-            className={`timeline-play${
-              remixing || playingRandom ? " is-playing" : ""
-            }`}
-            onClick={onRandomRemix}
-            title={
-              randomRemixNext === "remix"
-                ? `Next: Remix${
-                    selectedCount > 0 ? ` (${selectedCount})` : ""
-                  } — then Play random`
-                : "Next: Play random — then Remix"
-            }
-          >
-            Random remix
-          </button>
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => stopStream()}
-            disabled={mode === "stopped"}
-            title="Stop queuing new generations (in-flight jobs still finish)"
-          >
-            Stop all
-          </button>
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => void onDownloadLocked()}
-            disabled={lockedCount === 0 || zipping}
-            title={
-              lockedCount === 0
-                ? "Lock the sprites you want to keep first"
-                : `Download a zip of all ${lockedCount} locked sprite${
+    <div className="panel-timeline">
+      <CollapseSection
+        title="AI variations"
+        open={open}
+        onToggle={() => setOpen((v) => !v)}
+        actions={
+          <div className="timeline-controls">
+            <button
+              type="button"
+              className={`timeline-play${remixing ? " is-playing" : ""}`}
+              onClick={onRemix}
+              disabled={!remixing && selectedCount === 0}
+              title={
+                remixing
+                  ? "Stop remixing selected variations"
+                  : selectedCount === 0
+                    ? "Select variations to remix"
+                    : `Remix ${selectedCount} selected (max steps, random CFG, up to ${formatHoursLabel(maxHours)})`
+              }
+            >
+              Remix{selectedCount > 0 ? ` (${selectedCount})` : ""}
+            </button>
+            <button
+              type="button"
+              className={`timeline-play${playing || idleRerolling ? " is-playing" : ""}`}
+              onClick={onPlayPause}
+              title={
+                playing
+                  ? `Pause to idle-reroll from locked timeline images (up to ${formatHoursLabel(maxHours)})`
+                  : idleRerolling
+                    ? "Resume stream from 3D bake"
+                    : "Play stream"
+              }
+            >
+              {playing ? "Pause" : "Play"}
+            </button>
+            <button
+              type="button"
+              className={`timeline-play${playingRandom ? " is-playing" : ""}`}
+              onClick={onPlayRandom}
+              title={
+                playingRandom
+                  ? "Stop rolling random characters"
+                  : "Snap current bake, then roll a new character to tweak while AI runs"
+              }
+            >
+              Play random
+            </button>
+            <button
+              type="button"
+              className={`timeline-play${
+                remixing || playingRandom ? " is-playing" : ""
+              }`}
+              onClick={onRandomRemix}
+              title={
+                randomRemixNext === "remix"
+                  ? `Next: Remix${
+                      selectedCount > 0 ? ` (${selectedCount})` : ""
+                    } — then Play random`
+                  : "Next: Play random — then Remix"
+              }
+            >
+              Random remix
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => stopStream()}
+              disabled={mode === "stopped"}
+              title="Stop queuing new generations (in-flight jobs still finish)"
+            >
+              Stop all
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => void onDownloadLocked()}
+              disabled={lockedCount === 0 || zipping}
+              title={
+                lockedCount === 0
+                  ? "Lock the sprites you want to keep first"
+                  : `Download a zip of all ${lockedCount} locked sprite${
+                      lockedCount === 1 ? "" : "s"
+                    }`
+              }
+            >
+              {zipping
+                ? "Zipping…"
+                : `Download locked${lockedCount > 0 ? ` (${lockedCount})` : ""}`}
+            </button>
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => void onClear()}
+            >
+              Clear unlocked
+            </button>
+            <span className="meta timeline-status">
+              {inflight}/{maxConcurrency} in flight
+              {playing ? " · 3D source" : ""}
+              {playingRandom ? " · random characters" : ""}
+              {idleRerolling
+                ? ` · idle reroll from ${lockedCount} lock${
                     lockedCount === 1 ? "" : "s"
+                  }${
+                    deadlineRemainingMinutes === null
+                      ? ""
+                      : ` · ${deadlineRemainingMinutes}m left`
                   }`
-            }
-          >
-            {zipping
-              ? "Zipping…"
-              : `Download locked${lockedCount > 0 ? ` (${lockedCount})` : ""}`}
-          </button>
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => void onClear()}
-          >
-            Clear unlocked
-          </button>
-          <span className="meta timeline-status">
-            {inflight}/{maxConcurrency} in flight
-            {playing ? " · 3D source" : ""}
-            {playingRandom ? " · random characters" : ""}
-            {idleRerolling
-              ? ` · idle reroll from ${lockedCount} lock${
-                  lockedCount === 1 ? "" : "s"
-                }${
-                  deadlineRemainingMinutes === null
-                    ? ""
-                    : ` · ${deadlineRemainingMinutes}m left`
-                }`
-              : ""}
-            {remixing
-              ? ` · remixing ${selectedCount} · steps ${MAX_STEPS} · random CFG${
-                  deadlineRemainingMinutes === null
-                    ? ""
-                    : ` · ${deadlineRemainingMinutes}m left`
-                }`
-              : ""}
-            {warming ? " · warming up" : ""}
-            {status
-              ? ` · ${
-                  status.loaded
-                    ? status.device ?? "loaded"
-                    : status.ready
-                      ? "weights not loaded"
-                      : "deps missing"
-                }`
-              : ""}
-          </span>
-        </div>
-      </div>
-
+                : ""}
+              {remixing
+                ? ` · remixing ${selectedCount} · steps ${MAX_STEPS} · random CFG${
+                    deadlineRemainingMinutes === null
+                      ? ""
+                      : ` · ${deadlineRemainingMinutes}m left`
+                  }`
+                : ""}
+              {warming ? " · warming up" : ""}
+              {status
+                ? ` · ${
+                    status.loaded
+                      ? status.device ?? "loaded"
+                      : status.ready
+                        ? "weights not loaded"
+                        : "deps missing"
+                  }`
+                : ""}
+            </span>
+          </div>
+        }
+      >
       <div className="timeline-steer-block">
         <div className="timeline-steer-row">
           <label className="timeline-setting timeline-steer-field" htmlFor="timeline-steer">
@@ -891,6 +915,7 @@ export function VariationTimeline({
 
       <div
         className="timeline-scroll"
+        style={{ ["--timeline-thumb" as string]: `${thumbPx}px` }}
         onScroll={() => setHoverPreview(null)}
       >
         {items.length === 0 && pendingSlots === 0 ? (
@@ -994,7 +1019,8 @@ export function VariationTimeline({
             document.body,
           )
         : null}
-    </section>
+      </CollapseSection>
+    </div>
   );
 }
 

@@ -484,7 +484,7 @@ export function CaptionRefsPanel({
     : "";
 
   return (
-    <section className="panel panel-captions">
+    <div className="panel-captions">
       <CollapseSection
         title="Caption training refs"
         open={open}
@@ -745,6 +745,6 @@ export function CaptionRefsPanel({
         </div>
       </div>
       </CollapseSection>
-    </section>
+    </div>
   );
 }

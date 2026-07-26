@@ -160,6 +160,7 @@ import {
   type OutlinePassSettings,
   type Palette,
   type SpriteSize,
+  normalizePaletteHex,
 } from "./lib/palette";
 import {
   DEFAULT_RIM_LIGHTS,
@@ -1064,48 +1065,80 @@ export default function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>3d Sprite Gen</h1>
-        <p className="tagline">
-          Procedural chibi → iso bake at {size}×{size}px · free / local
-          {status ? ` · ${status.mesh_backend}` : ""}
-        </p>
-        <div className="palette-slug-row">
-          <label className="field-label" htmlFor="palette-slug-input">
-            Palette
-          </label>
-          <input
-            id="palette-slug-input"
-            type="text"
-            value={paletteSlugDraft}
-            onChange={(e) => setPaletteSlugDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") applyPaletteSlug();
-            }}
-            placeholder="endesga-64"
-            spellCheck={false}
-            title="Lospec palette slug (bake, model remap, AI)"
-          />
-          <button type="button" className="ghost-btn" onClick={applyPaletteSlug}>
-            Apply
-          </button>
-          <a
-            className="palette-lospec-link"
-            href={`https://lospec.com/palette-list/${encodeURIComponent(paletteSlug)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`Open ${paletteSlug} on Lospec`}
+        <div className="header-brand">
+          <h1>3d Sprite Gen</h1>
+          <p className="tagline">
+            Procedural chibi → iso bake at {size}×{size}px · free / local
+            {status ? ` · ${status.mesh_backend}` : ""}
+          </p>
+          <p
+            className={`tagline feature-boost-note${
+              __GIT_BRANCH__ !== "main" ? " branch-not-main" : ""
+            }`}
           >
-            Lospec
-          </a>
-          <span className="meta">{palette?.name ?? "…"}</span>
+            {__GIT_BRANCH__}
+          </p>
         </div>
-        <p
-          className={`tagline feature-boost-note${
-            __GIT_BRANCH__ !== "main" ? " branch-not-main" : ""
-          }`}
-        >
-          {__GIT_BRANCH__}
-        </p>
+        <div className="header-palette">
+          <div className="palette-slug-row">
+            <label className="field-label" htmlFor="palette-slug-input">
+              Palette
+            </label>
+            <input
+              id="palette-slug-input"
+              type="text"
+              value={paletteSlugDraft}
+              onChange={(e) => setPaletteSlugDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyPaletteSlug();
+              }}
+              placeholder="endesga-64"
+              spellCheck={false}
+              title="Lospec palette slug (bake, model remap, AI)"
+            />
+            <button type="button" className="ghost-btn" onClick={applyPaletteSlug}>
+              Apply
+            </button>
+            <a
+              className="palette-lospec-link"
+              href={`https://lospec.com/palette-list/${encodeURIComponent(paletteSlug)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`Open ${paletteSlug} on Lospec`}
+            >
+              Lospec
+            </a>
+            <a
+              className="palette-lospec-link"
+              href="https://lospec.com/palette-list"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Browse the Lospec palette index"
+            >
+              Browse all
+            </a>
+            <span className="meta">{palette?.name ?? "…"}</span>
+          </div>
+          {palette ? (
+            <div
+              className="header-palette-minis"
+              role="img"
+              aria-label={`${palette.name} palette colours`}
+            >
+              {palette.colors.map((c, i) => {
+                const hex = normalizePaletteHex(c);
+                return (
+                  <span
+                    key={`${hex}-${i}`}
+                    className="part-color-mini"
+                    style={{ background: `#${hex}` }}
+                    title={`#${hex}`}
+                  />
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
       </header>
 
       <main className="app-main">
@@ -2660,27 +2693,29 @@ export default function App() {
         </section>
       </div>
 
-      <VariationTimeline
-        sourceDataUrl={sourcePreview}
-        size={size}
-        paletteSlug={paletteSlug}
-        outlineHex={outlineColors.silhouette}
-        buildPrompt={(steer) =>
-          buildVariationPrompt(spec, {
-            facing,
-            size,
-            paletteSlug,
-            paletteName: palette?.name,
-            steer,
-          })
-        }
-        onRollRandom={applyRandom}
-      />
-
-      <CaptionRefsPanel
-        paletteSlug={paletteSlug}
-        paletteName={palette?.name}
-      />
+      <section className="panel panel-variations">
+        <h2 className="panel-title">Variations</h2>
+        <VariationTimeline
+          sourceDataUrl={sourcePreview}
+          size={size}
+          paletteSlug={paletteSlug}
+          outlineHex={outlineColors.silhouette}
+          buildPrompt={(steer) =>
+            buildVariationPrompt(spec, {
+              facing,
+              size,
+              paletteSlug,
+              paletteName: palette?.name,
+              steer,
+            })
+          }
+          onRollRandom={applyRandom}
+        />
+        <CaptionRefsPanel
+          paletteSlug={paletteSlug}
+          paletteName={palette?.name}
+        />
+      </section>
       </main>
     </div>
   );
