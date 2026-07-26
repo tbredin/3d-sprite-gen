@@ -1071,7 +1071,17 @@ export default function App() {
       <main className="app-main">
       <div className="layout">
         <section className="panel panel-character">
-          <h2 className="panel-title">Character</h2>
+          <div className="panel-header">
+            <h2 className="panel-title">Character</h2>
+            <button
+              type="button"
+              className="ghost"
+              onClick={resetCharacterPanel}
+              title="Reset to the knight preset and default slider values"
+            >
+              Reset
+            </button>
+          </div>
 
           <div className="preview-row">
             <div className="preview-main">
@@ -1282,16 +1292,6 @@ export default function App() {
             title="Character"
             open={characterOpen}
             onToggle={() => setCharacterOpen((v) => !v)}
-            actions={
-              <button
-                type="button"
-                className="ghost"
-                onClick={resetCharacterPanel}
-                title="Reset to the knight preset and default slider values"
-              >
-                Reset
-              </button>
-            }
           >
             <div className="char-toolbar">
               <div className="char-picker">
