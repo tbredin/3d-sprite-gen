@@ -140,8 +140,8 @@ import {
   BAYER_STRENGTH_MIN,
   BAYER_STRENGTH_STEP,
   DEFAULT_BAYER_DITHER,
-  DEFAULT_OUTLINE_COLORS,
   DEFAULT_OUTLINE_PASS,
+  defaultOutlineColors,
   loadBayerDitherSettings,
   loadOutlineColors,
   loadOutlinePassSettings,
@@ -1071,17 +1071,7 @@ export default function App() {
       <main className="app-main">
       <div className="layout">
         <section className="panel panel-character">
-          <div className="panel-header">
-            <h2 className="panel-title">Character</h2>
-            <button
-              type="button"
-              className="ghost"
-              onClick={resetCharacterPanel}
-              title="Reset to the knight preset and default slider values"
-            >
-              Reset
-            </button>
-          </div>
+          <h2 className="panel-title">Character</h2>
 
           <div className="preview-row">
             <div className="preview-main">
@@ -1292,6 +1282,16 @@ export default function App() {
             title="Character"
             open={characterOpen}
             onToggle={() => setCharacterOpen((v) => !v)}
+            actions={
+              <button
+                type="button"
+                className="ghost"
+                onClick={resetCharacterPanel}
+                title="Reset to the knight preset and default slider values"
+              >
+                Reset
+              </button>
+            }
           >
             <div className="char-toolbar">
               <div className="char-picker">
@@ -1321,6 +1321,14 @@ export default function App() {
                   aria-label="Random character"
                 >
                   🎲
+                </button>
+                <button
+                  type="button"
+                  className="field-matched char-reset"
+                  onClick={resetCharacterPanel}
+                  title="Reset to the knight preset and default slider values"
+                >
+                  Reset
                 </button>
               </div>
 
@@ -2245,7 +2253,7 @@ export default function App() {
                 className="ghost"
                 onClick={() => {
                   const nextPass = { ...DEFAULT_OUTLINE_PASS };
-                  const nextColors = { ...DEFAULT_OUTLINE_COLORS };
+                  const nextColors = defaultOutlineColors(palette?.colors);
                   saveOutlinePassSettings(nextPass);
                   saveOutlineColors(nextColors);
                   setOutlinePass(nextPass);

@@ -168,30 +168,6 @@ body {
   letter-spacing: 0.03em;
 }
 
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.45rem;
-  min-height: 1.4rem;
-}
-
-.panel-header .panel-title {
-  margin: 0;
-}
-
-/* Match collapse Reset sizing on the Character panel title row. */
-.panel-header .ghost {
-  box-sizing: border-box;
-  height: 1.25rem !important;
-  max-height: 1.25rem;
-  min-height: 0;
-  padding: 0 0.35rem !important;
-  font-size: 0.62rem;
-  line-height: 1;
-}
-
 .panel label,
 .panel .field {
   display: flex;
@@ -780,7 +756,7 @@ button.ghost {
 
 .char-picker {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 0.35rem;
   align-items: end;
   min-width: 0;
