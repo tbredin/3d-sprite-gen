@@ -41,6 +41,31 @@ import { legsYawForLead, resolveLeadSide, torsoYawForLead } from "./stance";
 export type AssembleOptions = {
   /** Draw cartoon eyes on the face. Default true. */
   showEyes?: boolean;
+  /** Skin skull / hair / helmet / neck. Default true. */
+  showHead?: boolean;
+  /** Torso mesh + hem / cape / pouches / back loadout. Default true. */
+  showTorso?: boolean;
+  /** Arms (weapons parented to hands hide with them). Default true. */
+  showArms?: boolean;
+  /** Legs. Default true. */
+  showLegs?: boolean;
+};
+
+/** Per-row show/hide for the Character panel (eyes + body parts). */
+export type PartVisibility = {
+  eyes: boolean;
+  head: boolean;
+  torso: boolean;
+  arms: boolean;
+  legs: boolean;
+};
+
+export const DEFAULT_PART_VISIBILITY: PartVisibility = {
+  eyes: true,
+  head: true,
+  torso: true,
+  arms: true,
+  legs: true,
 };
 
 /**
@@ -311,6 +336,10 @@ export function assembleCharacter(
 
   const leadSide = resolveLeadSide(spec.leadSide);
   const showEyes = opts?.showEyes ?? true;
+  const showHead = opts?.showHead ?? true;
+  const showTorso = opts?.showTorso ?? true;
+  const showArms = opts?.showArms ?? true;
+  const showLegs = opts?.showLegs ?? true;
 
   const helmetMode = helmetModeFor(spec.helmet?.style);
   const replaceHead = helmetMode.mount === "replace";
@@ -421,8 +450,9 @@ export function assembleCharacter(
   tagPartGroup(torso, PartGroupId.TORSO);
 
   const hem = spec.accessories?.hem ?? "none";
+  let hemG: ReturnType<typeof generateHem> | null = null;
   if (hem !== "none") {
-    const hemG = generateHem({
+    hemG = generateHem({
       style: hem,
       color: spec.accessories?.hemColor ?? spec.torso.trim ?? spec.torso.color,
     });
@@ -431,8 +461,9 @@ export function assembleCharacter(
     tagPartGroup(hemG, PartGroupId.ACCESSORY);
   }
 
+  let cape: ReturnType<typeof generateCape> | null = null;
   if (spec.accessories?.cape) {
-    const cape = generateCape({
+    cape = generateCape({
       color:
         spec.accessories.capeColor ??
         spec.torso.trim ??
@@ -443,8 +474,9 @@ export function assembleCharacter(
     tagPartGroup(cape, PartGroupId.ACCESSORY);
   }
 
+  let pouches: ReturnType<typeof generatePouches> | null = null;
   if (spec.accessories?.pouches) {
-    const pouches = generatePouches({
+    pouches = generatePouches({
       color:
         spec.accessories.pouchColor ??
         spec.torso.trim ??
@@ -456,8 +488,9 @@ export function assembleCharacter(
   }
 
   const backStyle = spec.accessories?.backLoadout ?? "none";
+  let back: ReturnType<typeof generateBackLoadout> | null = null;
   if (backStyle !== "none") {
-    const back = generateBackLoadout({
+    back = generateBackLoadout({
       style: backStyle,
       color:
         spec.accessories?.backLoadoutColor ??
@@ -561,6 +594,21 @@ export function assembleCharacter(
     addHullOutlines(off, 0.022);
     tagPartGroup(off, PartGroupId.WEAPON);
   }
+
+  // Part-row show/hide toggles — keep geometry built so re-showing is free.
+  if (!showHead) {
+    headPivot.visible = false;
+    neck.visible = false;
+  }
+  if (!showTorso) {
+    torso.visible = false;
+    if (hemG) hemG.visible = false;
+    if (cape) cape.visible = false;
+    if (pouches) pouches.visible = false;
+    if (back) back.visible = false;
+  }
+  if (!showArms) arms.root.visible = false;
+  if (!showLegs) legs.visible = false;
 
   return root;
 }

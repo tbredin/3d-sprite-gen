@@ -23,6 +23,10 @@ import { ANIMATED_BAKE_INTERVAL_MS } from "../lib/facing";
 import { ChibiCharacter } from "./ChibiCharacter";
 import { downloadDataUrl } from "../lib/capture";
 import {
+  DEFAULT_PART_VISIBILITY,
+  type PartVisibility,
+} from "../lib/chibi";
+import {
   applyPartOutline,
   DEFAULT_BAYER_DITHER,
   DEFAULT_OUTLINE_PASS,
@@ -112,8 +116,8 @@ type BakeProps = {
   bodyScale?: number;
   /** Mirror character left/right by swapping leadSide (not X-scale). */
   mirror?: boolean;
-  /** Toggle the cartoon eye plates. Default true. */
-  showEyes?: boolean;
+  /** Per-row show/hide (eyes + body parts). Default all visible. */
+  partVisibility?: PartVisibility;
   rimLights: RimLightSettings;
   /** Depth+normal discontinuity outline pass — see docs/SPIKE-depth-normal-edges.md. */
   edgeOutline?: EdgeOutlineSettings;
@@ -149,7 +153,7 @@ function BakeCapture({
   rotationY,
   spinning,
   mirror,
-  showEyes,
+  partVisibility,
   rimKey,
   edgeOutline,
   bayerDither,
@@ -168,8 +172,8 @@ function BakeCapture({
   rotationY: number;
   spinning: boolean;
   mirror: boolean;
-  /** Rebake when eye visibility toggles. */
-  showEyes: boolean;
+  /** Rebake when part visibility toggles. */
+  partVisibility: PartVisibility;
   /** Changes when lighting knobs move so the PNG rebakes. */
   rimKey: string;
   edgeOutline: EdgeOutlineSettings;
@@ -408,7 +412,7 @@ function BakeCapture({
     spinning,
     animTick,
     mirror,
-    showEyes,
+    partVisibility,
     rimKey,
     characterKey,
     target,
@@ -473,7 +477,7 @@ function CharacterPivot({
   spec,
   bodyScale,
   mirror,
-  showEyes,
+  partVisibility,
 }: {
   rotateMode: boolean;
   /** Signed rad/s; 0 = frozen at live yaw while rotateMode, else follows props. */
@@ -488,7 +492,7 @@ function CharacterPivot({
   spec: CharacterSpec;
   bodyScale: number;
   mirror: boolean;
-  showEyes: boolean;
+  partVisibility: PartVisibility;
 }) {
   const groupRef = useRef<Group>(null);
   const yawRef = useRef(rotationY);
@@ -567,7 +571,7 @@ function CharacterPivot({
           rotationY={rotationY}
           yawRef={rotateMode ? yawRef : undefined}
           mirror={mirror}
-          showEyes={showEyes}
+          partVisibility={partVisibility}
         />
       </group>
     </group>
@@ -595,7 +599,7 @@ export function BakeCanvas({
   spec,
   bodyScale = 1,
   mirror = false,
-  showEyes = true,
+  partVisibility = DEFAULT_PART_VISIBILITY,
   rimLights,
   edgeOutline = DEFAULT_EDGE_OUTLINE_SETTINGS,
   bayerDither = DEFAULT_BAYER_DITHER,
@@ -633,7 +637,7 @@ export function BakeCanvas({
     cameraHeight,
   ].join(":");
   // Rebake when the character mesh changes — without remounting WebGL.
-  const characterKey = `${bodyScale}:${JSON.stringify(spec)}:${showEyes}:${mirror}`;
+  const characterKey = `${bodyScale}:${JSON.stringify(spec)}:${JSON.stringify(partVisibility)}:${mirror}`;
 
   return (
     <Canvas
@@ -695,7 +699,7 @@ export function BakeCanvas({
         spec={spec}
         bodyScale={bodyScale}
         mirror={mirror}
-        showEyes={showEyes}
+        partVisibility={partVisibility}
       />
       <BakeCapture
         size={size}
@@ -709,7 +713,7 @@ export function BakeCanvas({
         rotationY={rotationY}
         spinning={spinning}
         mirror={mirror}
-        showEyes={showEyes}
+        partVisibility={partVisibility}
         rimKey={rimKey}
         edgeOutline={edgeOutline}
         bayerDither={bayerDither}

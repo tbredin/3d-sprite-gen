@@ -13,6 +13,10 @@
 
 import { ARM_POSES } from "./armPoses";
 import { LEG_POSES } from "./legPoses";
+import {
+  DEFAULT_PART_VISIBILITY,
+  type PartVisibility,
+} from "./assemble";
 import { EMPTY_LOCKS } from "./random";
 import type { PartLocks } from "./random";
 import {
@@ -39,7 +43,8 @@ export type PersistedCharacter = {
   /** `"random"` once the spec has drifted off a named preset. */
   presetId: PresetId | "random";
   mirror: boolean;
-  showEyes: boolean;
+  /** Per-row show/hide for eyes + body parts. */
+  partVisibility: PartVisibility;
   allowHelmets: boolean;
 };
 
@@ -267,6 +272,22 @@ function sanitizeLocks(raw: unknown): PartLocks {
   };
 }
 
+function sanitizePartVisibility(raw: unknown, legacyShowEyes?: unknown): PartVisibility {
+  const o = dict(raw);
+  // Older sessions only stored `showEyes` — fold that into the eyes flag.
+  const eyesFallback = bool(legacyShowEyes, true);
+  if (!o) {
+    return { ...DEFAULT_PART_VISIBILITY, eyes: eyesFallback };
+  }
+  return {
+    eyes: bool(o.eyes, eyesFallback),
+    head: bool(o.head, true),
+    torso: bool(o.torso, true),
+    arms: bool(o.arms, true),
+    legs: bool(o.legs, true),
+  };
+}
+
 function sanitizePresetId(raw: unknown): PresetId | "random" {
   if (raw === "random") return "random";
   return oneOf(PRESET_IDS, raw) ?? "random";
@@ -287,7 +308,10 @@ export function loadCharacterPersist(): PersistedCharacter | null {
       bodyScaleLocked: bool(parsed.bodyScaleLocked, false),
       presetId: sanitizePresetId(parsed.presetId),
       mirror: bool(parsed.mirror, false),
-      showEyes: bool(parsed.showEyes, true),
+      partVisibility: sanitizePartVisibility(
+        parsed.partVisibility,
+        parsed.showEyes,
+      ),
       allowHelmets: bool(parsed.allowHelmets, false),
     };
   } catch {

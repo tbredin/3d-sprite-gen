@@ -105,7 +105,8 @@ export {
   setOffhandVariant,
   getOffhandVariant,
 } from "./assemble";
-export type { AssembleOptions } from "./assemble";
+export type { AssembleOptions, PartVisibility } from "./assemble";
+export { DEFAULT_PART_VISIBILITY } from "./assemble";
 export { applySpriteFaceCheat } from "./faceCheat";
 export {
   stickyHeadYaw,

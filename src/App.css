@@ -972,6 +972,39 @@ button.ghost {
   flex: 0 0 auto;
 }
 
+.panel label.part-visibility {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  flex: 0 0 auto;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.part-visibility input {
+  width: 0.72rem;
+  height: 0.72rem;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+
+.part-block.is-hidden .part-inline-controls,
+.part-block.is-hidden .part-actions,
+.part-block.is-hidden .part-sliders-lockable,
+.part-block.is-hidden .part-eye-sliders {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.part-block.is-hidden .part-name {
+  color: var(--muted);
+}
+
 /* Per-dropdown pair stacks: lock on top, dice below. */
 .part-field-controls {
   display: flex;

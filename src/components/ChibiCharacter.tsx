@@ -13,7 +13,9 @@ import {
   applySpriteFaceCheat,
   oppositeLeadSide,
   stickyHeadYaw,
+  DEFAULT_PART_VISIBILITY,
   type CharacterSpec,
+  type PartVisibility,
 } from "../lib/chibi";
 import { applyBodyScale } from "../lib/chibi/units";
 import type { Object3D } from "three";
@@ -82,7 +84,7 @@ export function ChibiCharacter({
   rotationY = 0,
   yawRef,
   mirror = false,
-  showEyes = true,
+  partVisibility = DEFAULT_PART_VISIBILITY,
 }: {
   spec: CharacterSpec;
   /** Continuous body scale — triggers reassembly (layout units). */
@@ -99,8 +101,8 @@ export function ChibiCharacter({
    * Keeps body facing / BakeCanvas rotationY unchanged.
    */
   mirror?: boolean;
-  /** Toggle the cartoon eye plates. */
-  showEyes?: boolean;
+  /** Per-row show/hide (eyes + body parts). */
+  partVisibility?: PartVisibility;
 }) {
   const effectiveSpec = useMemo(
     () => (mirror ? mirroredSpec(spec) : spec),
@@ -120,13 +122,19 @@ export function ChibiCharacter({
   // Stable when only head proportions change — avoids tearing down the mesh
   // on every Size/Height slider tick.
   const topologyKey = JSON.stringify(meshTopologySpec(effectiveSpec));
+  const visibilityKey = JSON.stringify(partVisibility);
 
   const group = useMemo(() => {
     applyBodyScale(assembledScale);
+    const vis = JSON.parse(visibilityKey) as PartVisibility;
     return assembleCharacter(JSON.parse(topologyKey) as CharacterSpec, {
-      showEyes,
+      showEyes: vis.eyes,
+      showHead: vis.head,
+      showTorso: vis.torso,
+      showArms: vis.arms,
+      showLegs: vis.legs,
     });
-  }, [topologyKey, showEyes, assembledScale]);
+  }, [topologyKey, visibilityKey, assembledScale]);
 
   const headPivot = useMemo(
     () => group.getObjectByName("headPivot") ?? null,

@@ -83,6 +83,8 @@ import {
   BODY_SCALE_MIN,
   BODY_SCALE_MAX,
   BODY_SCALE_DEFAULT,
+  DEFAULT_PART_VISIBILITY,
+  type PartVisibility,
   loadBodyScale,
   saveBodyScale,
   loadCharacterPersist,
@@ -319,6 +321,29 @@ function FieldControlGroup({
   );
 }
 
+/** Show/hide checkbox — no label, sits left of the row lock. */
+function PartVisibilityToggle({
+  part,
+  checked,
+  onToggle,
+}: {
+  part: string;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <label className="part-visibility">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onToggle}
+        title={checked ? `Hide ${part}` : `Show ${part}`}
+        aria-label={checked ? `Hide ${part}` : `Show ${part}`}
+      />
+    </label>
+  );
+}
+
 export default function App() {
   const [facingPersist] = useState(() => loadFacingPersist());
   const [facing, setFacing] = useState<FacingId>(facingPersist.facing);
@@ -359,7 +384,9 @@ export default function App() {
     () => characterPersist?.bodyScaleLocked ?? false,
   );
   const [mirror, setMirror] = useState(characterPersist?.mirror ?? false);
-  const [showEyes, setShowEyes] = useState(characterPersist?.showEyes ?? true);
+  const [partVisibility, setPartVisibility] = useState<PartVisibility>(
+    () => characterPersist?.partVisibility ?? { ...DEFAULT_PART_VISIBILITY },
+  );
   /** Session preference: closed helms in random rolls. Hats/crowns stay allowed. */
   const [allowHelmets, setAllowHelmets] = useState(
     characterPersist?.allowHelmets ?? false,
@@ -539,10 +566,10 @@ export default function App() {
       bodyScaleLocked,
       presetId,
       mirror,
-      showEyes,
+      partVisibility,
       allowHelmets,
     });
-  }, [spec, locks, bodyScaleLocked, presetId, mirror, showEyes, allowHelmets]);
+  }, [spec, locks, bodyScaleLocked, presetId, mirror, partVisibility, allowHelmets]);
 
   const applyPreset = (id: PresetId) => {
     setPresetId(id);
@@ -574,7 +601,7 @@ export default function App() {
     setLocks({ ...EMPTY_LOCKS });
     setFieldLocks({ ...EMPTY_FIELD_LOCKS });
     setMirror(false);
-    setShowEyes(true);
+    setPartVisibility({ ...DEFAULT_PART_VISIBILITY });
     setAllowHelmets(false);
     setSize(48);
     setCameraHeight(DEFAULT_CAMERA_HEIGHT);
@@ -713,7 +740,12 @@ export default function App() {
   };
 
   /** Dist / Size / Y are pinned by the eyes section lock or their own row lock. */
-  const eyeSlidersDisabled = !showEyes || locks.eyes || locks.eyeLayout;
+  const eyeSlidersDisabled =
+    !partVisibility.eyes || locks.eyes || locks.eyeLayout;
+
+  const togglePartVisible = (part: keyof PartVisibility) => {
+    setPartVisibility((prev) => ({ ...prev, [part]: !prev[part] }));
+  };
 
   const applySpecFromParsed = (parsed: unknown) => {
     if (!parsed || typeof parsed !== "object") {
@@ -1115,7 +1147,7 @@ export default function App() {
                     spec={spec}
                     bodyScale={bodyScale}
                     mirror={mirror}
-                    showEyes={showEyes}
+                    partVisibility={partVisibility}
                     rimLights={rimLights}
                     edgeOutline={edgeOutline}
                     bayerDither={bayerDither}
@@ -1375,10 +1407,17 @@ export default function App() {
             </div>
 
             <div className="part-grid">
-              <div className={`part-block${locks.eyes ? " is-locked" : ""}`}>
+              <div
+                className={`part-block${locks.eyes ? " is-locked" : ""}${!partVisibility.eyes ? " is-hidden" : ""}`}
+              >
                 <div className="part-row">
                   <div className="part-title">
                     <div className="part-row-controls">
+                      <PartVisibilityToggle
+                        part="eyes"
+                        checked={partVisibility.eyes}
+                        onToggle={() => togglePartVisible("eyes")}
+                      />
                       <button
                         type="button"
                         className={`part-icon-btn part-row-lock${locks.eyes ? " is-locked" : ""}`}
@@ -1393,7 +1432,7 @@ export default function App() {
                         type="button"
                         className="part-icon-btn part-row-reroll"
                         onClick={applyRerollEyes}
-                        disabled={!showEyes || locks.eyes}
+                        disabled={!partVisibility.eyes || locks.eyes}
                         title={
                           locks.eyes
                             ? "Unlock to reroll eyes"
@@ -1406,20 +1445,11 @@ export default function App() {
                     </div>
                     <span className="part-name">eyes</span>
                   </div>
-                  <label className="part-lock">
-                    <input
-                      type="checkbox"
-                      checked={showEyes}
-                      onChange={() => setShowEyes((v) => !v)}
-                      title="Toggle cartoon eyes"
-                    />
-                    Show
-                  </label>
                   <FieldControlGroup
                     field="eyeStyle"
                     label="eye style"
                     locked={fieldLocks.eyeStyle}
-                    pinned={fieldPinned("eyeStyle") || !showEyes}
+                    pinned={fieldPinned("eyeStyle") || !partVisibility.eyes}
                     onToggle={toggleFieldLock}
                     onReroll={applyRerollField}
                   >
@@ -1427,7 +1457,7 @@ export default function App() {
                       title="eye style"
                       value={spec.face?.style ?? "classic"}
                       options={EYE_STYLES}
-                      disabled={!showEyes || fieldPinned("eyeStyle")}
+                      disabled={!partVisibility.eyes || fieldPinned("eyeStyle")}
                       onPick={(v) => applyPartEdit((s) => setEyeStyle(s, v))}
                     />
                   </FieldControlGroup>
@@ -1435,7 +1465,7 @@ export default function App() {
                     field="browStyle"
                     label="eyebrow style"
                     locked={fieldLocks.browStyle}
-                    pinned={fieldPinned("browStyle") || !showEyes}
+                    pinned={fieldPinned("browStyle") || !partVisibility.eyes}
                     onToggle={toggleFieldLock}
                     onReroll={applyRerollField}
                   >
@@ -1443,7 +1473,7 @@ export default function App() {
                       title="eyebrow style"
                       value={spec.face?.browStyle ?? "none"}
                       options={BROW_STYLES}
-                      disabled={!showEyes || fieldPinned("browStyle")}
+                      disabled={!partVisibility.eyes || fieldPinned("browStyle")}
                       onPick={(v) => applyPartEdit((s) => setBrowStyle(s, v))}
                     />
                   </FieldControlGroup>
@@ -1453,7 +1483,7 @@ export default function App() {
                       paletteColors={palette?.colors ?? []}
                       title="Eye colour"
                       ariaLabel="Eye colour"
-                      disabled={!showEyes || locks.eyes}
+                      disabled={!partVisibility.eyes || locks.eyes}
                       onChange={(hex) =>
                         applyPartEdit((s) => ({
                           ...s,
@@ -1569,14 +1599,20 @@ export default function App() {
 
               {PART_IDS.map((part) => {
                 const locked = locks[part];
+                const visible = partVisibility[part];
                 return (
                   <div
                     key={part}
-                    className={`part-block${locked ? " is-locked" : ""}`}
+                    className={`part-block${locked ? " is-locked" : ""}${!visible ? " is-hidden" : ""}`}
                   >
                     <div className="part-row">
                       <div className="part-title">
                         <div className="part-row-controls">
+                          <PartVisibilityToggle
+                            part={part}
+                            checked={visible}
+                            onToggle={() => togglePartVisible(part)}
+                          />
                           <button
                             type="button"
                             className={`part-icon-btn part-row-lock${locked ? " is-locked" : ""}`}
@@ -1593,7 +1629,7 @@ export default function App() {
                             type="button"
                             className="part-icon-btn part-row-reroll"
                             onClick={() => applyRerollPart(part)}
-                            disabled={locked}
+                            disabled={locked || !visible}
                             title={
                               locked
                                 ? "Unlock to reroll this part"
