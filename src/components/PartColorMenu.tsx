@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import {
   listPartColorSlots,
-  maxPartColorSlots,
   setPartColorSlot,
 } from "../lib/chibi/partColors";
 import type { CharacterSpec } from "../lib/chibi/types";
@@ -17,7 +16,25 @@ type Props = {
   disabled?: boolean;
 };
 
-/** Clickable swatch stack — popover listing every colour slot for a part. */
+/** Compact painter-palette glyph for the part colour trigger. */
+function PaletteGlyph() {
+  return (
+    <svg
+      className="part-color-palette-icon"
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      aria-hidden
+    >
+      <path
+        fill="currentColor"
+        d="M8 1.2C4.3 1.2 1.4 4 1.4 7.5c0 2.6 1.7 4.8 4.2 5.5.4.1.8-.2.8-.6v-.7c0-1 .8-1.8 1.8-1.8h2.1c2.3 0 4.3-1.9 4.3-4.2C14.6 3.6 11.7 1.2 8 1.2zm-3.2 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm2-2.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm2.5-.2a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm2.4 2.4a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"
+      />
+    </svg>
+  );
+}
+
+/** Palette icon + vertical mini-swatches — popover lists every colour slot. */
 export function PartColorMenu({
   part,
   spec,
@@ -31,8 +48,6 @@ export function PartColorMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const slots = listPartColorSlots(spec, part);
-  const capacity = maxPartColorSlots(part);
-  const empty = disabled || slots.length === 0;
 
   useEffect(() => {
     if (disabled) setOpen(false);
@@ -61,7 +76,7 @@ export function PartColorMenu({
     <div className="color-control part-color-menu" ref={rootRef}>
       <button
         type="button"
-        className="color-control-swatch-trigger"
+        className="color-control-swatch-trigger part-color-trigger"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={menuId}
@@ -70,27 +85,22 @@ export function PartColorMenu({
         aria-label={`${part} colours`}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="color-control-swatch-stack" aria-hidden>
-          {Array.from({ length: capacity }, (_, i) => {
-            const slot = empty ? undefined : slots[i];
-            if (!slot) {
+        <PaletteGlyph />
+        <span className="part-color-mini-stack" aria-hidden>
+          {slots.length === 0 ? (
+            <span className="part-color-mini part-color-mini-empty" />
+          ) : (
+            slots.map((slot) => {
+              const hex = normalizePaletteHex(slot.value);
               return (
                 <span
-                  key={`pad-${i}`}
-                  className="swatch color-control-swatch color-control-swatch-empty"
+                  key={slot.id}
+                  className="part-color-mini"
+                  style={{ background: `#${hex}` }}
                 />
               );
-            }
-            const hex = normalizePaletteHex(slot.value);
-            return (
-              <span
-                key={slot.id}
-                className="swatch color-control-swatch"
-                style={{ background: `#${hex}` }}
-                title={`${slot.label} #${hex}`}
-              />
-            );
-          })}
+            })
+          )}
         </span>
       </button>
       {open ? (
