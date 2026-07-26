@@ -16,7 +16,7 @@ export function maxPartColorSlots(part: PartId): number {
     case "head":
       return 4; // skin, hair, helmet, visor
     case "torso":
-      return 6; // cloth, trim, hem, cape, pouch, back
+      return 7; // cloth, trim, details, hem, cape, pouch, back
     case "arms":
       return 4; // sleeve, hand, weapon, offhand
     case "legs":
@@ -51,6 +51,16 @@ export function listPartColorSlots(
     ];
     if (spec.torso.trim) {
       slots.push({ id: "trim", label: "Trim", value: spec.torso.trim });
+    }
+    if (
+      (spec.torso.detailStyle ?? "classic") !== "none" &&
+      spec.torso.detailColor
+    ) {
+      slots.push({
+        id: "details",
+        label: "Details",
+        value: spec.torso.detailColor,
+      });
     }
     const a = spec.accessories;
     if (a?.hem && a.hem !== "none" && a.hemColor) {
@@ -122,6 +132,7 @@ export function setPartColorSlot(
   if (part === "torso") {
     if (slotId === "torso") next.torso.color = color;
     else if (slotId === "trim") next.torso.trim = color;
+    else if (slotId === "details") next.torso.detailColor = color;
     else if (slotId === "hem") {
       next.accessories = { ...next.accessories, hemColor: color };
     } else if (slotId === "cape") {

@@ -21,6 +21,7 @@ import { EMPTY_LOCKS } from "./random";
 import type { PartLocks } from "./random";
 import {
   BACK_LOADOUTS,
+  BODY_DETAIL_STYLES,
   BROW_STYLES,
   EYE_STYLES,
   HAIR_STYLES,
@@ -229,6 +230,10 @@ export function sanitizeCharacterSpec(raw: unknown): CharacterSpec | null {
 
   const trim = str(rawTorso.trim);
   if (trim) spec.torso.trim = trim;
+  const detailStyle = oneOf(BODY_DETAIL_STYLES, rawTorso.detailStyle);
+  if (detailStyle) spec.torso.detailStyle = detailStyle;
+  const detailColor = str(rawTorso.detailColor);
+  if (detailColor) spec.torso.detailColor = detailColor;
 
   const sleeveColor = str(rawArms.sleeveColor);
   if (sleeveColor) spec.arms.sleeveColor = sleeveColor;

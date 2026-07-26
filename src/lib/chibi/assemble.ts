@@ -443,6 +443,8 @@ export function assembleCharacter(
     style: spec.torso.style,
     color: spec.torso.color,
     trim: spec.torso.trim,
+    detailStyle: spec.torso.detailStyle,
+    detailColor: spec.torso.detailColor,
     skin: spec.skin,
   });
   upper.add(torso);
@@ -646,7 +648,13 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     hair: { style: "undercut", color: "#2a2035", complexity: 3 },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "none", color: "#000000" },
-    torso: { style: "fullPlate", color: "#b0b8c4", trim: "#6a7484" },
+    torso: {
+      style: "fullPlate",
+      color: "#b0b8c4",
+      trim: "#6a7484",
+      detailStyle: "ornate",
+      detailColor: "#f5c542",
+    },
     accessories: {
       hem: "none",
       cape: true,
@@ -675,7 +683,13 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     hair: { style: "bowl", color: "#1a1c2c", complexity: 2 },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "none", color: "#000000" },
-    torso: { style: "chestplate", color: "#5ad4a0", trim: "#2a2540" },
+    torso: {
+      style: "chestplate",
+      color: "#5ad4a0",
+      trim: "#2a2540",
+      detailStyle: "classic",
+      detailColor: "#f5c542",
+    },
     accessories: {
       hem: "loincloth",
       hemColor: "#2a2540",
@@ -913,7 +927,13 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     hair: { style: "bald", color: "#2a2035" },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "knightGreat", color: "#9aa4b0", visor: "#1a1c2c" },
-    torso: { style: "fullPlate", color: "#b0b8c4", trim: "#6a7484" },
+    torso: {
+      style: "fullPlate",
+      color: "#b0b8c4",
+      trim: "#6a7484",
+      detailStyle: "ornate",
+      detailColor: "#f5c542",
+    },
     accessories: {
       hem: "none",
       cape: true,
@@ -942,7 +962,13 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     hair: { style: "bald", color: "#2a2035" },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "knightWinged", color: "#c7cfcc", visor: "#5a2030" },
-    torso: { style: "fullPlate", color: "#dfe4ea", trim: "#8a4050" },
+    torso: {
+      style: "fullPlate",
+      color: "#dfe4ea",
+      trim: "#8a4050",
+      detailStyle: "ornate",
+      detailColor: "#f5c542",
+    },
     accessories: {
       hem: "none",
       cape: true,
@@ -971,7 +997,13 @@ export const PRESETS: Record<PresetId, CharacterSpec> = {
     hair: { style: "bald", color: "#1a1c2c" },
     face: { eyeColor: "#1a1c2c" },
     helmet: { style: "knightSallet", color: "#7a8490", visor: "#1a1c2c" },
-    torso: { style: "chestplate", color: "#8a94a0", trim: "#4a5565" },
+    torso: {
+      style: "chestplate",
+      color: "#8a94a0",
+      trim: "#4a5565",
+      detailStyle: "classic",
+      detailColor: "#f5c542",
+    },
     accessories: {
       hem: "none",
       pouches: true,

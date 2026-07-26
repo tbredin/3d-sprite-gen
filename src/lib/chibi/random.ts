@@ -10,6 +10,7 @@ import {
 import type {
   ArmPose,
   BackLoadout,
+  BodyDetailStyle,
   BrowStyle,
   CharacterSpec,
   EyeStyle,
@@ -23,6 +24,7 @@ import type {
 } from "./types";
 import {
   BACK_LOADOUTS,
+  BODY_DETAIL_STYLES,
   BROW_STYLES,
   EYE_STYLES,
   HAIR_STYLES,
@@ -89,8 +91,10 @@ export type FieldLockId =
   | "eyeStyle"
   | "browStyle"
   | "torsoStyle"
+  | "bodyDetails"
   | "hem"
   | "cape"
+  | "pouches"
   | "backLoadout"
   | "armPose"
   | "weapon"
@@ -108,8 +112,10 @@ export const FIELD_LOCK_PART: Record<FieldLockId, FieldLockPart> = {
   eyeStyle: "eyes",
   browStyle: "eyes",
   torsoStyle: "torso",
+  bodyDetails: "torso",
   hem: "torso",
   cape: "torso",
+  pouches: "torso",
   backLoadout: "torso",
   armPose: "arms",
   weapon: "arms",
@@ -127,8 +133,10 @@ export const EMPTY_FIELD_LOCKS: FieldLocks = {
   eyeStyle: false,
   browStyle: false,
   torsoStyle: false,
+  bodyDetails: false,
   hem: false,
   cape: false,
+  pouches: false,
   backLoadout: false,
   armPose: false,
   weapon: false,
@@ -257,6 +265,13 @@ const TORSO: TorsoStyle[] = [
   "robe",
   "hoodedRobe",
   "plain",
+];
+
+const BODY_DETAILS: BodyDetailStyle[] = [
+  "classic",
+  "classic",
+  "ornate",
+  "none",
 ];
 
 const HEM: HemStyle[] = [
@@ -660,6 +675,8 @@ function randomTorso(_helmetStyle?: HelmetStyle): TorsoBits {
   const torsoStyle = pick(TORSO);
   const cloth = pick(CLOTH);
   const trim = pickTrim(cloth);
+  const detailStyle = pick(BODY_DETAILS);
+  const armored = torsoStyle === "chestplate" || torsoStyle === "fullPlate";
 
   let hem: HemStyle = pick(HEM);
   if (torsoStyle === "hoodedRobe" || torsoStyle === "robe") {
@@ -685,7 +702,14 @@ function randomTorso(_helmetStyle?: HelmetStyle): TorsoBits {
   const backLoadout = pick(BACK_LOADOUT);
 
   return {
-    torso: { style: torsoStyle, color: cloth, trim },
+    torso: {
+      style: torsoStyle,
+      color: cloth,
+      trim,
+      detailStyle,
+      // Gold is intentional on armor; cloth details inherit trim in geometry.
+      detailColor: armored && detailStyle !== "none" ? "#f5c542" : undefined,
+    },
     accessories: {
       hem,
       hemColor,
@@ -799,6 +823,13 @@ function applyFieldLocks(
     if (pinned("torsoStyle")) {
       next.torso = { ...next.torso, style: prev.torso.style };
     }
+    if (pinned("bodyDetails")) {
+      next.torso = {
+        ...next.torso,
+        detailStyle: prev.torso.detailStyle ?? "classic",
+        detailColor: prev.torso.detailColor,
+      };
+    }
     if (next.accessories) {
       if (pinned("hem")) {
         next.accessories = {
@@ -810,6 +841,12 @@ function applyFieldLocks(
         next.accessories = {
           ...next.accessories,
           cape: prev.accessories?.cape ?? false,
+        };
+      }
+      if (pinned("pouches")) {
+        next.accessories = {
+          ...next.accessories,
+          pouches: prev.accessories?.pouches ?? false,
         };
       }
       if (pinned("backLoadout")) {
@@ -1095,6 +1132,11 @@ export function rerollField(
     }
     case "torsoStyle":
       return setTorsoStyle(spec, pickOther(TORSO_STYLES, spec.torso.style));
+    case "bodyDetails":
+      return setBodyDetailStyle(
+        spec,
+        pickOther(BODY_DETAIL_STYLES, spec.torso.detailStyle ?? "classic"),
+      );
     case "hem":
       return setHemStyle(
         spec,
@@ -1102,6 +1144,8 @@ export function rerollField(
       );
     case "cape":
       return setCape(spec, !(spec.accessories?.cape ?? false));
+    case "pouches":
+      return setPouches(spec, !(spec.accessories?.pouches ?? false));
     case "backLoadout":
       return setBackLoadout(
         spec,
@@ -1162,7 +1206,15 @@ export function rerollPartColors(
     }
     const cloth = pick(CLOTH);
     const trim = pickTrim(cloth);
-    next.torso = { ...next.torso, color: cloth, trim };
+    next.torso = {
+      ...next.torso,
+      color: cloth,
+      trim,
+      detailColor:
+        next.torso.style === "chestplate" || next.torso.style === "fullPlate"
+          ? "#f5c542"
+          : undefined,
+    };
     if (next.accessories) {
       next.accessories = {
         ...next.accessories,
@@ -1380,7 +1432,33 @@ export function setTorsoStyle(
   style: TorsoStyle,
 ): CharacterSpec {
   const next = structuredClone(spec);
-  next.torso = { ...next.torso, style };
+  const armored = style === "chestplate" || style === "fullPlate";
+  next.torso = {
+    ...next.torso,
+    style,
+    detailColor:
+      armored && (next.torso.detailStyle ?? "classic") !== "none"
+        ? next.torso.detailColor ?? "#f5c542"
+        : next.torso.detailColor,
+  };
+  return next;
+}
+
+export function setBodyDetailStyle(
+  spec: CharacterSpec,
+  detailStyle: BodyDetailStyle,
+): CharacterSpec {
+  const next = structuredClone(spec);
+  const armored =
+    next.torso.style === "chestplate" || next.torso.style === "fullPlate";
+  next.torso = {
+    ...next.torso,
+    detailStyle,
+    detailColor:
+      detailStyle !== "none" && armored
+        ? next.torso.detailColor ?? "#f5c542"
+        : next.torso.detailColor,
+  };
   return next;
 }
 
@@ -1402,6 +1480,17 @@ export function setCape(spec: CharacterSpec, on: boolean): CharacterSpec {
     cape: on,
     capeColor:
       next.accessories?.capeColor ?? next.torso.trim ?? pick(CLOTH),
+  };
+  return next;
+}
+
+export function setPouches(spec: CharacterSpec, on: boolean): CharacterSpec {
+  const next = structuredClone(spec);
+  next.accessories = {
+    ...next.accessories,
+    pouches: on,
+    pouchColor:
+      next.accessories?.pouchColor ?? next.torso.trim ?? "#5a4030",
   };
   return next;
 }
