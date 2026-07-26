@@ -89,6 +89,8 @@ type BakeProps = {
   silhouetteOutlineHex: string;
   /** Endesga hex (no #) for internal part-seam outlines. */
   partSeamsOutlineHex: string;
+  /** Endesga hex (no #) for colour-boundary (texture) seam outlines. */
+  textureSeamsOutlineHex: string;
   outlinePass?: OutlinePassSettings;
   zoom: number;
   /** 1 = classic iso elevation; higher = steeper camera. */
@@ -146,6 +148,7 @@ function BakeCapture({
   colors,
   silhouetteOutlineHex,
   partSeamsOutlineHex,
+  textureSeamsOutlineHex,
   outlinePass,
   zoom,
   cameraHeight,
@@ -165,6 +168,7 @@ function BakeCapture({
   colors: string[];
   silhouetteOutlineHex: string;
   partSeamsOutlineHex: string;
+  textureSeamsOutlineHex: string;
   outlinePass: OutlinePassSettings;
   zoom: number;
   cameraHeight: number;
@@ -374,6 +378,7 @@ function BakeCapture({
             {
               silhouette: silhouetteOutlineHex,
               partSeams: partSeamsOutlineHex,
+              textureSeams: textureSeamsOutlineHex,
             },
             idFlipped,
             idFlipped ? decodePartGroupPixel : undefined,
@@ -403,8 +408,10 @@ function BakeCapture({
     colors,
     silhouetteOutlineHex,
     partSeamsOutlineHex,
+    textureSeamsOutlineHex,
     outlinePass.silhouette,
     outlinePass.partSeams,
+    outlinePass.textureSeams,
     zoom,
     cameraHeight,
     rotationX,
@@ -583,6 +590,7 @@ export function BakeCanvas({
   colors,
   silhouetteOutlineHex,
   partSeamsOutlineHex,
+  textureSeamsOutlineHex,
   outlinePass = DEFAULT_OUTLINE_PASS,
   zoom,
   cameraHeight = DEFAULT_CAMERA_HEIGHT,
@@ -706,6 +714,7 @@ export function BakeCanvas({
         colors={colors}
         silhouetteOutlineHex={silhouetteOutlineHex}
         partSeamsOutlineHex={partSeamsOutlineHex}
+        textureSeamsOutlineHex={textureSeamsOutlineHex}
         outlinePass={outlinePass}
         zoom={zoom}
         cameraHeight={cameraHeight}
