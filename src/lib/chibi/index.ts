@@ -13,6 +13,7 @@
 import type {
   ArmPose,
   BackLoadout,
+  BodyDetailStyle,
   CharacterSpec,
   HairStyle,
   HelmetStyle,
@@ -46,8 +47,10 @@ export function generateTorso(
   style: TorsoStyle,
   color: string,
   trim?: string,
+  detailStyle?: BodyDetailStyle,
+  detailColor?: string,
 ): Pick<CharacterSpec, "torso"> {
-  return { torso: { style, color, trim } };
+  return { torso: { style, color, trim, detailStyle, detailColor } };
 }
 
 /** Soft skirt / loincloth / cape / back gear extras. */
@@ -179,6 +182,7 @@ export {
   HAIR_STYLES,
   HELMET_STYLES,
   TORSO_STYLES,
+  BODY_DETAIL_STYLES,
   HEM_STYLES,
   WEAPON_TYPES,
   OFFHAND_TYPES,
@@ -191,6 +195,7 @@ export type {
   HairStyle,
   HelmetStyle,
   TorsoStyle,
+  BodyDetailStyle,
   WeaponType,
 } from "./types";
 export {
@@ -200,8 +205,10 @@ export {
   setHairStyle,
   setHelmetStyle,
   setTorsoStyle,
+  setBodyDetailStyle,
   setHemStyle,
   setCape,
+  setPouches,
   setBackLoadout,
   setArmPose,
   setWeaponType,

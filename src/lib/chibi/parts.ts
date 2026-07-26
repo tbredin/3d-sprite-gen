@@ -17,6 +17,7 @@ import { legJointsForPose } from "./legPoses";
 import type {
   ArmPose,
   BackLoadout,
+  BodyDetailStyle,
   HairStyle,
   HelmetStyle,
   HemStyle,
@@ -2118,6 +2119,8 @@ export function generateTorso(opts: {
   style: TorsoStyle;
   color: string;
   trim?: string;
+  detailStyle?: BodyDetailStyle;
+  detailColor?: string;
   skin: string;
 }): Group {
   const g = new Group();
@@ -2132,6 +2135,14 @@ export function generateTorso(opts: {
   const H = CHIBI.torso;
   const cy = LAYOUT.headCenterY;
   const sw = CHIBI.shoulderWidth * 0.5;
+  const detailStyle = opts.detailStyle ?? "classic";
+  const armored = opts.style === "chestplate" || opts.style === "fullPlate";
+  // Armor gets a deliberate gold read by default. Cloth reuses its authored
+  // trim (or neutral silver) instead of receiving gold indiscriminately.
+  const detail = toonDetail(
+    opts.detailColor ??
+      (armored ? "#f5c542" : opts.trim ?? "#d7dde5"),
+  );
 
   // Soft hip volume tying legs into torso
   g.add(
@@ -2226,13 +2237,28 @@ export function generateTorso(opts: {
     g.add(mesh(limbCylinder(w * 1.05, 0.07, 12), mat, 0, LAYOUT.hipY + 0.12, 0));
     g.add(
       mesh(
-        new BoxGeometry(0.12, 0.1, 0.08),
-        toonDetail("#eef2f5"),
+        new BoxGeometry(
+          detailStyle === "none" ? 0.12 : 0.18,
+          detailStyle === "none" ? 0.1 : 0.14,
+          0.1,
+        ),
+        detailStyle === "none" ? toonDetail("#eef2f5") : detail,
         0,
         LAYOUT.hipY + 0.12,
-        d * 0.95,
+        d * 1.08,
       ),
     );
+    if (detailStyle === "ornate") {
+      g.add(
+        mesh(
+          new BoxGeometry(0.075, 0.055, 0.035),
+          toonDetail("#5a2030"),
+          0,
+          LAYOUT.hipY + 0.12,
+          d * 1.3,
+        ),
+      );
+    }
     // Rear belt knot / loop
     g.add(
       mesh(
@@ -2243,6 +2269,114 @@ export function generateTorso(opts: {
         -d * 0.95,
       ),
     );
+  };
+
+  /**
+   * Front readability pass. Shapes are intentionally 4–8 bake pixels wide:
+   * tiny jewelry disappears after palette quantization and sprite downsample.
+   */
+  const addBodyDetails = () => {
+    if (detailStyle === "none") return;
+    const frontZ = d * 1.18;
+
+    if (armored) {
+      // Gold cuirass frame, center keel, and shoulder catches. These sit proud
+      // of the plate so they remain high contrast from front and front-¾.
+      g.add(
+        mesh(
+          new BoxGeometry(CHIBI.hipWidth * 0.92, 0.065, 0.055),
+          detail,
+          0,
+          midY + H * 0.34,
+          frontZ,
+        ),
+      );
+      g.add(
+        mesh(
+          new BoxGeometry(0.065, H * 0.58, 0.055),
+          detail,
+          0,
+          midY + H * 0.03,
+          frontZ,
+        ),
+      );
+      for (const s of [-1, 1] as const) {
+        const rib = new Mesh(
+          new BoxGeometry(0.065, H * 0.5, 0.055),
+          detail,
+        );
+        rib.position.set(s * CHIBI.hipWidth * 0.42, midY + 0.02, frontZ);
+        rib.rotation.z = s * 0.18;
+        g.add(rib);
+        g.add(
+          mesh(
+            new BoxGeometry(0.16, 0.065, 0.16),
+            detail,
+            s * sw,
+            LAYOUT.shoulderY + 0.03,
+            0.15,
+          ),
+        );
+      }
+      if (detailStyle === "ornate") {
+        // Broad chest crest rather than etched linework.
+        g.add(
+          mesh(
+            new BoxGeometry(0.2, 0.14, 0.065),
+            detail,
+            0,
+            midY + H * 0.17,
+            frontZ + 0.04,
+          ),
+        );
+      }
+      return;
+    }
+
+    const buttons =
+      opts.style === "jacket" || opts.style === "plain" || opts.style === "robe";
+    if (buttons) {
+      const count = detailStyle === "ornate" ? 3 : 2;
+      for (let i = 0; i < count; i++) {
+        g.add(
+          mesh(
+            new SphereGeometry(0.047, 8, 6),
+            detail,
+            0.045,
+            midY + H * (0.22 - i * 0.22),
+            frontZ + 0.02,
+          ),
+        );
+      }
+    }
+
+    const necklace =
+      opts.style === "tank" ||
+      opts.style === "robe" ||
+      opts.style === "hoodedRobe" ||
+      detailStyle === "ornate";
+    if (necklace) {
+      for (const s of [-1, 0, 1] as const) {
+        g.add(
+          mesh(
+            new SphereGeometry(0.045, 8, 6),
+            detail,
+            s * 0.085,
+            LAYOUT.shoulderY - 0.11 - Math.abs(s) * 0.025,
+            frontZ,
+          ),
+        );
+      }
+      g.add(
+        mesh(
+          new BoxGeometry(0.11, 0.13, 0.065),
+          detail,
+          0,
+          LAYOUT.shoulderY - 0.22,
+          frontZ + 0.025,
+        ),
+      );
+    }
   };
 
   if (opts.style === "tank") {
@@ -2534,6 +2668,7 @@ export function generateTorso(opts: {
     addBelt();
   }
 
+  addBodyDetails();
   return g;
 }
 
@@ -2741,7 +2876,7 @@ export function generateCape(opts: {
   return g;
 }
 
-/** Hip / rear belt pouches — small bags that sell adventurer kit from behind. */
+/** Chunky hip / rear belt pouches that survive a 48px sprite bake. */
 export function generatePouches(opts: {
   color: string;
 }): Group {
@@ -2752,15 +2887,16 @@ export function generatePouches(opts: {
   const y = LAYOUT.hipY + 0.1;
 
   for (const s of [-1, 1] as const) {
-    // Side hip pouch
-    g.add(mesh(new BoxGeometry(0.14, 0.16, 0.12), mat, s * 0.38, y, 0.08));
-    g.add(mesh(new SphereGeometry(0.06, 6, 5), dark, s * 0.38, y + 0.06, 0.1));
+    // Side-front bags break the waist silhouette and remain visible at ¾.
+    g.add(mesh(new BoxGeometry(0.19, 0.21, 0.16), mat, s * 0.4, y - 0.015, 0.12));
+    g.add(mesh(new BoxGeometry(0.17, 0.075, 0.18), dark, s * 0.4, y + 0.065, 0.14));
+    g.add(mesh(new SphereGeometry(0.045, 6, 5), toonDetail("#d7dde5"), s * 0.4, y + 0.055, 0.24));
     // Rear kidney pouch
-    g.add(mesh(new BoxGeometry(0.12, 0.14, 0.1), mat, s * 0.22, y - 0.02, -0.28));
+    g.add(mesh(new BoxGeometry(0.16, 0.18, 0.13), mat, s * 0.24, y - 0.03, -0.3));
   }
   // Center rear bedroll / satchel lump
-  g.add(mesh(new CapsuleGeometry(0.1, 0.2, 3, 6), mat, 0, y + 0.02, -0.32));
-  g.add(mesh(new BoxGeometry(0.08, 0.06, 0.04), dark, 0, y + 0.08, -0.34));
+  g.add(mesh(new CapsuleGeometry(0.12, 0.22, 3, 6), mat, 0, y + 0.01, -0.34));
+  g.add(mesh(new BoxGeometry(0.11, 0.07, 0.05), dark, 0, y + 0.09, -0.42));
 
   return g;
 }

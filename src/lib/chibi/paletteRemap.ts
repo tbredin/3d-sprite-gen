@@ -59,6 +59,9 @@ export function remapSpecToPalette(
 
   next.torso.color = snap(next.torso.color);
   if (next.torso.trim) next.torso.trim = snap(next.torso.trim);
+  if (next.torso.detailColor) {
+    next.torso.detailColor = snap(next.torso.detailColor);
+  }
 
   if (next.accessories) {
     const a = next.accessories;

@@ -86,6 +86,12 @@ export type TorsoStyle =
   | "tank";
 
 /**
+ * Cohesive body ornament pass. One choice controls the necklace, buttons,
+ * buckle, and armor accents so sprite-scale detail stays art-directed.
+ */
+export type BodyDetailStyle = "none" | "classic" | "ornate";
+
+/**
  * Cartoon eye plate designs. Subtle variants of the classic 2-column plate —
  * modest horizontal / vertical leans for ~4–6 bake pixels at 48px.
  */
@@ -296,6 +302,10 @@ export type CharacterSpec = {
     style: TorsoStyle;
     color: string;
     trim?: string;
+    /** Chunky front-facing ornaments; defaults to `"classic"`. */
+    detailStyle?: BodyDetailStyle;
+    /** Optional ornament metal. Armor defaults to high-contrast gold. */
+    detailColor?: string;
   };
   /** Optional skirt / loincloth / cape / back gear — often present on JRPG chibis. */
   accessories?: {
@@ -492,6 +502,12 @@ export const TORSO_STYLES: TorsoStyle[] = [
   "fullPlate",
   "jacket",
   "tank",
+];
+
+export const BODY_DETAIL_STYLES: BodyDetailStyle[] = [
+  "none",
+  "classic",
+  "ornate",
 ];
 
 export const HEM_STYLES: HemStyle[] = ["none", "skirt", "loincloth"];

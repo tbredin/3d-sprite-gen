@@ -95,6 +95,7 @@ import {
   HAIR_STYLES,
   HELMET_STYLES,
   TORSO_STYLES,
+  BODY_DETAIL_STYLES,
   HEM_STYLES,
   WEAPON_TYPES,
   OFFHAND_TYPES,
@@ -110,8 +111,10 @@ import {
   setHairStyle,
   setHelmetStyle,
   setTorsoStyle,
+  setBodyDetailStyle,
   setHemStyle,
   setCape,
+  setPouches,
   setBackLoadout,
   setArmPose,
   setWeaponType,
@@ -130,6 +133,7 @@ import {
   type HairStyle,
   type HelmetStyle,
   type TorsoStyle,
+  type BodyDetailStyle,
   type HemStyle,
   type BackLoadout,
   type ArmPose,
@@ -1762,6 +1766,26 @@ export default function App() {
                               />
                             </FieldControlGroup>
                             <FieldControlGroup
+                              field="bodyDetails"
+                              label="body details"
+                              locked={fieldLocks.bodyDetails}
+                              pinned={fieldPinned("bodyDetails")}
+                              onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
+                            >
+                              <CompactSelect<BodyDetailStyle>
+                                title="details"
+                                value={spec.torso.detailStyle ?? "classic"}
+                                options={BODY_DETAIL_STYLES}
+                                disabled={fieldPinned("bodyDetails")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) =>
+                                    setBodyDetailStyle(s, v),
+                                  )
+                                }
+                              />
+                            </FieldControlGroup>
+                            <FieldControlGroup
                               field="hem"
                               label="hem"
                               locked={fieldLocks.hem}
@@ -1794,6 +1818,28 @@ export default function App() {
                                 disabled={fieldPinned("cape")}
                                 onPick={(v) =>
                                   applyPartEdit((s) => setCape(s, v === "on"))
+                                }
+                              />
+                            </FieldControlGroup>
+                            <FieldControlGroup
+                              field="pouches"
+                              label="pouches"
+                              locked={fieldLocks.pouches}
+                              pinned={fieldPinned("pouches")}
+                              onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
+                            >
+                              <CompactSelect<"off" | "on">
+                                title="pouches"
+                                value={
+                                  spec.accessories?.pouches ? "on" : "off"
+                                }
+                                options={["off", "on"]}
+                                disabled={fieldPinned("pouches")}
+                                onPick={(v) =>
+                                  applyPartEdit((s) =>
+                                    setPouches(s, v === "on"),
+                                  )
                                 }
                               />
                             </FieldControlGroup>
