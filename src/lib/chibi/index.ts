@@ -121,6 +121,12 @@ export {
 export type { HelmetMount, HelmetMode } from "./helmetMode";
 export { randomCharacter, rerollPart, rerollPartColors, rerollEyeColor, PART_IDS, EMPTY_LOCKS } from "./random";
 export type { PartId, PartLocks, RandomOptions } from "./random";
+export {
+  loadCharacterPersist,
+  saveCharacterPersist,
+  sanitizeCharacterSpec,
+} from "./characterPersist";
+export type { PersistedCharacter } from "./characterPersist";
 export { ARM_POSES, COMBAT_ARM_POSES, armJointsForPose } from "./armPoses";
 export { LEG_POSES, COMBAT_LEG_POSES, legJointsForPose } from "./legPoses";
 export {

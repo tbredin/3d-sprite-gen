@@ -71,6 +71,8 @@ import {
   BODY_SCALE_MAX,
   loadBodyScale,
   saveBodyScale,
+  loadCharacterPersist,
+  saveCharacterPersist,
   HEAD_SHAPES,
   HAIR_STYLES,
   HELMET_STYLES,
@@ -249,22 +251,32 @@ export default function App() {
   const [autoRotate, setAutoRotate] = useState(false);
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
-  const [presetId, setPresetId] = useState<PresetId | "random">("mage");
+  /** Last session's character, or null on a first / cleared visit. */
+  const [characterPersist] = useState(() => loadCharacterPersist());
+  const [presetId, setPresetId] = useState<PresetId | "random">(
+    characterPersist?.presetId ?? "mage",
+  );
   const [bodyScale, setBodyScale] = useState(() => loadBodyScale());
-  const [spec, setSpec] = useState<CharacterSpec>(() => getPreset("mage"));
+  const [spec, setSpec] = useState<CharacterSpec>(
+    () => characterPersist?.spec ?? getPreset("mage"),
+  );
   const [specText, setSpecText] = useState(() =>
-    JSON.stringify(getPreset("mage"), null, 2),
+    JSON.stringify(characterPersist?.spec ?? getPreset("mage"), null, 2),
   );
   const [specParseError, setSpecParseError] = useState<string | null>(null);
   const specFileRef = useRef<HTMLInputElement>(null);
   const [charKey, setCharKey] = useState(0);
-  const [locks, setLocks] = useState<PartLocks>({ ...EMPTY_LOCKS });
+  const [locks, setLocks] = useState<PartLocks>(
+    () => characterPersist?.locks ?? { ...EMPTY_LOCKS },
+  );
   /** Body scale is app-level (not part of the spec), so it locks on its own. */
   const [bodyScaleLocked, setBodyScaleLocked] = useState(false);
-  const [mirror, setMirror] = useState(false);
-  const [showEyes, setShowEyes] = useState(true);
+  const [mirror, setMirror] = useState(characterPersist?.mirror ?? false);
+  const [showEyes, setShowEyes] = useState(characterPersist?.showEyes ?? true);
   /** Session preference: closed helms in random rolls. Hats/crowns stay allowed. */
-  const [allowHelmets, setAllowHelmets] = useState(true);
+  const [allowHelmets, setAllowHelmets] = useState(
+    characterPersist?.allowHelmets ?? true,
+  );
   const [rimLights, setRimLights] = useState<RimLightSettings>(() =>
     loadRimLightSettings(),
   );
@@ -378,6 +390,17 @@ export default function App() {
   useEffect(() => {
     saveFacingPersist({ facing, rotationX, rotationY });
   }, [facing, rotationX, rotationY]);
+
+  useEffect(() => {
+    saveCharacterPersist({
+      spec,
+      locks,
+      presetId,
+      mirror,
+      showEyes,
+      allowHelmets,
+    });
+  }, [spec, locks, presetId, mirror, showEyes, allowHelmets]);
 
   const applyPreset = (id: PresetId) => {
     setPresetId(id);
