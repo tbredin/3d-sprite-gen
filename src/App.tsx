@@ -74,7 +74,7 @@ import {
   rerollPart,
   rerollField,
   rerollPartColors,
-  rerollEyeColor,
+  rerollEyes,
   applyBodyScale as setChibiBodyScale,
   BODY_SCALE_MIN,
   BODY_SCALE_MAX,
@@ -331,7 +331,7 @@ export default function App() {
   );
   const [specParseError, setSpecParseError] = useState<string | null>(null);
   const specFileRef = useRef<HTMLInputElement>(null);
-  const [charKey, setCharKey] = useState(0);
+  const specTextTimerRef = useRef<number | null>(null);
   const [locks, setLocks] = useState<PartLocks>(
     () => characterPersist?.locks ?? { ...EMPTY_LOCKS },
   );
@@ -480,14 +480,12 @@ export default function App() {
     setSpec(next);
     setSpecText(JSON.stringify(next, null, 2));
     setSpecParseError(null);
-    setCharKey((k) => k + 1);
   };
 
   const onBodyScaleChange = (scale: number) => {
     setBodyScale(scale);
     setChibiBodyScale(scale);
     saveBodyScale(scale);
-    setCharKey((k) => k + 1);
   };
 
   const applyRandom = () => {
@@ -498,7 +496,6 @@ export default function App() {
       setSpecParseError(null);
       return next;
     });
-    setCharKey((k) => k + 1);
   };
 
   const toggleLock = (part: keyof PartLocks) => {
@@ -521,7 +518,6 @@ export default function App() {
       setSpecParseError(null);
       return next;
     });
-    setCharKey((k) => k + 1);
   };
 
   const applyRerollField = (field: FieldLockId) => {
@@ -543,7 +539,6 @@ export default function App() {
       setSpecParseError(null);
       return next;
     });
-    setCharKey((k) => k + 1);
   };
 
   const applyRerollColors = (part: PartId) => {
@@ -554,18 +549,16 @@ export default function App() {
       setSpecParseError(null);
       return next;
     });
-    setCharKey((k) => k + 1);
   };
 
-  const applyRerollEyeColor = () => {
+  const applyRerollEyes = () => {
     setPresetId("random");
     setSpec((prev) => {
-      const next = rerollEyeColor(prev);
+      const next = rerollEyes(prev);
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
     });
-    setCharKey((k) => k + 1);
   };
 
   /** Apply a direct sub-part edit from a debug dropdown (keeps colours). */
@@ -573,11 +566,17 @@ export default function App() {
     setPresetId("random");
     setSpec((prev) => {
       const next = fn(prev);
-      setSpecText(JSON.stringify(next, null, 2));
+      // Defer JSON panel sync so slider drags don't stringify every tick.
+      if (specTextTimerRef.current != null) {
+        window.clearTimeout(specTextTimerRef.current);
+      }
+      specTextTimerRef.current = window.setTimeout(() => {
+        setSpecText(JSON.stringify(next, null, 2));
+        specTextTimerRef.current = null;
+      }, 120);
       setSpecParseError(null);
       return next;
     });
-    setCharKey((k) => k + 1);
   };
 
   const applySpecFromParsed = (parsed: unknown) => {
@@ -591,7 +590,6 @@ export default function App() {
     const next = structuredClone(parsed) as CharacterSpec;
     setPresetId("random");
     setSpec(next);
-    setCharKey((k) => k + 1);
     return next;
   };
 
@@ -947,7 +945,7 @@ export default function App() {
                   title="Drag to rotate"
                 >
                   <BakeCanvas
-                    key={`${presetId}-${bodyScale}-${charKey}-${size}`}
+                    key={String(size)}
                     size={size}
                     colors={palette.colors}
                     silhouetteOutlineHex={outlineColors.silhouette}
@@ -962,6 +960,7 @@ export default function App() {
                     spinSpeed={spinSpeed}
                     spinYawRef={spinYawRef}
                     spec={spec}
+                    bodyScale={bodyScale}
                     mirror={mirror}
                     showEyes={showEyes}
                     rimLights={rimLights}
@@ -1178,19 +1177,6 @@ export default function App() {
               <div className={`part-block${locks.eyes ? " is-locked" : ""}`}>
                 <div className="part-row">
                   <div className="part-title">
-                    <PaletteColorButton
-                      value={spec.face?.eyeColor ?? "#1a1c2c"}
-                      paletteColors={palette?.colors ?? []}
-                      title="Eye colour"
-                      ariaLabel="Eye colour"
-                      disabled={!showEyes || locks.eyes}
-                      onChange={(hex) =>
-                        applyPartEdit((s) => ({
-                          ...s,
-                          face: { ...s.face, eyeColor: hex },
-                        }))
-                      }
-                    />
                     <div className="part-row-controls">
                       <button
                         type="button"
@@ -1205,14 +1191,14 @@ export default function App() {
                       <button
                         type="button"
                         className="part-icon-btn part-row-reroll"
-                        onClick={applyRerollEyeColor}
+                        onClick={applyRerollEyes}
                         disabled={!showEyes || locks.eyes}
                         title={
                           locks.eyes
-                            ? "Unlock to reroll eye colour"
-                            : "Reroll eye colour"
+                            ? "Unlock to reroll eyes"
+                            : "Reroll eyes"
                         }
-                        aria-label="Reroll eye colour"
+                        aria-label="Reroll eyes"
                       >
                         🎲
                       </button>
@@ -1228,6 +1214,21 @@ export default function App() {
                     />
                     Show
                   </label>
+                  <div className="part-actions">
+                    <PaletteColorButton
+                      value={spec.face?.eyeColor ?? "#1a1c2c"}
+                      paletteColors={palette?.colors ?? []}
+                      title="Eye colour"
+                      ariaLabel="Eye colour"
+                      disabled={!showEyes || locks.eyes}
+                      onChange={(hex) =>
+                        applyPartEdit((s) => ({
+                          ...s,
+                          face: { ...s.face, eyeColor: hex },
+                        }))
+                      }
+                    />
+                  </div>
                 </div>
                 <div
                   className={`light-grid part-eye-sliders${showEyes && !locks.eyes ? "" : " is-disabled"}`}
@@ -1322,14 +1323,6 @@ export default function App() {
                   >
                     <div className="part-row">
                       <div className="part-title">
-                        <PartColorMenu
-                          part={part}
-                          spec={spec}
-                          paletteColors={palette?.colors ?? []}
-                          onEdit={applyPartEdit}
-                          onReroll={() => applyRerollColors(part)}
-                          disabled={locked}
-                        />
                         <div className="part-row-controls">
                           <button
                             type="button"
@@ -1608,9 +1601,38 @@ export default function App() {
                           </FieldControlGroup>
                         ) : null}
                       </div>
+
+                      <div className="part-actions">
+                        <PartColorMenu
+                          part={part}
+                          spec={spec}
+                          paletteColors={palette?.colors ?? []}
+                          onEdit={applyPartEdit}
+                          onReroll={() => applyRerollColors(part)}
+                          disabled={locked}
+                        />
+                      </div>
                     </div>
                     {part === "head" ? (
                       <div className="part-sliders-lockable">
+                        <button
+                          type="button"
+                          className={`part-icon-btn part-slider-lock${locks.headSize ? " is-locked" : ""}`}
+                          onClick={() => toggleLock("headSize")}
+                          title={
+                            locks.headSize
+                              ? "Unlock head size & height"
+                              : "Lock head size & height (kept when the head rerolls)"
+                          }
+                          aria-label={
+                            locks.headSize
+                              ? "Unlock head size and height"
+                              : "Lock head size and height"
+                          }
+                          aria-pressed={locks.headSize}
+                        >
+                          {locks.headSize ? "🔒" : "🔓"}
+                        </button>
                         <div
                           className={`light-grid part-head-sliders${locks.headSize ? " is-disabled" : ""}`}
                         >
@@ -1623,9 +1645,9 @@ export default function App() {
                             </span>
                             <input
                               type="range"
-                              min={0.5}
-                              max={2}
-                              step={0.05}
+                              min={0.8}
+                              max={1.35}
+                              step={0.01}
                               value={spec.head?.size ?? 1}
                               disabled={locks.headSize}
                               onChange={(e) => {
@@ -1650,9 +1672,9 @@ export default function App() {
                             </span>
                             <input
                               type="range"
-                              min={0.75}
-                              max={1.5}
-                              step={0.05}
+                              min={0.85}
+                              max={1.25}
+                              step={0.01}
                               value={spec.head?.yScale ?? 1}
                               disabled={locks.headSize}
                               onChange={(e) => {
@@ -1669,59 +1691,13 @@ export default function App() {
                             </span>
                           </label>
                         </div>
-                        <button
-                          type="button"
-                          className={`part-icon-btn${locks.headSize ? " is-locked" : ""}`}
-                          onClick={() => toggleLock("headSize")}
-                          title={
-                            locks.headSize
-                              ? "Unlock head size & height"
-                              : "Lock head size & height (kept when the head rerolls)"
-                          }
-                          aria-label={
-                            locks.headSize
-                              ? "Unlock head size and height"
-                              : "Lock head size and height"
-                          }
-                          aria-pressed={locks.headSize}
-                        >
-                          {locks.headSize ? "🔒" : "🔓"}
-                        </button>
                       </div>
                     ) : null}
                     {part === "torso" ? (
                       <div className="part-sliders-lockable">
-                        <div
-                          className={`light-grid part-torso-sliders${bodyScaleLocked ? " is-disabled" : ""}`}
-                        >
-                          <label className="light-slider">
-                            <span
-                              className="light-slider-label"
-                              title="Torso/legs scale from the neck — head, hands & feet stay fixed"
-                            >
-                              Size
-                            </span>
-                            <input
-                              type="range"
-                              min={BODY_SCALE_MIN}
-                              max={BODY_SCALE_MAX}
-                              step={0.05}
-                              value={bodyScale}
-                              disabled={bodyScaleLocked}
-                              onChange={(e) =>
-                                onBodyScaleChange(Number(e.target.value))
-                              }
-                              title="Body scale"
-                              aria-label="Body scale"
-                            />
-                            <span className="slider-val">
-                              {bodyScale.toFixed(2)}
-                            </span>
-                          </label>
-                        </div>
                         <button
                           type="button"
-                          className={`part-icon-btn${bodyScaleLocked ? " is-locked" : ""}`}
+                          className={`part-icon-btn part-slider-lock${bodyScaleLocked ? " is-locked" : ""}`}
                           onClick={() => setBodyScaleLocked((v) => !v)}
                           title={
                             bodyScaleLocked
@@ -1737,6 +1713,34 @@ export default function App() {
                         >
                           {bodyScaleLocked ? "🔒" : "🔓"}
                         </button>
+                        <div
+                          className={`light-grid part-torso-sliders${bodyScaleLocked ? " is-disabled" : ""}`}
+                        >
+                          <label className="light-slider">
+                            <span
+                              className="light-slider-label"
+                              title="Torso/legs scale from the neck — head, hands & feet stay fixed"
+                            >
+                              Size
+                            </span>
+                            <input
+                              type="range"
+                              min={BODY_SCALE_MIN}
+                              max={BODY_SCALE_MAX}
+                              step={0.01}
+                              value={bodyScale}
+                              disabled={bodyScaleLocked}
+                              onChange={(e) =>
+                                onBodyScaleChange(Number(e.target.value))
+                              }
+                              title="Body scale"
+                              aria-label="Body scale"
+                            />
+                            <span className="slider-val">
+                              {bodyScale.toFixed(2)}
+                            </span>
+                          </label>
+                        </div>
                       </div>
                     ) : null}
                   </div>

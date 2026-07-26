@@ -395,6 +395,11 @@ function snap05(n: number): number {
   return Math.round(n / 0.05) * 0.05;
 }
 
+/** Snap head/body size values to 0.01 steps. */
+function snap01(n: number): number {
+  return Math.round(n / 0.01) * 0.01;
+}
+
 function randomFace(): NonNullable<CharacterSpec["face"]> {
   return {
     eyeColor: pick(EYES),
@@ -411,8 +416,8 @@ function randomHeadProportions(): Pick<
   "size" | "yScale"
 > {
   return {
-    size: snap05(0.5 + Math.random() * 1.5),
-    yScale: snap05(0.75 + Math.random() * 0.75),
+    size: snap01(0.8 + Math.random() * 0.55),
+    yScale: snap01(0.85 + Math.random() * 0.4),
   };
 }
 
@@ -952,11 +957,11 @@ export function rerollPartColors(
   return next;
 }
 
-/** Shuffle only eye colour (eyes-row 🎲). */
-export function rerollEyeColor(spec: CharacterSpec): CharacterSpec {
+/** Shuffle all eyes-row params (colour, spacing, size, y) — not Show. */
+export function rerollEyes(spec: CharacterSpec): CharacterSpec {
   return {
     ...spec,
-    face: { ...spec.face, eyeColor: pick(EYES) },
+    face: randomFace(),
   };
 }
 

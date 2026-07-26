@@ -100,6 +100,8 @@ type BakeProps = {
   /** Mirrors the live spin yaw so drag can snap off the turntable. */
   spinYawRef?: MutableRefObject<number>;
   spec: CharacterSpec;
+  /** Continuous body scale — reassembles character without remounting the canvas. */
+  bodyScale?: number;
   /** Mirror character left/right by swapping leadSide (not X-scale). */
   mirror?: boolean;
   /** Toggle the cartoon eye plates. Default true. */
@@ -143,6 +145,7 @@ function BakeCapture({
   rimKey,
   edgeOutline,
   bayerDither,
+  characterKey,
   onCaptured,
   onSourceCaptured,
 }: {
@@ -163,6 +166,8 @@ function BakeCapture({
   rimKey: string;
   edgeOutline: EdgeOutlineSettings;
   bayerDither: BayerDitherSettings;
+  /** Spec / body-scale identity — rebake without remounting the canvas. */
+  characterKey: string;
   onCaptured: (dataUrl: string) => void;
   onSourceCaptured?: (dataUrl: string) => void;
 }) {
@@ -397,6 +402,7 @@ function BakeCapture({
     mirror,
     showEyes,
     rimKey,
+    characterKey,
     target,
     bakeCam,
     depthMaterial,
@@ -453,6 +459,7 @@ function CharacterPivot({
   rotationY,
   spinYawRef,
   spec,
+  bodyScale,
   mirror,
   showEyes,
 }: {
@@ -463,6 +470,7 @@ function CharacterPivot({
   rotationY: number;
   spinYawRef?: MutableRefObject<number>;
   spec: CharacterSpec;
+  bodyScale: number;
   mirror: boolean;
   showEyes: boolean;
 }) {
@@ -498,11 +506,15 @@ function CharacterPivot({
     }
   });
 
+  // bodyScale is read so CHARACTER_PIVOT_Y (mutated by applyBodyScale) refreshes.
+  void bodyScale;
+
   return (
     <group ref={groupRef} position={[0, CHARACTER_PIVOT_Y, 0]}>
       <group position={[0, -CHARACTER_PIVOT_Y, 0]}>
         <ChibiCharacter
           spec={spec}
+          bodyScale={bodyScale}
           rotationY={rotationY}
           yawRef={rotateMode ? yawRef : undefined}
           mirror={mirror}
@@ -528,6 +540,7 @@ export function BakeCanvas({
   spinSpeed = 0,
   spinYawRef,
   spec,
+  bodyScale = 1,
   mirror = false,
   showEyes = true,
   rimLights,
@@ -566,6 +579,8 @@ export function BakeCanvas({
     rimLights.blueColor,
     cameraHeight,
   ].join(":");
+  // Rebake when the character mesh changes — without remounting WebGL.
+  const characterKey = `${bodyScale}:${JSON.stringify(spec)}:${showEyes}:${mirror}`;
 
   return (
     <Canvas
@@ -621,6 +636,7 @@ export function BakeCanvas({
         rotationY={rotationY}
         spinYawRef={spinYawRef}
         spec={spec}
+        bodyScale={bodyScale}
         mirror={mirror}
         showEyes={showEyes}
       />
@@ -640,6 +656,7 @@ export function BakeCanvas({
         rimKey={rimKey}
         edgeOutline={edgeOutline}
         bayerDither={bayerDither}
+        characterKey={characterKey}
         onCaptured={onCaptured}
         onSourceCaptured={onSourceCaptured}
       />

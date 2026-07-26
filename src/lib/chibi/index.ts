@@ -124,7 +124,7 @@ export {
   rerollPart,
   rerollField,
   rerollPartColors,
-  rerollEyeColor,
+  rerollEyes,
   PART_IDS,
   EMPTY_LOCKS,
   EMPTY_FIELD_LOCKS,

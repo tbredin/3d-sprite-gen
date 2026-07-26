@@ -4,6 +4,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
   type MutableRefObject,
 } from "react";
 import { useFrame } from "@react-three/fiber";
@@ -14,6 +15,7 @@ import {
   stickyHeadYaw,
   type CharacterSpec,
 } from "../lib/chibi";
+import { applyBodyScale } from "../lib/chibi/units";
 import type { Object3D } from "three";
 
 function disposeObject(root: Object3D) {
@@ -57,15 +59,34 @@ function mirroredSpec(spec: CharacterSpec): CharacterSpec {
   return next;
 }
 
-/** R3F wrapper around assembleCharacter — rebuilds when spec identity changes. */
+/** Strip head size/height so proportion slider drags don't rebuild the mesh. */
+function meshTopologySpec(spec: CharacterSpec): CharacterSpec {
+  return {
+    ...spec,
+    head: {
+      ...spec.head,
+      size: 1,
+      yScale: 1,
+    },
+  };
+}
+
+/**
+ * R3F wrapper around assembleCharacter.
+ * Rebuilds when topology / eyes / body scale change; head size & height update
+ * the existing headPivot scale so slider drags stay live.
+ */
 export function ChibiCharacter({
   spec,
+  bodyScale = 1,
   rotationY = 0,
   yawRef,
   mirror = false,
   showEyes = true,
 }: {
   spec: CharacterSpec;
+  /** Continuous body scale — triggers reassembly (layout units). */
+  bodyScale?: number;
   /** Body yaw from the iso facing control — drives FF-style face cheating. */
   rotationY?: number;
   /**
@@ -86,11 +107,38 @@ export function ChibiCharacter({
     [spec, mirror],
   );
 
-  const group = useMemo(
-    () => assembleCharacter(effectiveSpec, { showEyes }),
-    [effectiveSpec, showEyes],
+  const headSize = effectiveSpec.head?.size ?? 1;
+  const headYScale = effectiveSpec.head?.yScale ?? 1;
+
+  // Coalesce body-scale rebuilds to one per frame while the slider is dragged.
+  const [assembledScale, setAssembledScale] = useState(bodyScale);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setAssembledScale(bodyScale));
+    return () => cancelAnimationFrame(id);
+  }, [bodyScale]);
+
+  // Stable when only head proportions change — avoids tearing down the mesh
+  // on every Size/Height slider tick.
+  const topologyKey = JSON.stringify(meshTopologySpec(effectiveSpec));
+
+  const group = useMemo(() => {
+    applyBodyScale(assembledScale);
+    return assembleCharacter(JSON.parse(topologyKey) as CharacterSpec, {
+      showEyes,
+    });
+  }, [topologyKey, showEyes, assembledScale]);
+
+  const headPivot = useMemo(
+    () => group.getObjectByName("headPivot") ?? null,
+    [group],
   );
-  const headPivot = useMemo(() => group.getObjectByName("headPivot") ?? null, [group]);
+
+  // Live proportion updates — no reassemble.
+  useLayoutEffect(() => {
+    if (!headPivot) return;
+    headPivot.scale.set(headSize, headSize * headYScale, headSize);
+  }, [headPivot, headSize, headYScale]);
+
   const liveYaw = useRef(yawRef);
   liveYaw.current = yawRef;
 

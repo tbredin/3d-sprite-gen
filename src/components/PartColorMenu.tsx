@@ -16,7 +16,25 @@ type Props = {
   disabled?: boolean;
 };
 
-/** Circular swatch trigger — popover lists every colour slot for the part. */
+/** Compact painter-palette glyph for the part colour trigger. */
+function PaletteGlyph() {
+  return (
+    <svg
+      className="part-color-palette-icon"
+      viewBox="0 0 16 16"
+      width="12"
+      height="12"
+      aria-hidden
+    >
+      <path
+        fill="currentColor"
+        d="M8 1.2C4.3 1.2 1.4 4 1.4 7.5c0 2.6 1.7 4.8 4.2 5.5.4.1.8-.2.8-.6v-.7c0-1 .8-1.8 1.8-1.8h2.1c2.3 0 4.3-1.9 4.3-4.2C14.6 3.6 11.7 1.2 8 1.2zm-3.2 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm2-2.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm2.5-.2a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm2.4 2.4a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"
+      />
+    </svg>
+  );
+}
+
+/** Palette icon + vertical mini-swatches — popover lists every colour slot. */
 export function PartColorMenu({
   part,
   spec,
@@ -30,9 +48,6 @@ export function PartColorMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
   const slots = listPartColorSlots(spec, part);
-  const primary = slots[0];
-  const hex = primary ? normalizePaletteHex(primary.value) : null;
-  const empty = disabled || !hex;
 
   useEffect(() => {
     if (disabled) setOpen(false);
@@ -61,20 +76,37 @@ export function PartColorMenu({
     <div className="color-control part-color-menu" ref={rootRef}>
       <button
         type="button"
-        className={`swatch color-control-swatch swatch-btn${empty ? " color-control-swatch-empty" : ""}`}
-        style={empty || !hex ? undefined : { background: `#${hex}` }}
+        className="color-control-swatch-trigger part-color-trigger"
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={menuId}
         disabled={disabled}
-        title={hex ? `Colours #${hex}` : "Colours"}
+        title="Colours"
         aria-label={`${part} colours`}
         onClick={() => setOpen((v) => !v)}
-      />
+      >
+        <PaletteGlyph />
+        <span className="part-color-mini-stack" aria-hidden>
+          {slots.length === 0 ? (
+            <span className="part-color-mini part-color-mini-empty" />
+          ) : (
+            slots.map((slot) => {
+              const hex = normalizePaletteHex(slot.value);
+              return (
+                <span
+                  key={slot.id}
+                  className="part-color-mini"
+                  style={{ background: `#${hex}` }}
+                />
+              );
+            })
+          )}
+        </span>
+      </button>
       {open ? (
         <div
           id={menuId}
-          className="part-color-popover part-color-popover-start"
+          className="part-color-popover"
           role="dialog"
           aria-label={`${part} colours`}
         >
@@ -97,7 +129,7 @@ export function PartColorMenu({
           ) : (
             <ul className="part-color-slot-list">
               {slots.map((slot) => {
-                const slotHex = normalizePaletteHex(slot.value);
+                const hex = normalizePaletteHex(slot.value);
                 const picking = activeSlot === slot.id;
                 return (
                   <li key={slot.id} className="part-color-slot">
@@ -107,15 +139,15 @@ export function PartColorMenu({
                       onClick={() =>
                         setActiveSlot((id) => (id === slot.id ? null : slot.id))
                       }
-                      title={`${slot.label} #${slotHex}`}
+                      title={`${slot.label} #${hex}`}
                     >
                       <span
                         className="swatch"
-                        style={{ background: `#${slotHex}` }}
+                        style={{ background: `#${hex}` }}
                         aria-hidden
                       />
                       <span className="part-color-slot-label">{slot.label}</span>
-                      <span className="part-color-slot-hex">#{slotHex}</span>
+                      <span className="part-color-slot-hex">#{hex}</span>
                     </button>
                     {picking && paletteColors.length > 0 ? (
                       <div
@@ -125,7 +157,7 @@ export function PartColorMenu({
                       >
                         {paletteColors.map((c) => {
                           const swatch = normalizePaletteHex(c);
-                          const selected = swatch === slotHex;
+                          const selected = swatch === hex;
                           return (
                             <button
                               key={swatch}
