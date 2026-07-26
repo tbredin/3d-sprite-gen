@@ -32,6 +32,8 @@ const CHARACTER_STORAGE_KEY = "3d-sprite-gen:character-v1";
 export type PersistedCharacter = {
   spec: CharacterSpec;
   locks: PartLocks;
+  /** App-level body scale lock (not part of CharacterSpec). */
+  bodyScaleLocked: boolean;
   /** `"random"` once the spec has drifted off a named preset. */
   presetId: PresetId | "random";
   mirror: boolean;
@@ -254,6 +256,7 @@ function sanitizeLocks(raw: unknown): PartLocks {
     arms: bool(o.arms, false),
     legs: bool(o.legs, false),
     eyes: bool(o.eyes, false),
+    headSize: bool(o.headSize, false),
   };
 }
 
@@ -274,6 +277,7 @@ export function loadCharacterPersist(): PersistedCharacter | null {
     return {
       spec,
       locks: sanitizeLocks(parsed.locks),
+      bodyScaleLocked: bool(parsed.bodyScaleLocked, false),
       presetId: sanitizePresetId(parsed.presetId),
       mirror: bool(parsed.mirror, false),
       showEyes: bool(parsed.showEyes, true),

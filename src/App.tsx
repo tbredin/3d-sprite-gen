@@ -270,7 +270,9 @@ export default function App() {
     () => characterPersist?.locks ?? { ...EMPTY_LOCKS },
   );
   /** Body scale is app-level (not part of the spec), so it locks on its own. */
-  const [bodyScaleLocked, setBodyScaleLocked] = useState(false);
+  const [bodyScaleLocked, setBodyScaleLocked] = useState(
+    () => characterPersist?.bodyScaleLocked ?? false,
+  );
   const [mirror, setMirror] = useState(characterPersist?.mirror ?? false);
   const [showEyes, setShowEyes] = useState(characterPersist?.showEyes ?? true);
   /** Session preference: closed helms in random rolls. Hats/crowns stay allowed. */
@@ -395,12 +397,13 @@ export default function App() {
     saveCharacterPersist({
       spec,
       locks,
+      bodyScaleLocked,
       presetId,
       mirror,
       showEyes,
       allowHelmets,
     });
-  }, [spec, locks, presetId, mirror, showEyes, allowHelmets]);
+  }, [spec, locks, bodyScaleLocked, presetId, mirror, showEyes, allowHelmets]);
 
   const applyPreset = (id: PresetId) => {
     setPresetId(id);
