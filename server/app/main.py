@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import time
 import uuid
 from pathlib import Path
 from typing import List, Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -178,6 +179,23 @@ async def variations_warmup() -> dict:
 @app.get("/api/variations")
 def variations_list() -> dict:
     return {"items": sprite_variations.list_variations()}
+
+
+# Declared before the /{job_id} routes so "locked.zip" is never read as an id.
+@app.get("/api/variations/locked.zip")
+async def variations_locked_zip() -> Response:
+    data, count = await asyncio.to_thread(sprite_variations.locked_zip_bytes)
+    if count == 0:
+        raise HTTPException(404, "no locked variations to download")
+    filename = f"locked-sprites-{count}-{time.strftime('%Y%m%d-%H%M%S')}.zip"
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Locked-Count": str(count),
+        },
+    )
 
 
 @app.post("/api/variations/generate")

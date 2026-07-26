@@ -11,6 +11,7 @@ import random
 import threading
 import time
 import uuid
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal, Optional
@@ -588,3 +589,30 @@ def clear_unlocked() -> int:
 def image_path(job_id: str) -> Optional[Path]:
     p = VARIATIONS_DIR / f"{job_id}.png"
     return p if p.exists() else None
+
+
+def locked_zip_bytes() -> tuple[bytes, int]:
+    """Zip every locked variation PNG plus its metadata.
+
+    PNGs sit at the archive root using the same naming as a single Save
+    (``variation-<id>-<size>.png``); metadata lands under ``meta/`` so the
+    prompt/seed of a keeper stays recoverable. Returns (zip bytes, png count).
+    """
+    ensure_dirs()
+    locked = [m for m in list_variations() if m.get("locked")]
+    buf = io.BytesIO()
+    count = 0
+    # Deflate is near-free on already-compressed PNGs but keeps the JSON small.
+    with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for meta in locked:
+            job_id = str(meta.get("id") or "")
+            if not job_id:
+                continue
+            png = image_path(job_id)
+            if png is None:
+                continue
+            size = meta.get("size", "")
+            zf.write(png, arcname=f"variation-{job_id}-{size}.png")
+            zf.writestr(f"meta/{job_id}.json", json.dumps(meta, indent=2))
+            count += 1
+    return buf.getvalue(), count

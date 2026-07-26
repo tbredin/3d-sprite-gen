@@ -46,3 +46,14 @@ export function downloadDataUrl(dataUrl: string, filename: string) {
   a.download = filename;
   a.click();
 }
+
+/** Save an in-memory blob (zip, png…) via a temporary object URL. */
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  // Revoke after the click has been handed to the browser's download manager.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}

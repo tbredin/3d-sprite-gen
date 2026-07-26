@@ -148,6 +148,22 @@ export async function deleteVariation(id: string): Promise<void> {
   }
 }
 
+/** Zip of every locked variation PNG (+ its metadata), built by the server. */
+export async function fetchLockedVariationsZip(): Promise<{
+  blob: Blob;
+  filename: string;
+}> {
+  const res = await fetch("/api/variations/locked.zip");
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `download locked ${res.status}`);
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get("content-disposition") ?? "";
+  const match = /filename="?([^";]+)"?/i.exec(disposition);
+  return { blob, filename: match?.[1] ?? "locked-sprites.zip" };
+}
+
 export async function clearUnlockedVariations(): Promise<number> {
   const res = await fetch("/api/variations/clear", { method: "DELETE" });
   if (!res.ok) throw new Error(`clear ${res.status}`);

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import {
   clearUnlockedVariations,
   deleteVariation,
+  fetchLockedVariationsZip,
   fetchVariationStatus,
   generateVariation,
   listVariations,
@@ -12,7 +13,7 @@ import {
   type VariationMeta,
   type VariationStatus,
 } from "../api";
-import { downloadDataUrl } from "../lib/capture";
+import { downloadBlob, downloadDataUrl } from "../lib/capture";
 import {
   loadVariationSettings,
   saveVariationSettings,
@@ -171,6 +172,7 @@ export function VariationTimeline({
   const [sort, setSort] = useState<SortMode>("newest");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(loadSelectedIds);
   const [maxHours, setMaxHours] = useState(DEFAULT_MAX_HOURS);
+  const [zipping, setZipping] = useState(false);
 
   const modeRef = useRef<StreamMode>("stopped");
   const sourceRef = useRef(sourceDataUrl);
@@ -571,6 +573,19 @@ export function VariationTimeline({
     }
   };
 
+  const onDownloadLocked = async () => {
+    setZipping(true);
+    try {
+      const { blob, filename } = await fetchLockedVariationsZip();
+      downloadBlob(blob, filename);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setZipping(false);
+    }
+  };
+
   const onDownload = async (item: VariationMeta) => {
     const res = await fetch(item.image);
     const blob = await res.blob();
@@ -692,6 +707,23 @@ export function VariationTimeline({
             title="Stop queuing new generations (in-flight jobs still finish)"
           >
             Stop all
+          </button>
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={() => void onDownloadLocked()}
+            disabled={lockedCount === 0 || zipping}
+            title={
+              lockedCount === 0
+                ? "Lock the sprites you want to keep first"
+                : `Download a zip of all ${lockedCount} locked sprite${
+                    lockedCount === 1 ? "" : "s"
+                  }`
+            }
+          >
+            {zipping
+              ? "Zipping…"
+              : `Download locked${lockedCount > 0 ? ` (${lockedCount})` : ""}`}
           </button>
           <button
             type="button"
