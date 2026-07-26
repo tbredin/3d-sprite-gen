@@ -72,6 +72,7 @@ import {
   PRESET_LABELS,
   randomCharacter,
   rerollPart,
+  rerollField,
   rerollPartColors,
   rerollEyeColor,
   applyBodyScale as setChibiBodyScale,
@@ -252,35 +253,55 @@ function CompactSelect<T extends string>({
 }
 
 /**
- * Wraps one part-row dropdown with its own 🔒. A pinned field keeps its value
- * through Play random and the part 🎲; the section lock still pins everything.
+ * Wraps one part-row dropdown with stacked 🔒 (top) + 🎲 (bottom). A pinned
+ * field keeps its value through Play random and both dice; the section lock
+ * still pins everything.
  */
-function FieldLockGroup({
+function FieldControlGroup({
   field,
   label,
   locked,
+  pinned,
   onToggle,
+  onReroll,
   children,
 }: {
   field: FieldLockId;
   label: string;
   locked: boolean;
+  pinned: boolean;
   onToggle: (field: FieldLockId) => void;
+  onReroll: (field: FieldLockId) => void;
   children: ReactNode;
 }) {
-  const action = locked ? `Unlock ${label}` : `Lock ${label}`;
+  const lockAction = locked ? `Unlock ${label}` : `Lock ${label}`;
+  const rerollAction = pinned
+    ? `Unlock to reroll ${label}`
+    : `Reroll ${label}`;
   return (
     <div className={`part-field${locked ? " is-locked" : ""}`}>
-      <button
-        type="button"
-        className={`part-icon-btn part-field-lock${locked ? " is-locked" : ""}`}
-        onClick={() => onToggle(field)}
-        title={action}
-        aria-label={action}
-        aria-pressed={locked}
-      >
-        {locked ? "🔒" : "🔓"}
-      </button>
+      <div className="part-field-controls">
+        <button
+          type="button"
+          className={`part-icon-btn part-field-lock${locked ? " is-locked" : ""}`}
+          onClick={() => onToggle(field)}
+          title={lockAction}
+          aria-label={lockAction}
+          aria-pressed={locked}
+        >
+          {locked ? "🔒" : "🔓"}
+        </button>
+        <button
+          type="button"
+          className="part-icon-btn part-field-reroll"
+          onClick={() => onReroll(field)}
+          disabled={pinned}
+          title={rerollAction}
+          aria-label={`Reroll ${label}`}
+        >
+          🎲
+        </button>
+      </div>
       {children}
     </div>
   );
@@ -496,6 +517,28 @@ export default function App() {
     setPresetId("random");
     setSpec((prev) => {
       const next = rerollPart(prev, part, locks, { allowHelmets }, fieldLocks);
+      setSpecText(JSON.stringify(next, null, 2));
+      setSpecParseError(null);
+      return next;
+    });
+    setCharKey((k) => k + 1);
+  };
+
+  const applyRerollField = (field: FieldLockId) => {
+    if (fieldPinned(field)) return;
+    if (field === "offhandAngle") {
+      const options = OFFHAND_VARIANT_IDS.filter((id) => id !== offhandVariant);
+      const nextId =
+        options[Math.floor(Math.random() * options.length)] ??
+        OFFHAND_VARIANT_IDS[0]!;
+      setOffhandVariant(OFFHAND_VARIANT_IDS.indexOf(nextId));
+      setOffhandVariantState(nextId);
+      applyPartEdit((s) => s);
+      return;
+    }
+    setPresetId("random");
+    setSpec((prev) => {
+      const next = rerollField(prev, field, { allowHelmets });
       setSpecText(JSON.stringify(next, null, 2));
       setSpecParseError(null);
       return next;
@@ -1135,42 +1178,6 @@ export default function App() {
               <div className={`part-block${locks.eyes ? " is-locked" : ""}`}>
                 <div className="part-row">
                   <div className="part-title">
-                    <button
-                      type="button"
-                      className={`part-icon-btn part-row-lock${locks.eyes ? " is-locked" : ""}`}
-                      onClick={() => toggleLock("eyes")}
-                      title={locks.eyes ? "Unlock eyes" : "Lock eyes"}
-                      aria-label={locks.eyes ? "Unlock eyes" : "Lock eyes"}
-                      aria-pressed={locks.eyes}
-                    >
-                      {locks.eyes ? "🔒" : "🔓"}
-                    </button>
-                    <span className="part-name">eyes</span>
-                  </div>
-                  <label className="part-lock">
-                    <input
-                      type="checkbox"
-                      checked={showEyes}
-                      onChange={() => setShowEyes((v) => !v)}
-                      title="Toggle cartoon eyes"
-                    />
-                    Show
-                  </label>
-                  <div className="part-actions">
-                    <button
-                      type="button"
-                      className="part-icon-btn"
-                      onClick={applyRerollEyeColor}
-                      disabled={!showEyes || locks.eyes}
-                      title={
-                        locks.eyes
-                          ? "Unlock to reroll eye colour"
-                          : "Reroll eye colour"
-                      }
-                      aria-label="Reroll eye colour"
-                    >
-                      🎲
-                    </button>
                     <PaletteColorButton
                       value={spec.face?.eyeColor ?? "#1a1c2c"}
                       paletteColors={palette?.colors ?? []}
@@ -1184,7 +1191,43 @@ export default function App() {
                         }))
                       }
                     />
+                    <div className="part-row-controls">
+                      <button
+                        type="button"
+                        className={`part-icon-btn part-row-lock${locks.eyes ? " is-locked" : ""}`}
+                        onClick={() => toggleLock("eyes")}
+                        title={locks.eyes ? "Unlock eyes" : "Lock eyes"}
+                        aria-label={locks.eyes ? "Unlock eyes" : "Lock eyes"}
+                        aria-pressed={locks.eyes}
+                      >
+                        {locks.eyes ? "🔒" : "🔓"}
+                      </button>
+                      <button
+                        type="button"
+                        className="part-icon-btn part-row-reroll"
+                        onClick={applyRerollEyeColor}
+                        disabled={!showEyes || locks.eyes}
+                        title={
+                          locks.eyes
+                            ? "Unlock to reroll eye colour"
+                            : "Reroll eye colour"
+                        }
+                        aria-label="Reroll eye colour"
+                      >
+                        🎲
+                      </button>
+                    </div>
+                    <span className="part-name">eyes</span>
                   </div>
+                  <label className="part-lock">
+                    <input
+                      type="checkbox"
+                      checked={showEyes}
+                      onChange={() => setShowEyes((v) => !v)}
+                      title="Toggle cartoon eyes"
+                    />
+                    Show
+                  </label>
                 </div>
                 <div
                   className={`light-grid part-eye-sliders${showEyes && !locks.eyes ? "" : " is-disabled"}`}
@@ -1279,27 +1322,55 @@ export default function App() {
                   >
                     <div className="part-row">
                       <div className="part-title">
-                        <button
-                          type="button"
-                          className={`part-icon-btn part-row-lock${locked ? " is-locked" : ""}`}
-                          onClick={() => toggleLock(part)}
-                          title={locked ? `Unlock ${part}` : `Lock ${part}`}
-                          aria-label={locked ? `Unlock ${part}` : `Lock ${part}`}
-                          aria-pressed={locked}
-                        >
-                          {locked ? "🔒" : "🔓"}
-                        </button>
+                        <PartColorMenu
+                          part={part}
+                          spec={spec}
+                          paletteColors={palette?.colors ?? []}
+                          onEdit={applyPartEdit}
+                          onReroll={() => applyRerollColors(part)}
+                          disabled={locked}
+                        />
+                        <div className="part-row-controls">
+                          <button
+                            type="button"
+                            className={`part-icon-btn part-row-lock${locked ? " is-locked" : ""}`}
+                            onClick={() => toggleLock(part)}
+                            title={locked ? `Unlock ${part}` : `Lock ${part}`}
+                            aria-label={
+                              locked ? `Unlock ${part}` : `Lock ${part}`
+                            }
+                            aria-pressed={locked}
+                          >
+                            {locked ? "🔒" : "🔓"}
+                          </button>
+                          <button
+                            type="button"
+                            className="part-icon-btn part-row-reroll"
+                            onClick={() => applyRerollPart(part)}
+                            disabled={locked}
+                            title={
+                              locked
+                                ? "Unlock to reroll this part"
+                                : "Reroll part"
+                            }
+                            aria-label={`Reroll ${part}`}
+                          >
+                            🎲
+                          </button>
+                        </div>
                         <span className="part-name">{part}</span>
                       </div>
 
                       <div className="part-inline-controls">
                         {part === "head" ? (
                           <>
-                            <FieldLockGroup
+                            <FieldControlGroup
                               field="headShape"
                               label="head shape"
                               locked={fieldLocks.headShape}
+                              pinned={fieldPinned("headShape")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<HeadShape>
                                 title="shape"
@@ -1310,12 +1381,14 @@ export default function App() {
                                   applyPartEdit((s) => setHeadShape(s, v))
                                 }
                               />
-                            </FieldLockGroup>
-                            <FieldLockGroup
+                            </FieldControlGroup>
+                            <FieldControlGroup
                               field="hairStyle"
                               label="hair"
                               locked={fieldLocks.hairStyle}
+                              pinned={fieldPinned("hairStyle")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<HairStyle>
                                 title="hair"
@@ -1326,12 +1399,14 @@ export default function App() {
                                   applyPartEdit((s) => setHairStyle(s, v))
                                 }
                               />
-                            </FieldLockGroup>
-                            <FieldLockGroup
+                            </FieldControlGroup>
+                            <FieldControlGroup
                               field="helmetStyle"
                               label="helmet"
                               locked={fieldLocks.helmetStyle}
+                              pinned={fieldPinned("helmetStyle")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<HelmetStyle>
                                 title="helmet"
@@ -1349,16 +1424,18 @@ export default function App() {
                                   applyPartEdit((s) => setHelmetStyle(s, v))
                                 }
                               />
-                            </FieldLockGroup>
+                            </FieldControlGroup>
                           </>
                         ) : null}
                         {part === "torso" ? (
                           <>
-                            <FieldLockGroup
+                            <FieldControlGroup
                               field="torsoStyle"
                               label="torso style"
                               locked={fieldLocks.torsoStyle}
+                              pinned={fieldPinned("torsoStyle")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<TorsoStyle>
                                 title="style"
@@ -1369,12 +1446,14 @@ export default function App() {
                                   applyPartEdit((s) => setTorsoStyle(s, v))
                                 }
                               />
-                            </FieldLockGroup>
-                            <FieldLockGroup
+                            </FieldControlGroup>
+                            <FieldControlGroup
                               field="hem"
                               label="hem"
                               locked={fieldLocks.hem}
+                              pinned={fieldPinned("hem")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<HemStyle>
                                 title="hem"
@@ -1385,12 +1464,14 @@ export default function App() {
                                   applyPartEdit((s) => setHemStyle(s, v))
                                 }
                               />
-                            </FieldLockGroup>
-                            <FieldLockGroup
+                            </FieldControlGroup>
+                            <FieldControlGroup
                               field="cape"
                               label="cape"
                               locked={fieldLocks.cape}
+                              pinned={fieldPinned("cape")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<"off" | "on">
                                 title="cape"
@@ -1401,12 +1482,14 @@ export default function App() {
                                   applyPartEdit((s) => setCape(s, v === "on"))
                                 }
                               />
-                            </FieldLockGroup>
-                            <FieldLockGroup
+                            </FieldControlGroup>
+                            <FieldControlGroup
                               field="backLoadout"
                               label="back loadout"
                               locked={fieldLocks.backLoadout}
+                              pinned={fieldPinned("backLoadout")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<BackLoadout>
                                 title="back"
@@ -1417,16 +1500,18 @@ export default function App() {
                                   applyPartEdit((s) => setBackLoadout(s, v))
                                 }
                               />
-                            </FieldLockGroup>
+                            </FieldControlGroup>
                           </>
                         ) : null}
                         {part === "arms" ? (
                           <>
-                            <FieldLockGroup
+                            <FieldControlGroup
                               field="armPose"
                               label="arm pose"
                               locked={fieldLocks.armPose}
+                              pinned={fieldPinned("armPose")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<ArmPose>
                                 title="pose"
@@ -1437,12 +1522,14 @@ export default function App() {
                                   applyPartEdit((s) => setArmPose(s, v))
                                 }
                               />
-                            </FieldLockGroup>
-                            <FieldLockGroup
+                            </FieldControlGroup>
+                            <FieldControlGroup
                               field="weapon"
                               label="weapon"
                               locked={fieldLocks.weapon}
+                              pinned={fieldPinned("weapon")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<WeaponType>
                                 title="weapon"
@@ -1453,12 +1540,14 @@ export default function App() {
                                   applyPartEdit((s) => setWeaponType(s, v))
                                 }
                               />
-                            </FieldLockGroup>
-                            <FieldLockGroup
+                            </FieldControlGroup>
+                            <FieldControlGroup
                               field="offhand"
                               label="offhand"
                               locked={fieldLocks.offhand}
+                              pinned={fieldPinned("offhand")}
                               onToggle={toggleFieldLock}
+                              onReroll={applyRerollField}
                             >
                               <CompactSelect<WeaponType>
                                 title="offhand"
@@ -1469,15 +1558,17 @@ export default function App() {
                                   applyPartEdit((s) => setOffhandType(s, v))
                                 }
                               />
-                            </FieldLockGroup>
+                            </FieldControlGroup>
                             {spec.offhand &&
                             spec.offhand.type !== "none" &&
                             spec.offhand.type !== "shield" ? (
-                              <FieldLockGroup
+                              <FieldControlGroup
                                 field="offhandAngle"
                                 label="offhand angle"
                                 locked={fieldLocks.offhandAngle}
+                                pinned={fieldPinned("offhandAngle")}
                                 onToggle={toggleFieldLock}
+                                onReroll={applyRerollField}
                               >
                                 <CompactSelect<string>
                                   title="offhand angle"
@@ -1492,16 +1583,18 @@ export default function App() {
                                     applyPartEdit((s) => s);
                                   }}
                                 />
-                              </FieldLockGroup>
+                              </FieldControlGroup>
                             ) : null}
                           </>
                         ) : null}
                         {part === "legs" ? (
-                          <FieldLockGroup
+                          <FieldControlGroup
                             field="legPose"
                             label="leg pose"
                             locked={fieldLocks.legPose}
+                            pinned={fieldPinned("legPose")}
                             onToggle={toggleFieldLock}
+                            onReroll={applyRerollField}
                           >
                             <CompactSelect<LegPose>
                               title="pose"
@@ -1512,30 +1605,8 @@ export default function App() {
                                 applyPartEdit((s) => setLegPose(s, v))
                               }
                             />
-                          </FieldLockGroup>
+                          </FieldControlGroup>
                         ) : null}
-                      </div>
-
-                      <div className="part-actions">
-                        <button
-                          type="button"
-                          className="part-icon-btn"
-                          onClick={() => applyRerollPart(part)}
-                          disabled={locked}
-                          title={
-                            locked ? "Unlock to reroll this part" : "Reroll part"
-                          }
-                          aria-label={`Reroll ${part}`}
-                        >
-                          🎲
-                        </button>
-                        <PartColorMenu
-                          part={part}
-                          spec={spec}
-                          paletteColors={palette?.colors ?? []}
-                          onEdit={applyPartEdit}
-                          onReroll={() => applyRerollColors(part)}
-                        />
                       </div>
                     </div>
                     {part === "head" ? (

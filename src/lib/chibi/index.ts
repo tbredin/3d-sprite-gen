@@ -122,6 +122,7 @@ export type { HelmetMount, HelmetMode } from "./helmetMode";
 export {
   randomCharacter,
   rerollPart,
+  rerollField,
   rerollPartColors,
   rerollEyeColor,
   PART_IDS,

@@ -15,7 +15,16 @@ import type {
   TorsoStyle,
   WeaponType,
 } from "./types";
-import { HEAD_SHAPES } from "./types";
+import {
+  BACK_LOADOUTS,
+  HAIR_STYLES,
+  HEAD_SHAPES,
+  HELMET_STYLES,
+  HEM_STYLES,
+  OFFHAND_TYPES,
+  TORSO_STYLES,
+  WEAPON_TYPES,
+} from "./types";
 
 export type PartId = "head" | "torso" | "arms" | "legs";
 
@@ -800,6 +809,77 @@ export function rerollPart(
     pinned,
     rolled,
   );
+}
+
+/**
+ * Reroll one dropdown field. Picks from the same option lists the UI exposes
+ * (and respects `allowHelmets`). Prefer a different value when possible so the
+ * dice always feels like it did something.
+ */
+export function rerollField(
+  spec: CharacterSpec,
+  field: FieldLockId,
+  opts?: RandomOptions,
+): CharacterSpec {
+  switch (field) {
+    case "headShape":
+      return setHeadShape(
+        spec,
+        pickOther(HEAD_SHAPES, spec.head?.shape ?? "lozenge"),
+      );
+    case "hairStyle":
+      return setHairStyle(
+        spec,
+        pickOther(HAIR_STYLES, spec.hair?.style ?? "bald"),
+      );
+    case "helmetStyle": {
+      const allowHelmets = opts?.allowHelmets ?? true;
+      const pool = allowHelmets
+        ? HELMET_STYLES
+        : HELMET_STYLES.filter((h) => h === "none" || !isHeadReplacement(h));
+      return setHelmetStyle(
+        spec,
+        pickOther(pool, spec.helmet?.style ?? "none"),
+      );
+    }
+    case "torsoStyle":
+      return setTorsoStyle(spec, pickOther(TORSO_STYLES, spec.torso.style));
+    case "hem":
+      return setHemStyle(
+        spec,
+        pickOther(HEM_STYLES, spec.accessories?.hem ?? "none"),
+      );
+    case "cape":
+      return setCape(spec, !(spec.accessories?.cape ?? false));
+    case "backLoadout":
+      return setBackLoadout(
+        spec,
+        pickOther(BACK_LOADOUTS, spec.accessories?.backLoadout ?? "none"),
+      );
+    case "armPose":
+      return setArmPose(spec, pickOther(COMBAT_ARM_POSES, spec.arms.pose));
+    case "weapon":
+      return setWeaponType(
+        spec,
+        pickOther(WEAPON_TYPES, spec.weapon?.type ?? "none"),
+      );
+    case "offhand":
+      return setOffhandType(
+        spec,
+        pickOther(OFFHAND_TYPES, spec.offhand?.type ?? "none"),
+      );
+    case "offhandAngle":
+      // Variant lives in assemble module state — App handles the dice.
+      return spec;
+    case "legPose":
+      return setLegPose(spec, pickOther(COMBAT_LEG_POSES, spec.legs.pose));
+  }
+}
+
+/** Prefer a different option so a field dice click visibly changes. */
+function pickOther<T>(arr: readonly T[], current: T): T {
+  const others = arr.filter((x) => x !== current);
+  return others.length > 0 ? pick(others) : pick(arr);
 }
 
 /** Keep geometry/styles; only shuffle colors owned by that part. */

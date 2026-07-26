@@ -877,14 +877,14 @@ button.ghost {
   background: #0a0c14;
 }
 
-.part-block.is-locked .part-actions .part-icon-btn:disabled,
 .part-block.is-locked .part-color-menu,
-.part-block.is-locked .color-control {
+.part-block.is-locked .color-control,
+.part-block.is-locked .part-row-reroll:disabled {
   opacity: 0.35;
   pointer-events: none;
 }
 
-.part-block.is-locked .part-actions .part-icon-btn.is-locked {
+.part-block.is-locked .part-row-controls .part-icon-btn.is-locked {
   opacity: 1;
   pointer-events: auto;
   filter: none;
@@ -913,12 +913,24 @@ button.ghost {
   letter-spacing: 0.02em;
 }
 
-.part-row-lock {
+.part-row-controls,
+.part-field-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex: 0 0 auto;
+}
+
+.part-row-lock,
+.part-row-reroll {
   opacity: 0.55;
 }
 
 .part-row-lock:hover,
-.part-row-lock.is-locked {
+.part-row-lock.is-locked,
+.part-row-reroll:hover:not(:disabled) {
   opacity: 1;
 }
 
@@ -943,7 +955,7 @@ button.ghost {
   line-height: 1.1;
 }
 
-/* Lock sits left of its dropdown; the pair wraps together. */
+/* Lock + dice stack left of its dropdown; the group wraps together. */
 .part-field {
   display: flex;
   align-items: center;
@@ -957,26 +969,20 @@ button.ghost {
   flex: 1 1 auto;
 }
 
-.part-field-lock {
+.part-field-lock,
+.part-field-reroll {
   opacity: 0.4;
 }
 
 .part-field-lock:hover,
-.part-field-lock.is-locked {
+.part-field-lock.is-locked,
+.part-field-reroll:hover:not(:disabled) {
   opacity: 1;
 }
 
 /* A locked section greys its dropdowns but leaves the field locks clickable. */
 .part-block.is-locked .part-field-lock {
   pointer-events: auto;
-}
-
-.part-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.05rem;
-  margin-left: auto;
-  flex: 0 0 auto;
 }
 
 .part-icon-btn,
@@ -1014,26 +1020,37 @@ button.ghost {
 /* Beat `.panel button.part-icon-btn` (same specificity otherwise loses by order). */
 .part-icon-btn.part-row-lock,
 .panel button.part-icon-btn.part-row-lock,
+.part-icon-btn.part-row-reroll,
+.panel button.part-icon-btn.part-row-reroll,
 .part-icon-btn.part-field-lock,
-.panel button.part-icon-btn.part-field-lock {
+.panel button.part-icon-btn.part-field-lock,
+.part-icon-btn.part-field-reroll,
+.panel button.part-icon-btn.part-field-reroll {
   /* content-box so horizontal padding actually widens the hit area. */
   box-sizing: content-box;
   width: 0.42rem;
-  /* Match other emoji controls for hit area; glyph stays 0.42rem. */
-  height: 1.25rem !important;
-  max-height: 1.25rem;
-  font-size: 0.42rem;
+  /* Half-height so lock + dice stack matches a single control. */
+  height: 0.62rem !important;
+  max-height: 0.62rem;
+  font-size: 0.38rem;
   /* Negative margin cancels the padding so the hit area grows, not the layout. */
   padding: 0 2px !important;
   margin: 0 -2px;
 }
 
 .part-icon-btn.part-row-lock,
-.panel button.part-icon-btn.part-row-lock {
+.panel button.part-icon-btn.part-row-lock,
+.part-icon-btn.part-row-reroll,
+.panel button.part-icon-btn.part-row-reroll {
   width: calc(0.42rem + 1px);
-  font-size: calc(0.42rem + 1px);
+  font-size: calc(0.38rem + 1px);
   /* Keep the +1px visual side gap: 2px padding − 1px margin net. */
   margin: 0 -1px;
+}
+
+.part-title > .part-color-menu,
+.part-title > .color-control {
+  margin-right: 1px;
 }
 
 .color-control {
@@ -1112,7 +1129,7 @@ button.color-control-swatch.swatch-btn:disabled {
   pointer-events: none;
 }
 
-/* Part colour trigger: palette glyph with mini-swatches overlaid at its right. */
+/* Part colour trigger: circular swatch left of the lock/dice stack. */
 .part-color-trigger,
 .panel button.part-color-trigger {
   position: relative;
@@ -1123,45 +1140,6 @@ button.color-control-swatch.swatch-btn:disabled {
 
 .part-color-trigger:hover:not(:disabled) {
   color: var(--text, #e8ecf4);
-}
-
-.part-color-palette-icon {
-  display: block;
-  flex: none;
-  opacity: 0.9;
-}
-
-/* Overlaid, so the stack never grows the row or swallows the trigger click. */
-.part-color-mini-stack {
-  position: absolute;
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 0;
-  pointer-events: none;
-}
-
-.part-color-mini {
-  display: block;
-  box-sizing: content-box;
-  width: 3px;
-  height: 3px;
-  flex: none;
-  border: 1px solid var(--swatch-border-mini);
-  border-radius: 50%;
-}
-
-.part-color-mini + .part-color-mini {
-  margin-top: -1px;
-}
-
-.part-color-mini-empty {
-  background: repeating-conic-gradient(#3a415c 0% 25%, #12141f 0% 50%) 50% /
-    3px 3px;
 }
 
 .color-control-native {
@@ -1187,6 +1165,16 @@ button.color-control-swatch.swatch-btn:disabled {
   padding: 0.3rem;
   background: #0c0e16;
   border: 1px solid #3a415c;
+}
+
+.part-color-popover-start {
+  right: auto;
+  left: 0;
+}
+
+.part-title .part-color-popover {
+  right: auto;
+  left: 0;
 }
 
 .part-color-popover-head {
