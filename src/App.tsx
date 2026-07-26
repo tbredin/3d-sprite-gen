@@ -552,6 +552,14 @@ export default function App() {
     setSpecParseError(null);
   };
 
+  /** Jump to a different built-in preset (never re-picks the current one). */
+  const applyRandomPreset = () => {
+    const options = PRESET_IDS.filter((id) => id !== presetId);
+    const next =
+      options[Math.floor(Math.random() * options.length)] ?? PRESET_IDS[0]!;
+    applyPreset(next);
+  };
+
   const onBodyScaleChange = (scale: number) => {
     setBodyScale(scale);
     setChibiBodyScale(scale);
@@ -1283,21 +1291,44 @@ export default function App() {
             open={characterOpen}
             onToggle={() => setCharacterOpen((v) => !v)}
             actions={
-              <button
-                type="button"
-                className="ghost"
-                onClick={resetCharacterPanel}
-                title="Reset to the knight preset and default slider values"
-              >
-                Reset
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="ghost collapse-reroll"
+                  onClick={applyRandom}
+                  title="Random character"
+                  aria-label="Random character"
+                >
+                  🎲
+                </button>
+                <button
+                  type="button"
+                  className="ghost"
+                  onClick={resetCharacterPanel}
+                  title="Reset to the knight preset and default slider values"
+                >
+                  Reset
+                </button>
+              </>
             }
           >
             <div className="char-toolbar">
               <div className="char-picker">
-                <label className="field">
-                  Preset
+                <div className="field char-preset">
+                  <div className="char-preset-heading">
+                    <span>Preset</span>
+                    <button
+                      type="button"
+                      className="part-icon-btn part-row-reroll"
+                      onClick={applyRandomPreset}
+                      title="Random preset"
+                      aria-label="Random preset"
+                    >
+                      🎲
+                    </button>
+                  </div>
                   <select
+                    aria-label="Preset"
                     value={presetId === "random" ? "" : presetId}
                     onChange={(e) => applyPreset(e.target.value as PresetId)}
                   >
@@ -1312,24 +1343,7 @@ export default function App() {
                       </option>
                     ))}
                   </select>
-                </label>
-                <button
-                  type="button"
-                  className="field-matched"
-                  onClick={applyRandom}
-                  title="Random character"
-                  aria-label="Random character"
-                >
-                  🎲
-                </button>
-                <button
-                  type="button"
-                  className="field-matched char-reset"
-                  onClick={resetCharacterPanel}
-                  title="Reset to the knight preset and default slider values"
-                >
-                  Reset
-                </button>
+                </div>
               </div>
 
               <div className="part-toggles">

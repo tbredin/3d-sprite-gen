@@ -508,6 +508,12 @@ button.ghost {
   line-height: 1;
 }
 
+/* Emoji needs a touch more room than the text actions beside it. */
+.panel .collapse-actions .ghost.collapse-reroll {
+  padding: 0 0.3rem !important;
+  font-size: 0.72rem;
+}
+
 .collapse-body {
   padding-bottom: 0.15rem;
 }
@@ -756,7 +762,7 @@ button.ghost {
 
 .char-picker {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.35rem;
   align-items: end;
   min-width: 0;
@@ -766,6 +772,12 @@ button.ghost {
 
 .char-picker .field {
   min-width: 0;
+}
+
+.char-preset-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
 }
 
 .panel button.field-matched {
