@@ -168,6 +168,24 @@ body {
   letter-spacing: 0.03em;
 }
 
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.panel-header .panel-title {
+  margin: 0;
+}
+
+.panel button.field-matched.char-reroll {
+  height: 1.5rem;
+  padding: 0 0.6rem;
+  font-size: 0.7rem;
+}
+
 .panel label,
 .panel .field {
   display: flex;

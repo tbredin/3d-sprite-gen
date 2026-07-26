@@ -1111,7 +1111,18 @@ export default function App() {
       <main className="app-main">
       <div className="layout">
         <section className="panel panel-character">
-          <h2 className="panel-title">Character</h2>
+          <div className="panel-header">
+            <h2 className="panel-title">Character</h2>
+            <button
+              type="button"
+              className="field-matched char-reroll"
+              onClick={applyRandom}
+              title="Random character"
+              aria-label="Random character"
+            >
+              🎲 Random
+            </button>
+          </div>
 
           <div className="preview-row">
             <div className="preview-main">
