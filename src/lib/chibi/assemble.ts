@@ -66,14 +66,14 @@ type GripRole = "lead" | "off";
 /** Bladed / hafted frame: length up +Y, hold point just under the guard. */
 const hafted = () => ({
   axis: new Vector3(0, 1, 0),
-  // Hand: wrist at origin, fist −Y, knuckles +Z. Sit the handle in the mitt
-  // (not on the wrist/back) so it reads as gripped in the palm/channel.
-  grip: new Vector3(0, -0.08, 0.1),
+  // Hand: wrist at origin, fist −Y, knuckles +Z. Hold point sits in the finger
+  // / palm channel (past the wrist), not near the cuff.
+  grip: new Vector3(0, -0.14, 0.12),
 });
 /** Gun frame: barrel forward +Z, hold point at the receiver. */
 const gunned = () => ({
   axis: new Vector3(0, 0, 1),
-  grip: new Vector3(0, -0.06, 0.08),
+  grip: new Vector3(0, -0.12, 0.1),
 });
 /**
  * Pistols hang their rake grip below the origin — raise the prop so that
@@ -81,7 +81,7 @@ const gunned = () => ({
  */
 const pistolled = () => ({
   axis: new Vector3(0, 0, 1),
-  grip: new Vector3(0, 0.06, 0.1),
+  grip: new Vector3(0, 0, 0.12),
 });
 
 const WEAPON_GRIP: Record<HeldWeapon, { axis: Vector3; grip: Vector3 }> = {
