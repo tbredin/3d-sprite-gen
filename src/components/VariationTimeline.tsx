@@ -883,6 +883,7 @@ export function VariationTimeline({
 
       <div
         className="timeline-scroll"
+        style={{ ["--timeline-thumb" as string]: `${thumbPx}px` }}
         onScroll={() => setHoverPreview(null)}
       >
         {items.length === 0 && pendingSlots === 0 ? (
