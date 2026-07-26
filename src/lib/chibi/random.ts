@@ -308,7 +308,19 @@ const CLOTH = [
 
 const BOOT = ["#5a4030", "#6a7484", "#8b5a2b", "#433455", "#7a8090", "#5a6a7a"];
 
-const EYES = ["#1a1c2c", "#3d6e70", "#2a6ebd", "#433455", "#5a2a7a"];
+/** Surface eye colours — keep distinct after Endesga lock so the eyes 🎲 reads. */
+const EYES = [
+  "#1a1c2c",
+  "#2a6ebd",
+  "#3d6e70",
+  "#e83b3b",
+  "#5ad4a0",
+  "#f5e07a",
+  "#5b3d8a",
+  "#e8a04a",
+  "#c7cfcc",
+  "#d4648a",
+];
 
 function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
@@ -757,10 +769,8 @@ export function rerollPart(
 
   if (part === "head") {
     const head = randomHead(spec.skin, opts?.allowHelmets ?? true);
-    // Eyes lock keeps face even when the head dice is pressed.
-    if (locks?.eyes && spec.face) {
-      head.face = spec.face;
-    }
+    // Eyes are their own row — head 🎲 must never touch face / eye colour.
+    head.face = spec.face;
     // Head-size lock keeps proportions even when the head dice is pressed.
     if (locks?.headSize) {
       head.head = {
@@ -891,7 +901,7 @@ function pickOther<T>(arr: readonly T[], current: T): T {
 export function rerollPartColors(
   spec: CharacterSpec,
   part: PartId,
-  locks?: PartLocks,
+  _locks?: PartLocks,
 ): CharacterSpec {
   const next = structuredClone(spec);
   if (part === "head") {
@@ -901,10 +911,7 @@ export function rerollPartColors(
     }
     next.skin = pick(SKINS);
     if (next.hair) next.hair.color = pick(HAIR_COLORS);
-    // Eye colour lives on the eyes row — only shuffle when eyes are unlocked.
-    if (!locks?.eyes) {
-      next.face = { ...next.face, eyeColor: pick(EYES) };
-    }
+    // Eye colour is owned by the eyes row — never shuffle it from head colours.
     if (next.helmet && next.helmet.style !== "none") {
       const d = defaultHelmetColors(next.helmet.style);
       next.helmet.color = d.color;
@@ -959,9 +966,14 @@ export function rerollPartColors(
 
 /** Shuffle all eyes-row params (colour, spacing, size, y) — not Show. */
 export function rerollEyes(spec: CharacterSpec): CharacterSpec {
+  const current = spec.face?.eyeColor;
+  let face = randomFace();
+  for (let i = 0; i < 10 && face.eyeColor === current; i++) {
+    face = randomFace();
+  }
   return {
     ...spec,
-    face: randomFace(),
+    face,
   };
 }
 
