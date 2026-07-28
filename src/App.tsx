@@ -83,10 +83,15 @@ import {
   BODY_SCALE_MIN,
   BODY_SCALE_MAX,
   BODY_SCALE_DEFAULT,
+  BODY_Y_MIN,
+  BODY_Y_MAX,
+  BODY_Y_DEFAULT,
   DEFAULT_PART_VISIBILITY,
   type PartVisibility,
   loadBodyScale,
   saveBodyScale,
+  loadBodyY,
+  saveBodyY,
   loadCharacterPersist,
   saveCharacterPersist,
   HEAD_SHAPES,
@@ -185,7 +190,17 @@ import {
   loadCameraHeight,
   saveCameraHeight,
 } from "./lib/isoCamera";
+import { Sprite2DCanvas } from "./components/Sprite2DCanvas";
+import {
+  ISO_DIR_2D_CYCLE,
+  isIsoDir2D,
+  snapFacingToIsoDir2D,
+  snapYawToIsoDir2D,
+  type IsoDir2D,
+} from "./lib/chibi2d";
 import "./App.css";
+
+type ViewMode = "3d" | "2d";
 
 const PITCH_LIMIT = Math.PI / 2 - 0.05;
 
@@ -356,6 +371,8 @@ export default function App() {
   const [rotationY, setRotationY] = useState(facingPersist.rotationY);
   const [size, setSize] = useState<SpriteSize>(48);
   const [cameraHeight, setCameraHeight] = useState(() => loadCameraHeight());
+  /** 3D low-poly bake vs pure Canvas2D isometric sprite drawer. */
+  const [viewMode, setViewMode] = useState<ViewMode>("3d");
   const [autoRotate, setAutoRotate] = useState(false);
   /** -1 = hold left, 1 = hold right, 0 = none. Overrides auto-rotate direction while held. */
   const [holdDir, setHoldDir] = useState<-1 | 0 | 1>(0);
@@ -369,6 +386,7 @@ export default function App() {
     characterPersist?.presetId ?? "knight",
   );
   const [bodyScale, setBodyScale] = useState(() => loadBodyScale());
+  const [bodyY, setBodyY] = useState(() => loadBodyY());
   const [spec, setSpec] = useState<CharacterSpec>(
     () => characterPersist?.spec ?? getPreset("knight"),
   );
@@ -480,23 +498,76 @@ export default function App() {
 
   const applyFacing = (id: FacingId) => {
     if (id === "custom") return;
+    const next = viewMode === "2d" ? snapFacingToIsoDir2D(id) : id;
     setAutoRotate(false);
     setHoldDir(0);
     setOscillate(false);
-    setFacing(id);
+    setFacing(next);
     setRotationX(0);
-    const yaw = getFacing(id).rotationY;
+    const yaw = getFacing(next).rotationY;
     setRotationY(yaw);
     spinYawRef.current = yaw;
   };
 
+  const stepIsoDir2D = (dir: -1 | 1) => {
+    const cur: IsoDir2D = isIsoDir2D(facing)
+      ? facing
+      : facing === "custom"
+        ? snapYawToIsoDir2D(rotationY)
+        : snapFacingToIsoDir2D(facing);
+    const idx = ISO_DIR_2D_CYCLE.indexOf(cur);
+    const next = ISO_DIR_2D_CYCLE[(idx + dir + ISO_DIR_2D_CYCLE.length) % ISO_DIR_2D_CYCLE.length]!;
+    setFacing(next);
+    setRotationX(0);
+    const yaw = getFacing(next).rotationY;
+    setRotationY(yaw);
+    spinYawRef.current = yaw;
+  };
+
+  const switchViewMode = (mode: ViewMode) => {
+    if (mode === viewMode) return;
+    setAutoRotate(false);
+    setHoldDir(0);
+    setOscillate(false);
+    setViewMode(mode);
+    if (mode === "2d") {
+      setRotationX(0);
+      const next =
+        facing === "custom"
+          ? snapYawToIsoDir2D(rotationY)
+          : snapFacingToIsoDir2D(facing);
+      setFacing(next);
+      const yaw = getFacing(next).rotationY;
+      setRotationY(yaw);
+      spinYawRef.current = yaw;
+    }
+  };
+
   const toggleAutoRotate = () => {
     if (autoRotate) {
+      if (viewMode === "2d") {
+        setAutoRotate(false);
+        return;
+      }
       stopSpinAndCommit();
       return;
     }
     setHoldDir(0);
     setOscillate(false);
+    if (viewMode === "2d") {
+      if (!isIsoDir2D(facing)) {
+        const next =
+          facing === "custom"
+            ? snapYawToIsoDir2D(rotationY)
+            : snapFacingToIsoDir2D(facing);
+        setFacing(next);
+        const yaw = getFacing(next).rotationY;
+        setRotationY(yaw);
+        spinYawRef.current = yaw;
+      }
+      setAutoRotate(true);
+      return;
+    }
     spinYawRef.current = rotationY;
     setFacing("custom");
     setAutoRotate(true);
@@ -506,8 +577,10 @@ export default function App() {
    * Center pad button toggles oscillate mode. Turning it on parks the model in
    * "custom" (live) yaw so the pivot drives the sweep; turning it off commits
    * the current live yaw so drag/other controls pick up seamlessly.
+   * Disabled in 2D mode (discrete 4-way facings only).
    */
   const toggleOscillate = () => {
+    if (viewMode === "2d") return;
     if (oscillate) {
       const yaw = spinYawRef.current;
       setOscillate(false);
@@ -532,6 +605,7 @@ export default function App() {
   };
 
   const onFacingButton = (id: NamedFacingId) => {
+    if (viewMode === "2d" && !isIsoDir2D(id)) return;
     if (oscillate) {
       toggleOscillateEndpoint(id);
       return;
@@ -542,8 +616,13 @@ export default function App() {
   const onHoldRotateStart = (dir: -1 | 1) => (e: ReactPointerEvent<HTMLButtonElement>) => {
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
-    if (!spinning) spinYawRef.current = rotationY;
     setOscillate(false);
+    if (viewMode === "2d") {
+      setAutoRotate(false);
+      setHoldDir(dir);
+      return;
+    }
+    if (!spinning) spinYawRef.current = rotationY;
     setFacing("custom");
     setHoldDir(dir);
   };
@@ -553,12 +632,40 @@ export default function App() {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
     setHoldDir(0);
+    if (viewMode === "2d") return;
     if (!autoRotate) {
       const yaw = spinYawRef.current;
       setFacing("custom");
       setRotationY(yaw);
     }
   };
+
+  /** Discrete 4-way spin while holding / auto-rotating in 2D mode. */
+  useEffect(() => {
+    if (viewMode !== "2d") return;
+    if (!autoRotate && holdDir === 0) return;
+    const dir: -1 | 1 = holdDir !== 0 ? holdDir : 1;
+    const tick = () => {
+      setFacing((prev) => {
+        const cur: IsoDir2D = isIsoDir2D(prev)
+          ? prev
+          : snapYawToIsoDir2D(spinYawRef.current);
+        const idx = ISO_DIR_2D_CYCLE.indexOf(cur);
+        const next =
+          ISO_DIR_2D_CYCLE[
+            (idx + dir + ISO_DIR_2D_CYCLE.length) % ISO_DIR_2D_CYCLE.length
+          ]!;
+        const yaw = getFacing(next).rotationY;
+        setRotationY(yaw);
+        spinYawRef.current = yaw;
+        setRotationX(0);
+        return next;
+      });
+    };
+    tick();
+    const id = window.setInterval(tick, 420);
+    return () => window.clearInterval(id);
+  }, [viewMode, autoRotate, holdDir]);
 
   useEffect(() => {
     saveFacingPersist({ facing, rotationX, rotationY });
@@ -598,10 +705,16 @@ export default function App() {
     saveBodyScale(scale);
   };
 
+  const onBodyYChange = (y: number) => {
+    setBodyY(y);
+    saveBodyY(y);
+  };
+
   /** Knight preset + every Character-panel slider / lock back to defaults. */
   const resetCharacterPanel = () => {
     applyPreset("knight");
     onBodyScaleChange(BODY_SCALE_DEFAULT);
+    onBodyYChange(BODY_Y_DEFAULT);
     setBodyScaleLocked(false);
     setLocks({ ...EMPTY_LOCKS });
     setFieldLocks({ ...EMPTY_FIELD_LOCKS });
@@ -881,6 +994,18 @@ export default function App() {
   const onPreviewPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
+    if (viewMode === "2d") {
+      setAutoRotate(false);
+      setHoldDir(0);
+      dragRef.current = {
+        pointerId: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        rotX: 0,
+        rotY: rotationY,
+      };
+      return;
+    }
     // Snap off the turntable at the live yaw so drag doesn't jump.
     const rotY = spinning ? spinYawRef.current : rotationY;
     if (spinning) {
@@ -905,6 +1030,16 @@ export default function App() {
     const dx = e.clientX - drag.x;
     const dy = e.clientY - drag.y;
     if (dx === 0 && dy === 0) return;
+    if (viewMode === "2d") {
+      const stepPx = 40;
+      if (Math.abs(dx) < stepPx) return;
+      const steps = Math.round(dx / stepPx);
+      const dir: -1 | 1 = steps > 0 ? -1 : 1;
+      for (let i = 0; i < Math.abs(steps); i++) stepIsoDir2D(dir);
+      drag.x = e.clientX;
+      drag.rotY = spinYawRef.current;
+      return;
+    }
     setFacing("custom");
     setRotationY(drag.rotY + dx * 0.012);
     setRotationX(clampPitch(drag.rotX + dy * 0.012));
@@ -1148,7 +1283,29 @@ export default function App() {
       <main className="app-main">
       <div className="layout">
         <section className="panel panel-character">
-          <h2 className="panel-title">Character</h2>
+          <div className="panel-title-row">
+            <h2 className="panel-title">Character</h2>
+            <div className="view-mode-tabs" role="tablist" aria-label="Render mode">
+              <button
+                type="button"
+                role="tab"
+                className={`view-mode-tab${viewMode === "3d" ? " is-active" : ""}`}
+                aria-selected={viewMode === "3d"}
+                onClick={() => switchViewMode("3d")}
+              >
+                3D
+              </button>
+              <button
+                type="button"
+                role="tab"
+                className={`view-mode-tab${viewMode === "2d" ? " is-active" : ""}`}
+                aria-selected={viewMode === "2d"}
+                onClick={() => switchViewMode("2d")}
+              >
+                2D Sprite
+              </button>
+            </div>
+          </div>
 
           <div className="preview-row">
             <div className="preview-main">
@@ -1160,39 +1317,69 @@ export default function App() {
                   onPointerMove={onPreviewPointerMove}
                   onPointerUp={onPreviewPointerUp}
                   onPointerCancel={onPreviewPointerUp}
-                  title="Drag to rotate"
+                  title={
+                    viewMode === "2d"
+                      ? "Drag to cycle 4 diagonal facings"
+                      : "Drag to rotate"
+                  }
                 >
-                  <BakeCanvas
-                    key={String(size)}
-                    size={size}
-                    colors={palette.colors}
-                    silhouetteOutlineHex={outlineColors.silhouette}
-                    partSeamsOutlineHex={outlineColors.partSeams}
-                    textureSeamsOutlineHex={outlineColors.textureSeams}
-                    outlinePass={outlinePass}
-                    zoom={1}
-                    cameraHeight={cameraHeight}
-                    rotationX={rotationX}
-                    rotationY={rotationY}
-                    spinning={spinning}
-                    rotateMode={rotateMode}
-                    spinSpeed={oscillateActive ? 0 : spinSpeed}
-                    spinYawRef={spinYawRef}
-                    oscillate={oscillateActive}
-                    oscillateFrom={oscillateFrom}
-                    oscillateDelta={oscillateDelta}
-                    oscillateSpeed={ROTATE_FACING_SPEED}
-                    spec={spec}
-                    bodyScale={bodyScale}
-                    mirror={mirror}
-                    partVisibility={partVisibility}
-                    rimLights={rimLights}
-                    edgeOutline={edgeOutline}
-                    bayerDither={bayerDither}
-                    displayPx={spritePx}
-                    onCaptured={setPreview}
-                    onSourceCaptured={setSourcePreview}
-                  />
+                  {viewMode === "3d" ? (
+                    <BakeCanvas
+                      key={String(size)}
+                      size={size}
+                      colors={palette.colors}
+                      silhouetteOutlineHex={outlineColors.silhouette}
+                      partSeamsOutlineHex={outlineColors.partSeams}
+                      textureSeamsOutlineHex={outlineColors.textureSeams}
+                      outlinePass={outlinePass}
+                      zoom={1}
+                      cameraHeight={cameraHeight}
+                      rotationX={rotationX}
+                      rotationY={rotationY}
+                      spinning={spinning}
+                      rotateMode={rotateMode}
+                      spinSpeed={oscillateActive ? 0 : spinSpeed}
+                      spinYawRef={spinYawRef}
+                      oscillate={oscillateActive}
+                      oscillateFrom={oscillateFrom}
+                      oscillateDelta={oscillateDelta}
+                      oscillateSpeed={ROTATE_FACING_SPEED}
+                      spec={spec}
+                      bodyScale={bodyScale}
+                      bodyY={bodyY}
+                      mirror={mirror}
+                      partVisibility={partVisibility}
+                      rimLights={rimLights}
+                      edgeOutline={edgeOutline}
+                      bayerDither={bayerDither}
+                      displayPx={spritePx}
+                      onCaptured={setPreview}
+                      onSourceCaptured={setSourcePreview}
+                    />
+                  ) : (
+                    <Sprite2DCanvas
+                      size={size}
+                      colors={palette.colors}
+                      facing={
+                        isIsoDir2D(facing)
+                          ? facing
+                          : snapYawToIsoDir2D(rotationY)
+                      }
+                      spec={spec}
+                      bodyScale={bodyScale}
+                      bodyY={bodyY}
+                      mirror={mirror}
+                      partVisibility={partVisibility}
+                      displayPx={spritePx}
+                      outlineColors={outlineColors}
+                      outlinePass={outlinePass}
+                      edgeOutline={edgeOutline}
+                      rimLights={rimLights}
+                      bayerDither={bayerDither}
+                      onCaptured={setPreview}
+                      onSourceCaptured={setSourcePreview}
+                    />
+                  )}
                 </div>
               ) : (
                 <div
@@ -1206,7 +1393,11 @@ export default function App() {
                 <button
                   type="button"
                   className="spin-btn"
-                  title="Hold to rotate left"
+                  title={
+                    viewMode === "2d"
+                      ? "Hold to step facing left"
+                      : "Hold to rotate left"
+                  }
                   aria-label="Rotate left"
                   onPointerDown={onHoldRotateStart(-1)}
                   onPointerUp={onHoldRotateEnd}
@@ -1218,7 +1409,15 @@ export default function App() {
                 <button
                   type="button"
                   className={`spin-btn spin-btn-main${autoRotate ? " is-active" : ""}`}
-                  title={autoRotate ? "Pause continuous rotate" : "Continuous rotate"}
+                  title={
+                    viewMode === "2d"
+                      ? autoRotate
+                        ? "Pause 4-way facing cycle"
+                        : "Cycle 4 diagonal facings"
+                      : autoRotate
+                        ? "Pause continuous rotate"
+                        : "Continuous rotate"
+                  }
                   aria-pressed={autoRotate}
                   onClick={toggleAutoRotate}
                 >
@@ -1227,7 +1426,11 @@ export default function App() {
                 <button
                   type="button"
                   className="spin-btn"
-                  title="Hold to rotate right"
+                  title={
+                    viewMode === "2d"
+                      ? "Hold to step facing right"
+                      : "Hold to rotate right"
+                  }
                   aria-label="Rotate right"
                   onPointerDown={onHoldRotateStart(1)}
                   onPointerUp={onHoldRotateEnd}
@@ -1237,13 +1440,17 @@ export default function App() {
                   →
                 </button>
               </div>
-              <p className="meta drag-hint">Drag to rotate · NN preview · iso checker</p>
+              <p className="meta drag-hint">
+                {viewMode === "2d"
+                  ? "Drag to cycle diagonals · NN preview · iso checker"
+                  : "Drag to rotate · NN preview · iso checker"}
+              </p>
             </div>
 
             <div className="preview-side">
               <div className="iso-facing">
                 <span className="iso-facing-label" id="iso-facing-label">
-                  Iso facing
+                  {viewMode === "2d" ? "Iso facing (4-way)" : "Iso facing"}
                 </span>
                 <div
                   className="iso-facing-pad"
@@ -1258,21 +1465,28 @@ export default function App() {
                     const isActive = oscillate
                       ? isEndpoint
                       : facing === cell.id;
+                    const disabled2d =
+                      viewMode === "2d" && !isIsoDir2D(cell.id);
                     return (
                       <button
                         key={cell.id}
                         type="button"
                         className={`iso-facing-btn${
                           isActive ? " is-active" : ""
-                        }${isEndpoint ? " is-endpoint" : ""}`}
+                        }${isEndpoint ? " is-endpoint" : ""}${
+                          disabled2d ? " is-disabled" : ""
+                        }`}
                         style={{ gridRow: cell.row, gridColumn: cell.col }}
                         title={
-                          oscillate
-                            ? `Oscillate endpoint — ${cell.title}`
-                            : cell.title
+                          disabled2d
+                            ? `${cell.title} (3D only)`
+                            : oscillate
+                              ? `Oscillate endpoint — ${cell.title}`
+                              : cell.title
                         }
                         aria-label={cell.title}
                         aria-pressed={isActive}
+                        disabled={disabled2d}
                         onClick={() => onFacingButton(cell.id)}
                       >
                         {isEndpoint ? endpointIndex + 1 : cell.glyph}
@@ -1285,18 +1499,25 @@ export default function App() {
                       oscillate ? " is-oscillate" : ""
                     }${!oscillate && facing === "custom" ? " is-custom" : ""}`}
                     title={
-                      oscillate
-                        ? "Oscillate mode on — pick two directions to sweep between (click again to turn off)"
-                        : "Oscillate: sweep between two directions"
+                      viewMode === "2d"
+                        ? "Oscillate is 3D-only"
+                        : oscillate
+                          ? "Oscillate mode on — pick two directions to sweep between (click again to turn off)"
+                          : "Oscillate: sweep between two directions"
                     }
                     aria-label="Toggle oscillate mode"
                     aria-pressed={oscillate}
+                    disabled={viewMode === "2d"}
                     onClick={toggleOscillate}
                   >
                     ⇄
                   </button>
                 </div>
-                {oscillate ? (
+                {viewMode === "2d" ? (
+                  <span className="meta iso-facing-status">
+                    4 diagonals · locked iso
+                  </span>
+                ) : oscillate ? (
                   <span className="meta iso-facing-status">
                     {oscillateActive
                       ? "Oscillating ⇄"
@@ -1325,12 +1546,13 @@ export default function App() {
                   title={`Bake resolution (${SPRITE_SIZE_MIN}–${SPRITE_SIZE_MAX} px, step ${SPRITE_SIZE_STEP})`}
                 />
               </div>
-              <div className="field">
+              <div className={`field${viewMode === "2d" ? " is-disabled" : ""}`}>
                 <div className="field-heading">
                   <span>Cam height</span>
                   <button
                     type="button"
                     className="field-reset"
+                    disabled={viewMode === "2d"}
                     onClick={() => {
                       setCameraHeight(DEFAULT_CAMERA_HEIGHT);
                       saveCameraHeight(DEFAULT_CAMERA_HEIGHT);
@@ -1345,12 +1567,17 @@ export default function App() {
                   max={1.55}
                   step={0.05}
                   value={cameraHeight}
+                  disabled={viewMode === "2d"}
                   onChange={(e) => {
                     const v = Number(e.target.value);
                     setCameraHeight(v);
                     saveCameraHeight(v);
                   }}
-                  title="Iso camera elevation (1 = classic)"
+                  title={
+                    viewMode === "2d"
+                      ? "Camera height locked in 2D sprite mode"
+                      : "Iso camera elevation (1 = classic)"
+                  }
                 />
               </div>
             </div>
@@ -2081,10 +2308,10 @@ export default function App() {
                         >
                           {bodyScaleLocked ? "🔒" : "🔓"}
                         </button>
-                        <div
-                          className={`light-grid part-torso-sliders${bodyScaleLocked ? " is-disabled" : ""}`}
-                        >
-                          <label className="light-slider">
+                        <div className="light-grid part-torso-sliders">
+                          <label
+                            className={`light-slider${bodyScaleLocked ? " is-disabled" : ""}`}
+                          >
                             <span
                               className="light-slider-label"
                               title="Torso/legs scale from the neck — head, hands & feet stay fixed"
@@ -2106,6 +2333,29 @@ export default function App() {
                             />
                             <span className="slider-val">
                               {bodyScale.toFixed(2)}
+                            </span>
+                          </label>
+                          <label className="light-slider">
+                            <span
+                              className="light-slider-label"
+                              title="Shift torso, arms & legs vertically — head stays pinned (3D and 2D)"
+                            >
+                              Y
+                            </span>
+                            <input
+                              type="range"
+                              min={BODY_Y_MIN}
+                              max={BODY_Y_MAX}
+                              step={0.01}
+                              value={bodyY}
+                              onChange={(e) =>
+                                onBodyYChange(Number(e.target.value))
+                              }
+                              title="Body Y — independent of head"
+                              aria-label="Body Y position"
+                            />
+                            <span className="slider-val">
+                              {bodyY.toFixed(2)}
                             </span>
                           </label>
                         </div>

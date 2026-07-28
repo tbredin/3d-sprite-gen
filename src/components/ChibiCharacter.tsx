@@ -81,6 +81,7 @@ function meshTopologySpec(spec: CharacterSpec): CharacterSpec {
 export function ChibiCharacter({
   spec,
   bodyScale = 1,
+  bodyY = 0,
   rotationY = 0,
   yawRef,
   mirror = false,
@@ -89,6 +90,11 @@ export function ChibiCharacter({
   spec: CharacterSpec;
   /** Continuous body scale — triggers reassembly (layout units). */
   bodyScale?: number;
+  /**
+   * Vertical offset for torso/arms/legs only (head stays pinned).
+   * Live-updated without reassembling the mesh.
+   */
+  bodyY?: number;
   /** Body yaw from the iso facing control — drives FF-style face cheating. */
   rotationY?: number;
   /**
@@ -140,12 +146,23 @@ export function ChibiCharacter({
     () => group.getObjectByName("headPivot") ?? null,
     [group],
   );
+  const upperBody = useMemo(
+    () => group.getObjectByName("upperBody") ?? null,
+    [group],
+  );
+  const legs = useMemo(() => group.getObjectByName("legs") ?? null, [group]);
 
   // Live proportion updates — no reassemble.
   useLayoutEffect(() => {
     if (!headPivot) return;
     headPivot.scale.set(headSize, headSize * headYScale, headSize);
   }, [headPivot, headSize, headYScale]);
+
+  // Body Y fine-tune — shift torso/arms + legs; head/neck stay put.
+  useLayoutEffect(() => {
+    if (upperBody) upperBody.position.y = bodyY;
+    if (legs) legs.position.y = bodyY;
+  }, [upperBody, legs, bodyY]);
 
   const liveYaw = useRef(yawRef);
   liveYaw.current = yawRef;

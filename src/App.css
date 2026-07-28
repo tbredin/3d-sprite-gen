@@ -220,6 +220,65 @@ body {
   letter-spacing: 0.03em;
 }
 
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.panel-title-row .panel-title {
+  margin: 0;
+}
+
+.view-mode-tabs {
+  display: inline-flex;
+  border: 1px solid #3a415c;
+  background: #1a1e2c;
+}
+
+.view-mode-tab {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: #9aa3bd;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 0.28rem 0.55rem;
+  cursor: pointer;
+}
+
+.view-mode-tab:hover {
+  color: #d7dceb;
+  background: #242a3d;
+}
+
+.view-mode-tab.is-active {
+  color: #f2f4fa;
+  background: #3a4563;
+}
+
+.iso-facing-btn.is-disabled,
+.iso-facing-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+
+.field.is-disabled {
+  opacity: 0.45;
+}
+
+.field.is-disabled input[type="range"] {
+  cursor: not-allowed;
+}
+
+.sprite-2d-canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
 .panel label,
 .panel .field {
   display: flex;
@@ -969,7 +1028,11 @@ button.ghost {
 }
 
 .part-torso-sliders {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panel .part-torso-sliders .light-slider.is-disabled {
+  opacity: 0.4;
 }
 
 /* Slider band with its own lock button beside the sliders. */
