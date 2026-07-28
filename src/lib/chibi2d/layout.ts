@@ -28,6 +28,29 @@ export type Anchors = {
   torsoDepth: number;
 };
 
+/**
+ * Neck-pivoted head proportions — mirrors 3D `headPivot` scale so Size/Height
+ * grow the skull (and hair/helm/face) up from the collar, not about mid-skull.
+ */
+export type HeadProps = {
+  size: number;
+  yScale: number;
+  /** World-Y of the neck joint. */
+  neckY: number;
+  /** World-Y of the scaled head centre. */
+  centerY: number;
+  /** Horizontal skull radius after Size. */
+  r: number;
+};
+
+export function headProps(spec: CharacterSpec, a: Anchors): HeadProps {
+  const size = Math.max(0.55, Math.min(1.45, spec.head?.size ?? 1));
+  const yScale = Math.max(0.55, Math.min(1.55, spec.head?.yScale ?? 1));
+  const neckY = a.shoulderY + 0.1;
+  const centerY = neckY + (a.headCenterY - neckY) * size * yScale;
+  return { size, yScale, neckY, centerY, r: a.skullR * size };
+}
+
 export function anchorsForScale(bodyScale: number): Anchors {
   applyBodyScale(bodyScale);
   return {

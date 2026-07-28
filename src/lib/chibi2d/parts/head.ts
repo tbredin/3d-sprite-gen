@@ -1,13 +1,7 @@
 import type { HeadShape } from "../../chibi";
 import { fillEllipse, fillLozenge, fillPoly, project, shade, u } from "../draw";
 import type { DrawCtx } from "../types";
-import type { Anchors } from "../layout";
-
-function headScale(spec: DrawCtx["spec"]) {
-  const size = spec.head?.size ?? 1;
-  const yScale = spec.head?.yScale ?? 1;
-  return { size: Math.max(0.55, Math.min(1.45, size)), yScale: Math.max(0.55, Math.min(1.55, yScale)) };
-}
+import { headProps, type Anchors } from "../layout";
 
 /** Screen bias for the forward face pad — down + toward the facing diagonal. */
 function faceBias(ctx: DrawCtx, w: number, h: number) {
@@ -26,17 +20,23 @@ export function drawNeck(ctx: DrawCtx, a: Anchors, skin: string) {
 
 export function drawHead(ctx: DrawCtx, a: Anchors, skin: string) {
   const shape: HeadShape = ctx.spec.head?.shape ?? "lozenge";
-  const { size, yScale } = headScale(ctx.spec);
-  const c = project(ctx, 0, a.headCenterY, 0);
-  const w = u(ctx, a.skullR * size * 1.05);
-  const h = u(ctx, a.skullR * size * yScale * 1.15);
+  const hp = headProps(ctx.spec, a);
+  const c = project(ctx, 0, hp.centerY, 0);
+  const w = u(ctx, hp.r * 1.05);
+  const h = u(ctx, hp.r * hp.yScale * 1.15);
   const g = ctx.ctx;
   const mid = shade(skin, 0);
   const dark = shade(skin, -0.12);
   const light = shade(skin, 0.08);
   const fb = faceBias(ctx, w, h);
+  void fb;
   // Forward face pad projected slightly ahead so cheeks read ¾ iso.
-  const face = project(ctx, ctx.flipX * a.skullR * size * 0.12, a.headCenterY - a.skullR * size * 0.08, a.skullR * size * 0.42);
+  const face = project(
+    ctx,
+    ctx.flipX * hp.r * 0.12,
+    hp.centerY - hp.r * hp.yScale * 0.08,
+    hp.r * 0.42,
+  );
 
   switch (shape) {
     case "mage":

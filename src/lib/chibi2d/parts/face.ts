@@ -1,7 +1,7 @@
 import type { BrowStyle, EyeStyle } from "../../chibi";
 import { fillEllipse, fillRect, project, shade, u } from "../draw";
 import type { DrawCtx } from "../types";
-import type { Anchors } from "../layout";
+import { headProps, type Anchors } from "../layout";
 
 /**
  * Eye plate sizes — ~50% of the first 2D pass so plates read as 2–3 bake
@@ -80,21 +80,20 @@ export function drawFace(ctx: DrawCtx, a: Anchors, opts?: { hideLeft?: boolean; 
   const spacing = face?.spacing ?? 1;
   const eyeScale = face?.scale ?? 1;
   const yOff = face?.y ?? 0;
-  const size = ctx.spec.head?.size ?? 1;
-  const r = a.skullR * size;
+  const hp = headProps(ctx.spec, a);
 
   // 3D face pad sits ~−0.1·r below head center; eyes further at EYE_V_FRAC ≈ −0.105·faceAy.
-  const faceCy = a.headCenterY + r * (-0.14 + yOff * 0.12);
-  const faceCz = r * 0.48;
+  const faceCy = hp.centerY + hp.r * hp.yScale * (-0.14 + yOff * 0.12);
+  const faceCz = hp.r * 0.48;
   // Bias the face mass toward the camera-facing diagonal (screen down+out).
-  const faceCx = ctx.flipX * r * 0.1;
-  const halfSep = r * 0.2 * spacing * eyeScale;
+  const faceCx = ctx.flipX * hp.r * 0.1;
+  const halfSep = hp.r * 0.2 * spacing * eyeScale;
 
   const left = project(ctx, faceCx - halfSep, faceCy, faceCz);
   const right = project(ctx, faceCx + halfSep, faceCy, faceCz);
   // Near eye (toward camera side) sits slightly lower/larger in iso reads.
   const nearIsRight = ctx.flipX > 0;
-  const browLift = u(ctx, 0.055 * eyeScale);
+  const browLift = u(ctx, 0.055 * eyeScale * hp.yScale);
 
   if (!opts?.hideLeft) {
     const cy = left.y + (nearIsRight ? u(ctx, 0.008) : 0);

@@ -1,13 +1,15 @@
 import type { HairStyle } from "../../chibi";
 import { fillCapsule, fillEllipse, fillPoly, fillRect, project, shade, u } from "../draw";
 import type { DrawCtx } from "../types";
-import type { Anchors } from "../layout";
+import { headProps, type Anchors } from "../layout";
 
 type HairCtx = {
   g: CanvasRenderingContext2D;
   cx: number;
   cy: number;
   r: number;
+  /** Head Height scale — vertical hair volume follows the skull. */
+  yScale: number;
   color: string;
   dark: string;
   light: string;
@@ -19,29 +21,29 @@ type HairCtx = {
 function hairBase(ctx: DrawCtx, a: Anchors): HairCtx | null {
   const hair = ctx.spec.hair;
   if (!hair || hair.style === "bald") return null;
-  const size = ctx.spec.head?.size ?? 1;
-  const c = project(ctx, 0, a.headCenterY, 0);
-  const rWorld = a.skullR * size;
+  const hp = headProps(ctx.spec, a);
+  const c = project(ctx, 0, hp.centerY, 0);
   const front = project(
     ctx,
-    ctx.flipX * rWorld * 0.14,
-    a.headCenterY - rWorld * 0.08,
-    rWorld * 0.42,
+    ctx.flipX * hp.r * 0.14,
+    hp.centerY - hp.r * hp.yScale * 0.08,
+    hp.r * 0.42,
   );
   const back = project(
     ctx,
-    -ctx.flipX * rWorld * 0.1,
-    a.headCenterY - rWorld * 0.02,
-    -rWorld * 0.26,
+    -ctx.flipX * hp.r * 0.1,
+    hp.centerY - hp.r * hp.yScale * 0.02,
+    -hp.r * 0.26,
   );
   const aPt = ctx.showFace ? front : back;
-  const r = u(ctx, rWorld);
+  const r = u(ctx, hp.r);
   const color = hair.color;
   return {
     g: ctx.ctx,
     cx: c.x * 0.45 + aPt.x * 0.55,
     cy: c.y * 0.45 + aPt.y * 0.55,
     r,
+    yScale: hp.yScale,
     color,
     dark: shade(color, -0.12),
     light: shade(color, 0.1),
@@ -53,7 +55,7 @@ function hairBase(ctx: DrawCtx, a: Anchors): HairCtx | null {
 
 function withIsoHeadTransform(h: HairCtx, draw: () => void) {
   const skew = h.face ? 0.2 * h.flip : -0.12 * h.flip;
-  const yScale = h.face ? 0.93 : 0.96;
+  const yScale = (h.face ? 0.93 : 0.96) * h.yScale;
   h.g.save();
   h.g.translate(h.cx, h.cy);
   h.g.transform(1, 0, skew, yScale, 0, 0);
