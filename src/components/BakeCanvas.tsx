@@ -587,11 +587,12 @@ function CharacterPivot({
   void bodyScale;
 
   return (
-    <group ref={groupRef} position={[0, CHARACTER_PIVOT_Y + bodyY, 0]}>
+    <group ref={groupRef} position={[0, CHARACTER_PIVOT_Y, 0]}>
       <group position={[0, -CHARACTER_PIVOT_Y, 0]}>
         <ChibiCharacter
           spec={spec}
           bodyScale={bodyScale}
+          bodyY={bodyY}
           rotationY={rotationY}
           yawRef={rotateMode ? yawRef : undefined}
           mirror={mirror}

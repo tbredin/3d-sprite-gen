@@ -2287,7 +2287,6 @@ export default function App() {
                       </div>
                     ) : null}
                     {part === "torso" ? (
-                      <>
                       <div className="part-sliders-lockable">
                         <button
                           type="button"
@@ -2307,10 +2306,10 @@ export default function App() {
                         >
                           {bodyScaleLocked ? "🔒" : "🔓"}
                         </button>
-                        <div
-                          className={`light-grid part-torso-sliders${bodyScaleLocked ? " is-disabled" : ""}`}
-                        >
-                          <label className="light-slider">
+                        <div className="light-grid part-torso-sliders">
+                          <label
+                            className={`light-slider${bodyScaleLocked ? " is-disabled" : ""}`}
+                          >
                             <span
                               className="light-slider-label"
                               title="Torso/legs scale from the neck — head, hands & feet stay fixed"
@@ -2334,34 +2333,31 @@ export default function App() {
                               {bodyScale.toFixed(2)}
                             </span>
                           </label>
+                          <label className="light-slider">
+                            <span
+                              className="light-slider-label"
+                              title="Shift torso, arms & legs vertically — head stays pinned (3D and 2D)"
+                            >
+                              Y
+                            </span>
+                            <input
+                              type="range"
+                              min={BODY_Y_MIN}
+                              max={BODY_Y_MAX}
+                              step={0.01}
+                              value={bodyY}
+                              onChange={(e) =>
+                                onBodyYChange(Number(e.target.value))
+                              }
+                              title="Body Y — independent of head"
+                              aria-label="Body Y position"
+                            />
+                            <span className="slider-val">
+                              {bodyY.toFixed(2)}
+                            </span>
+                          </label>
                         </div>
                       </div>
-                      <div className="light-grid part-torso-sliders">
-                        <label className="light-slider">
-                          <span
-                            className="light-slider-label"
-                            title="Vertical framing offset in the sprite (both 3D and 2D)"
-                          >
-                            Y
-                          </span>
-                          <input
-                            type="range"
-                            min={BODY_Y_MIN}
-                            max={BODY_Y_MAX}
-                            step={0.01}
-                            value={bodyY}
-                            onChange={(e) =>
-                              onBodyYChange(Number(e.target.value))
-                            }
-                            title="Body Y position"
-                            aria-label="Body Y position"
-                          />
-                          <span className="slider-val">
-                            {bodyY.toFixed(2)}
-                          </span>
-                        </label>
-                      </div>
-                      </>
                     ) : null}
                   </div>
                 );

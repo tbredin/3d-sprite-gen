@@ -23,12 +23,26 @@ function helmBase(ctx: DrawCtx, a: Anchors): HelmCtx | null {
   if (!helmet || helmet.style === "none") return null;
   const size = ctx.spec.head?.size ?? 1;
   const c = project(ctx, 0, a.headCenterY, 0);
-  const r = u(ctx, a.skullR * size);
+  const rWorld = a.skullR * size;
+  const front = project(
+    ctx,
+    ctx.flipX * rWorld * 0.14,
+    a.headCenterY - rWorld * 0.08,
+    rWorld * 0.42,
+  );
+  const back = project(
+    ctx,
+    -ctx.flipX * rWorld * 0.1,
+    a.headCenterY - rWorld * 0.02,
+    -rWorld * 0.26,
+  );
+  const aPt = ctx.showFace ? front : back;
+  const r = u(ctx, rWorld);
   const color = helmet.color;
   return {
     g: ctx.ctx,
-    cx: c.x,
-    cy: c.y,
+    cx: c.x * 0.45 + aPt.x * 0.55,
+    cy: c.y * 0.45 + aPt.y * 0.55,
     r,
     color,
     dark: shade(color, -0.15),
@@ -38,6 +52,17 @@ function helmBase(ctx: DrawCtx, a: Anchors): HelmCtx | null {
     face: ctx.showFace,
     style: helmet.style,
   };
+}
+
+function withIsoHeadTransform(h: HelmCtx, draw: () => void) {
+  const skew = h.face ? 0.2 * h.flip : -0.12 * h.flip;
+  const yScale = h.face ? 0.93 : 0.96;
+  h.g.save();
+  h.g.translate(h.cx, h.cy);
+  h.g.transform(1, 0, skew, yScale, 0, 0);
+  h.g.translate(-h.cx, -h.cy);
+  draw();
+  h.g.restore();
 }
 
 function lid(h: HelmCtx, y = -0.75, rx = 0.85, ry = 0.22) {
@@ -451,5 +476,5 @@ export function eyesHiddenByHelmet2d(style?: HelmetStyle): {
 export function drawHelmet(ctx: DrawCtx, a: Anchors): void {
   const h = helmBase(ctx, a);
   if (!h) return;
-  drawHelmetStyle(h);
+  withIsoHeadTransform(h, () => drawHelmetStyle(h));
 }

@@ -14,10 +14,11 @@ const SQRT_HALF = Math.SQRT1_2;
 export function project(ctx: DrawCtx, x: number, y: number, z: number): Pt {
   const cy = Math.cos(ctx.yaw);
   const sy = Math.sin(ctx.yaw);
+  const ry = y + ctx.bodyY;
   const rx = x * cy + z * sy;
   const rz = -x * sy + z * cy;
   const isoX = (rx - rz) * SQRT_HALF;
-  const isoY = y * SIN_EL + (rx + rz) * SQRT_HALF * COS_EL;
+  const isoY = ry * SIN_EL + (rx + rz) * SQRT_HALF * COS_EL;
   return {
     x: ctx.ox + isoX * ctx.scale,
     y: ctx.oy - isoY * ctx.scale,

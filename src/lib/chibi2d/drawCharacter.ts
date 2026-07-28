@@ -42,7 +42,7 @@ export function drawCharacter(
     draw.showFace &&
     (mode.mount !== "replace" || mode.showFace);
 
-  // Back layer
+  // Body stack — uses draw.bodyY so torso/limbs move independently of the head.
   if (visibility.torso) drawAccessories(draw, anchors, "back");
 
   if (visibility.legs) drawLegs(draw, anchors);
@@ -55,7 +55,10 @@ export function drawCharacter(
     drawAccessories(draw, anchors, "front");
   }
 
+  // Head stack pinned — clear bodyY so neck/skull/hair/face/helm stay put.
   if (visibility.head) {
+    const bodyY = draw.bodyY;
+    draw.bodyY = 0;
     drawNeck(draw, anchors, spec.skin);
     if (showSkull) drawHead(draw, anchors, spec.skin);
     if (showHair) drawHair(draw, anchors);
@@ -64,6 +67,7 @@ export function drawCharacter(
       drawFace(draw, anchors, hide);
     }
     if (showHelm) drawHelmet(draw, anchors);
+    draw.bodyY = bodyY;
   }
 
   g.restore();

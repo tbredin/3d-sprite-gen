@@ -33,7 +33,7 @@ export type DrawCharacterOptions = {
   facing: IsoDir2D;
   size: SpriteSize;
   bodyScale: number;
-  /** Vertical framing offset in head-units (positive = higher in frame). */
+  /** Vertical offset for torso/arms/legs only — head stays pinned (head-units). */
   bodyY?: number;
   mirror?: boolean;
   partVisibility?: PartVisibility;
@@ -58,6 +58,12 @@ export type DrawCtx = {
   oy: number;
   /** Character root yaw matching `getFacing(facing).rotationY`. */
   yaw: number;
+  /**
+   * Body-only vertical offset (head-units). Applied inside `project` so torso /
+   * limbs / accessories shift without moving the head stack. Zero while drawing
+   * neck/head/hair/face/helmet.
+   */
+  bodyY: number;
   /** Face/eyes visible (toward-* facings). */
   showFace: boolean;
   /** Screen-X flip for left-side diagonals (toward-bl / away-tl). */

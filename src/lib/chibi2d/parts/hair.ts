@@ -21,12 +21,26 @@ function hairBase(ctx: DrawCtx, a: Anchors): HairCtx | null {
   if (!hair || hair.style === "bald") return null;
   const size = ctx.spec.head?.size ?? 1;
   const c = project(ctx, 0, a.headCenterY, 0);
-  const r = u(ctx, a.skullR * size);
+  const rWorld = a.skullR * size;
+  const front = project(
+    ctx,
+    ctx.flipX * rWorld * 0.14,
+    a.headCenterY - rWorld * 0.08,
+    rWorld * 0.42,
+  );
+  const back = project(
+    ctx,
+    -ctx.flipX * rWorld * 0.1,
+    a.headCenterY - rWorld * 0.02,
+    -rWorld * 0.26,
+  );
+  const aPt = ctx.showFace ? front : back;
+  const r = u(ctx, rWorld);
   const color = hair.color;
   return {
     g: ctx.ctx,
-    cx: c.x,
-    cy: c.y,
+    cx: c.x * 0.45 + aPt.x * 0.55,
+    cy: c.y * 0.45 + aPt.y * 0.55,
     r,
     color,
     dark: shade(color, -0.12),
@@ -35,6 +49,17 @@ function hairBase(ctx: DrawCtx, a: Anchors): HairCtx | null {
     flip: ctx.flipX,
     face: ctx.showFace,
   };
+}
+
+function withIsoHeadTransform(h: HairCtx, draw: () => void) {
+  const skew = h.face ? 0.2 * h.flip : -0.12 * h.flip;
+  const yScale = h.face ? 0.93 : 0.96;
+  h.g.save();
+  h.g.translate(h.cx, h.cy);
+  h.g.transform(1, 0, skew, yScale, 0, 0);
+  h.g.translate(-h.cx, -h.cy);
+  draw();
+  h.g.restore();
 }
 
 function crown(h: HairCtx, rx = 1.05, ry = 0.85, yOff = -0.35) {
@@ -564,5 +589,5 @@ export function drawHair(ctx: DrawCtx, a: Anchors): void {
   const h = hairBase(ctx, a);
   if (!h) return;
   const style = ctx.spec.hair!.style;
-  drawStyle(h, style);
+  withIsoHeadTransform(h, () => drawStyle(h, style));
 }

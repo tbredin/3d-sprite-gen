@@ -72,9 +72,10 @@ export function makeDrawCtx(
     facing,
     scale,
     ox: size / 2,
-    // Positive bodyY lifts the figure in the bake (screen-up).
-    oy: size / 2 + CHARACTER_PIVOT_Y * scale * 0.15 - (opts.bodyY ?? 0) * scale,
+    oy: size / 2 + CHARACTER_PIVOT_Y * scale * 0.15,
     yaw,
+    // Body-only offset — head drawers zero this while painting.
+    bodyY: opts.bodyY ?? 0,
     showFace: facing === "toward-br" || facing === "toward-bl",
     flipX: facing === "toward-bl" || facing === "away-tl" ? -1 : 1,
     spec,
