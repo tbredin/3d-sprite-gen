@@ -83,10 +83,15 @@ import {
   BODY_SCALE_MIN,
   BODY_SCALE_MAX,
   BODY_SCALE_DEFAULT,
+  BODY_Y_MIN,
+  BODY_Y_MAX,
+  BODY_Y_DEFAULT,
   DEFAULT_PART_VISIBILITY,
   type PartVisibility,
   loadBodyScale,
   saveBodyScale,
+  loadBodyY,
+  saveBodyY,
   loadCharacterPersist,
   saveCharacterPersist,
   HEAD_SHAPES,
@@ -381,6 +386,7 @@ export default function App() {
     characterPersist?.presetId ?? "knight",
   );
   const [bodyScale, setBodyScale] = useState(() => loadBodyScale());
+  const [bodyY, setBodyY] = useState(() => loadBodyY());
   const [spec, setSpec] = useState<CharacterSpec>(
     () => characterPersist?.spec ?? getPreset("knight"),
   );
@@ -699,10 +705,16 @@ export default function App() {
     saveBodyScale(scale);
   };
 
+  const onBodyYChange = (y: number) => {
+    setBodyY(y);
+    saveBodyY(y);
+  };
+
   /** Knight preset + every Character-panel slider / lock back to defaults. */
   const resetCharacterPanel = () => {
     applyPreset("knight");
     onBodyScaleChange(BODY_SCALE_DEFAULT);
+    onBodyYChange(BODY_Y_DEFAULT);
     setBodyScaleLocked(false);
     setLocks({ ...EMPTY_LOCKS });
     setFieldLocks({ ...EMPTY_FIELD_LOCKS });
@@ -1334,6 +1346,7 @@ export default function App() {
                       oscillateSpeed={ROTATE_FACING_SPEED}
                       spec={spec}
                       bodyScale={bodyScale}
+                      bodyY={bodyY}
                       mirror={mirror}
                       partVisibility={partVisibility}
                       rimLights={rimLights}
@@ -1354,6 +1367,7 @@ export default function App() {
                       }
                       spec={spec}
                       bodyScale={bodyScale}
+                      bodyY={bodyY}
                       mirror={mirror}
                       partVisibility={partVisibility}
                       displayPx={spritePx}
@@ -2273,6 +2287,7 @@ export default function App() {
                       </div>
                     ) : null}
                     {part === "torso" ? (
+                      <>
                       <div className="part-sliders-lockable">
                         <button
                           type="button"
@@ -2321,6 +2336,32 @@ export default function App() {
                           </label>
                         </div>
                       </div>
+                      <div className="light-grid part-torso-sliders">
+                        <label className="light-slider">
+                          <span
+                            className="light-slider-label"
+                            title="Vertical framing offset in the sprite (both 3D and 2D)"
+                          >
+                            Y
+                          </span>
+                          <input
+                            type="range"
+                            min={BODY_Y_MIN}
+                            max={BODY_Y_MAX}
+                            step={0.01}
+                            value={bodyY}
+                            onChange={(e) =>
+                              onBodyYChange(Number(e.target.value))
+                            }
+                            title="Body Y position"
+                            aria-label="Body Y position"
+                          />
+                          <span className="slider-val">
+                            {bodyY.toFixed(2)}
+                          </span>
+                        </label>
+                      </div>
+                      </>
                     ) : null}
                   </div>
                 );

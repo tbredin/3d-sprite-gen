@@ -3,21 +3,25 @@ import { fillEllipse, fillRect, project, shade, u } from "../draw";
 import type { DrawCtx } from "../types";
 import type { Anchors } from "../layout";
 
+/**
+ * Eye plate sizes — ~50% of the first 2D pass so plates read as 2–3 bake
+ * pixels at 48px (closer to the 3D faceTexture footprint).
+ */
 function eyeLayout(style: EyeStyle) {
   switch (style) {
     case "square":
-      return { w: 0.11, h: 0.13, iris: 0.5, drop: 0 };
+      return { w: 0.055, h: 0.065, iris: 0.5, drop: 0 };
     case "flat":
-      return { w: 0.13, h: 0.09, iris: 0.5, drop: 0.02 };
+      return { w: 0.065, h: 0.045, iris: 0.5, drop: 0.01 };
     case "lean":
-      return { w: 0.09, h: 0.15, iris: 0.5, drop: 0.03 };
+      return { w: 0.045, h: 0.075, iris: 0.5, drop: 0.015 };
     case "spark":
-      return { w: 0.1, h: 0.12, iris: 0.75, drop: 0.03 };
+      return { w: 0.05, h: 0.06, iris: 0.75, drop: 0.015 };
     case "lid":
-      return { w: 0.11, h: 0.08, iris: 0.5, drop: 0.02 };
+      return { w: 0.055, h: 0.04, iris: 0.5, drop: 0.01 };
     case "classic":
     default:
-      return { w: 0.1, h: 0.12, iris: 0.5, drop: 0.03 };
+      return { w: 0.05, h: 0.06, iris: 0.5, drop: 0.015 };
   }
 }
 
@@ -33,13 +37,10 @@ function drawOneEye(
   const ew = u(ctx, L.w);
   const eh = u(ctx, L.h);
   const g = ctx.ctx;
-  // White plate
   fillEllipse(g, cx, cy, ew, eh, "#f7f4ec");
-  // Iris half toward gaze (screen-outward slightly)
   const irisW = ew * L.iris;
   const irisX = cx + side * ew * (1 - L.iris) * 0.35;
   fillEllipse(g, irisX, cy + u(ctx, L.drop) * 0.3, irisW, eh * 0.85, iris);
-  // Tiny glint
   fillEllipse(g, cx - side * ew * 0.25, cy - eh * 0.25, ew * 0.18, eh * 0.18, "#ffffff");
 }
 
@@ -53,10 +54,10 @@ function drawBrow(
 ) {
   if (style === "none") return;
   const g = ctx.ctx;
-  const w = u(ctx, style === "short" ? 0.07 : style === "thick" ? 0.12 : 0.1);
-  const h = u(ctx, style === "thick" ? 0.035 : style === "thin" ? 0.015 : 0.022);
+  const w = u(ctx, style === "short" ? 0.035 : style === "thick" ? 0.06 : 0.05);
+  const h = u(ctx, style === "thick" ? 0.018 : style === "thin" ? 0.008 : 0.011);
   const lift =
-    style === "arched" ? -u(ctx, 0.02) : style === "angled" ? -u(ctx, 0.01) : 0;
+    style === "arched" ? -u(ctx, 0.01) : style === "angled" ? -u(ctx, 0.005) : 0;
   const tilt = style === "angled" ? side * 0.35 : style === "soft" ? side * 0.1 : 0;
   g.save();
   g.translate(cx, cy + lift);
@@ -65,6 +66,11 @@ function drawBrow(
   g.restore();
 }
 
+/**
+ * Eyes sit on the lower-forward face pad (matches 3D `faceY` + `EYE_V_FRAC`),
+ * projected in character space so toward-br / toward-bl read as ¾ iso — not
+ * a face-on billboard centered on the skull.
+ */
 export function drawFace(ctx: DrawCtx, a: Anchors, opts?: { hideLeft?: boolean; hideRight?: boolean }) {
   if (!ctx.showFace) return;
   const face = ctx.spec.face;
@@ -74,20 +80,30 @@ export function drawFace(ctx: DrawCtx, a: Anchors, opts?: { hideLeft?: boolean; 
   const spacing = face?.spacing ?? 1;
   const eyeScale = face?.scale ?? 1;
   const yOff = face?.y ?? 0;
+  const size = ctx.spec.head?.size ?? 1;
+  const r = a.skullR * size;
 
-  const head = project(ctx, 0, a.headCenterY + yOff * 0.12, a.skullR * 0.55);
-  const gap = u(ctx, a.skullR * 0.42 * spacing * eyeScale);
-  const leftX = head.x - gap * ctx.flipX;
-  const rightX = head.x + gap * ctx.flipX;
-  const ey = head.y - u(ctx, 0.02);
+  // 3D face pad sits ~−0.1·r below head center; eyes further at EYE_V_FRAC ≈ −0.105·faceAy.
+  const faceCy = a.headCenterY + r * (-0.14 + yOff * 0.12);
+  const faceCz = r * 0.48;
+  // Bias the face mass toward the camera-facing diagonal (screen down+out).
+  const faceCx = ctx.flipX * r * 0.1;
+  const halfSep = r * 0.2 * spacing * eyeScale;
 
-  // Screen-left / screen-right relative to flip
+  const left = project(ctx, faceCx - halfSep, faceCy, faceCz);
+  const right = project(ctx, faceCx + halfSep, faceCy, faceCz);
+  // Near eye (toward camera side) sits slightly lower/larger in iso reads.
+  const nearIsRight = ctx.flipX > 0;
+  const browLift = u(ctx, 0.055 * eyeScale);
+
   if (!opts?.hideLeft) {
-    drawOneEye(ctx, leftX, ey, -1 as 1 | -1, style, iris);
-    drawBrow(ctx, leftX, ey - u(ctx, 0.1 * eyeScale), -1, brow, shade(ctx.spec.skin, -0.35));
+    const cy = left.y + (nearIsRight ? u(ctx, 0.008) : 0);
+    drawOneEye(ctx, left.x, cy, -1, style, iris);
+    drawBrow(ctx, left.x, cy - browLift, -1, brow, shade(ctx.spec.skin, -0.35));
   }
   if (!opts?.hideRight) {
-    drawOneEye(ctx, rightX, ey, 1 as 1 | -1, style, iris);
-    drawBrow(ctx, rightX, ey - u(ctx, 0.1 * eyeScale), 1, brow, shade(ctx.spec.skin, -0.35));
+    const cy = right.y + (nearIsRight ? 0 : u(ctx, 0.008));
+    drawOneEye(ctx, right.x, cy, 1, style, iris);
+    drawBrow(ctx, right.x, cy - browLift, 1, brow, shade(ctx.spec.skin, -0.35));
   }
 }

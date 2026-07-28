@@ -12,6 +12,7 @@ export type Sprite2DCanvasProps = {
   facing: IsoDir2D;
   spec: CharacterSpec;
   bodyScale: number;
+  bodyY?: number;
   mirror?: boolean;
   partVisibility?: PartVisibility;
   displayPx: number;
@@ -32,6 +33,7 @@ export function Sprite2DCanvas({
   facing,
   spec,
   bodyScale,
+  bodyY = 0,
   mirror = false,
   partVisibility,
   displayPx,
@@ -55,6 +57,7 @@ export function Sprite2DCanvas({
       facing,
       size,
       bodyScale,
+      bodyY,
       mirror,
       partVisibility,
       colors,
@@ -83,6 +86,7 @@ export function Sprite2DCanvas({
     facing,
     spec,
     bodyScale,
+    bodyY,
     mirror,
     partVisibility,
     displayPx,

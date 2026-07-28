@@ -116,6 +116,8 @@ type BakeProps = {
   spec: CharacterSpec;
   /** Continuous body scale — reassembles character without remounting the canvas. */
   bodyScale?: number;
+  /** Vertical framing offset in head-units (positive = higher in the sprite). */
+  bodyY?: number;
   /** Mirror character left/right by swapping leadSide (not X-scale). */
   mirror?: boolean;
   /** Per-row show/hide (eyes + body parts). Default all visible. */
@@ -496,6 +498,7 @@ function CharacterPivot({
   oscillateSpeed,
   spec,
   bodyScale,
+  bodyY,
   mirror,
   partVisibility,
 }: {
@@ -511,6 +514,7 @@ function CharacterPivot({
   oscillateSpeed: number;
   spec: CharacterSpec;
   bodyScale: number;
+  bodyY: number;
   mirror: boolean;
   partVisibility: PartVisibility;
 }) {
@@ -583,7 +587,7 @@ function CharacterPivot({
   void bodyScale;
 
   return (
-    <group ref={groupRef} position={[0, CHARACTER_PIVOT_Y, 0]}>
+    <group ref={groupRef} position={[0, CHARACTER_PIVOT_Y + bodyY, 0]}>
       <group position={[0, -CHARACTER_PIVOT_Y, 0]}>
         <ChibiCharacter
           spec={spec}
@@ -619,6 +623,7 @@ export function BakeCanvas({
   oscillateSpeed = 0,
   spec,
   bodyScale = 1,
+  bodyY = 0,
   mirror = false,
   partVisibility = DEFAULT_PART_VISIBILITY,
   rimLights,
@@ -658,7 +663,7 @@ export function BakeCanvas({
     cameraHeight,
   ].join(":");
   // Rebake when the character mesh changes — without remounting WebGL.
-  const characterKey = `${bodyScale}:${JSON.stringify(spec)}:${JSON.stringify(partVisibility)}:${mirror}`;
+  const characterKey = `${bodyScale}:${bodyY}:${JSON.stringify(spec)}:${JSON.stringify(partVisibility)}:${mirror}`;
 
   return (
     <Canvas
@@ -719,6 +724,7 @@ export function BakeCanvas({
         oscillateSpeed={oscillateSpeed}
         spec={spec}
         bodyScale={bodyScale}
+        bodyY={bodyY}
         mirror={mirror}
         partVisibility={partVisibility}
       />

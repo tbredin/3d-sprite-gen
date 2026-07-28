@@ -19,6 +19,11 @@ export const BODY_SCALE_MIN = 0.5;
 export const BODY_SCALE_MAX = 1.5;
 export const BODY_SCALE_DEFAULT = 1;
 
+/** Vertical framing offset in head-units (positive = higher in the sprite). */
+export const BODY_Y_MIN = -0.5;
+export const BODY_Y_MAX = 0.5;
+export const BODY_Y_DEFAULT = 0;
+
 /** @deprecated Discrete presets — kept for migration from older localStorage. */
 export type BodyProfileId = "normal" | "trim" | "compact" | "tiny";
 
@@ -129,11 +134,17 @@ const LEGACY_PROFILE_TO_SCALE: Record<BodyProfileId, number> = {
 };
 
 const BODY_SCALE_STORAGE_KEY = "3d-sprite-gen:body-scale-v1";
+const BODY_Y_STORAGE_KEY = "3d-sprite-gen:body-y-v1";
 const LEGACY_BODY_PROFILE_STORAGE_KEY = "3d-sprite-gen:body-profile-v1";
 
 export function clampBodyScale(scale: number): number {
   if (!Number.isFinite(scale)) return BODY_SCALE_DEFAULT;
   return Math.min(BODY_SCALE_MAX, Math.max(BODY_SCALE_MIN, scale));
+}
+
+export function clampBodyY(y: number): number {
+  if (!Number.isFinite(y)) return BODY_Y_DEFAULT;
+  return Math.min(BODY_Y_MAX, Math.max(BODY_Y_MIN, y));
 }
 
 function scaledBodyDef(scale: number): BodyProfileDef {
@@ -242,6 +253,27 @@ export function saveBodyScale(scale: number) {
       BODY_SCALE_STORAGE_KEY,
       String(clampBodyScale(scale)),
     );
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadBodyY(): number {
+  try {
+    const raw = localStorage.getItem(BODY_Y_STORAGE_KEY);
+    if (raw != null) {
+      const n = Number(raw);
+      if (Number.isFinite(n)) return clampBodyY(n);
+    }
+  } catch {
+    /* ignore */
+  }
+  return BODY_Y_DEFAULT;
+}
+
+export function saveBodyY(y: number) {
+  try {
+    localStorage.setItem(BODY_Y_STORAGE_KEY, String(clampBodyY(y)));
   } catch {
     /* ignore */
   }

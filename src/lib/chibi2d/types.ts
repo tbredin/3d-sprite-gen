@@ -33,6 +33,8 @@ export type DrawCharacterOptions = {
   facing: IsoDir2D;
   size: SpriteSize;
   bodyScale: number;
+  /** Vertical framing offset in head-units (positive = higher in frame). */
+  bodyY?: number;
   mirror?: boolean;
   partVisibility?: PartVisibility;
 };
