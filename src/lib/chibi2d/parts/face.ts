@@ -82,26 +82,43 @@ export function drawFace(ctx: DrawCtx, a: Anchors, opts?: { hideLeft?: boolean; 
   const yOff = face?.y ?? 0;
   const hp = headProps(ctx.spec, a);
 
-  // 3D face pad sits ~−0.1·r below head center; eyes further at EYE_V_FRAC ≈ −0.105·faceAy.
-  const faceCy = hp.centerY + hp.r * hp.yScale * (-0.14 + yOff * 0.12);
+  // Eye-Y slider response in 2D: stronger than pure proportional scaling so
+  // ±0.25 gives a clearly visible adjustment at 32–64px.
+  const EYE_Y_RESPONSE = 0.55;
+  // Requested nudge: ~10px on the upscaled preview (display is 4x native).
+  const EYE_DRAW_NUDGE_PX = 2.5;
+  // Lower default eye row for iso readability; slider still fine-tunes from here.
+  const faceCy = hp.centerY + hp.r * hp.yScale * 0.03 + yOff * EYE_Y_RESPONSE;
   const faceCz = hp.r * 0.48;
   // Bias the face mass toward the camera-facing diagonal (screen down+out).
   const faceCx = ctx.flipX * hp.r * 0.1;
   const halfSep = hp.r * 0.2 * spacing * eyeScale;
 
-  const left = project(ctx, faceCx - halfSep, faceCy, faceCz);
-  const right = project(ctx, faceCx + halfSep, faceCy, faceCz);
-  // Near eye (toward camera side) sits slightly lower/larger in iso reads.
+  const center = project(ctx, faceCx, faceCy, faceCz);
+  // Facing direction on screen (sample forward in local +Z).
+  const fwd2 = project(ctx, faceCx, faceCy, faceCz + hp.r * 0.4);
+  const fx = fwd2.x - center.x;
+  const fy = fwd2.y - center.y;
+  const fl = Math.hypot(fx, fy) || 1;
+  const nx = fx / fl;
+  const ny = fy / fl;
+  // Eye line must be perpendicular to facing axis.
+  const ex = -ny;
+  const ey = nx;
+  const sepPx = u(ctx, halfSep);
+  const left = { x: center.x - ex * sepPx, y: center.y - ey * sepPx };
+  const right = { x: center.x + ex * sepPx, y: center.y + ey * sepPx };
+  // Near eye (toward camera side) sits slightly lower in iso reads.
   const nearIsRight = ctx.flipX > 0;
   const browLift = u(ctx, 0.055 * eyeScale * hp.yScale);
 
   if (!opts?.hideLeft) {
-    const cy = left.y + (nearIsRight ? u(ctx, 0.008) : 0);
+    const cy = left.y + (nearIsRight ? u(ctx, 0.008) : 0) + EYE_DRAW_NUDGE_PX;
     drawOneEye(ctx, left.x, cy, -1, style, iris);
     drawBrow(ctx, left.x, cy - browLift, -1, brow, shade(ctx.spec.skin, -0.35));
   }
   if (!opts?.hideRight) {
-    const cy = right.y + (nearIsRight ? 0 : u(ctx, 0.008));
+    const cy = right.y + (nearIsRight ? 0 : u(ctx, 0.008)) + EYE_DRAW_NUDGE_PX;
     drawOneEye(ctx, right.x, cy, 1, style, iris);
     drawBrow(ctx, right.x, cy - browLift, 1, brow, shade(ctx.spec.skin, -0.35));
   }

@@ -7,6 +7,10 @@ import { drawWeaponAt } from "./weapons";
 
 type Joint = { x: number; y: number; z: number };
 
+/** 2D leg tuning: slightly smaller and tighter stance. */
+const LEG_2D_SCALE = 0.88;
+const LEG_STANCE_SCALE = 0.82;
+
 /** Approximate two-bone arm tip in character space from pose joints. */
 function armChain(
   ctx: DrawCtx,
@@ -52,11 +56,11 @@ function legChain(
   pose: LegPose,
 ): { hip: Joint; knee: Joint; foot: Joint } {
   const joints = legJointsForPose(pose, side, ctx.lead);
-  const hipX = side * a.hipWidth * 0.38;
+  const hipX = side * a.hipWidth * 0.38 * LEG_STANCE_SCALE;
   const hipY = a.hipY + (joints.hipY ?? 0);
   const hipZ = 0;
-  const thigh = (a.hipY - a.footY) * 0.52;
-  const shin = (a.hipY - a.footY) * 0.48;
+  const thigh = (a.hipY - a.footY) * 0.52 * LEG_2D_SCALE;
+  const shin = (a.hipY - a.footY) * 0.48 * LEG_2D_SCALE;
   const hx = joints.hip.x;
   const hz = joints.hip.z;
   const dirX = Math.sin(hz) * 0.9;
@@ -81,7 +85,7 @@ export function drawLegs(ctx: DrawCtx, a: Anchors) {
   const pose: LegPose = ctx.spec.legs.pose;
   const pant = ctx.spec.legs.pantColor;
   const boot = ctx.spec.legs.bootColor;
-  const thick = u(ctx, a.legThick * 0.45);
+  const thick = u(ctx, a.legThick * 0.45 * LEG_2D_SCALE);
   const g = ctx.ctx;
 
   // Draw trail then lead so lead overlaps.
@@ -100,8 +104,8 @@ export function drawLegs(ctx: DrawCtx, a: Anchors) {
       g,
       foot.x,
       foot.y + u(ctx, 0.02),
-      u(ctx, a.footLength * 0.55),
-      u(ctx, a.footWidth * 0.45),
+      u(ctx, a.footLength * 0.55 * LEG_2D_SCALE),
+      u(ctx, a.footWidth * 0.45 * LEG_2D_SCALE),
       boot,
     );
   }

@@ -20,6 +20,11 @@ type HelmCtx = {
   style: HelmetStyle;
 };
 
+/** User-tuned: helms should read ~0.2 larger against the head. */
+const HELM_SIZE_MULT = 1.2;
+/** User-tuned: move helm anchor ~1 preview px toward facing. */
+const HELM_FACING_NUDGE_PX = 0.25;
+
 function helmBase(ctx: DrawCtx, a: Anchors): HelmCtx | null {
   const helmet = ctx.spec.helmet;
   if (!helmet || helmet.style === "none") return null;
@@ -38,12 +43,18 @@ function helmBase(ctx: DrawCtx, a: Anchors): HelmCtx | null {
     -hp.r * 0.26,
   );
   const aPt = ctx.showFace ? front : back;
-  const r = u(ctx, hp.r);
+  const r = u(ctx, hp.r * HELM_SIZE_MULT);
   const color = helmet.color;
+  const blendX = c.x * 0.45 + aPt.x * 0.55;
+  const blendY = c.y * 0.45 + aPt.y * 0.55;
+  const vx = aPt.x - c.x;
+  const vy = aPt.y - c.y;
+  const vl = Math.hypot(vx, vy) || 1;
   return {
     g: ctx.ctx,
-    cx: c.x * 0.45 + aPt.x * 0.55,
-    cy: c.y * 0.45 + aPt.y * 0.55,
+    cx: blendX + (vx / vl) * HELM_FACING_NUDGE_PX,
+    // Keep prior 1px up nudge, plus 1px toward facing.
+    cy: blendY - 0.25 + (vy / vl) * HELM_FACING_NUDGE_PX,
     r,
     yScale: hp.yScale,
     color,

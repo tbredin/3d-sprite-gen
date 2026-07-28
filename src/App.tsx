@@ -1371,8 +1371,10 @@ export default function App() {
                       mirror={mirror}
                       partVisibility={partVisibility}
                       displayPx={spritePx}
-                      silhouetteOutlineHex={outlineColors.silhouette}
-                      outlineSilhouette={outlinePass.silhouette}
+                      outlineColors={outlineColors}
+                      outlinePass={outlinePass}
+                      edgeOutline={edgeOutline}
+                      rimLights={rimLights}
                       bayerDither={bayerDither}
                       onCaptured={setPreview}
                       onSourceCaptured={setSourcePreview}

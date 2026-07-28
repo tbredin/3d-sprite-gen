@@ -4,7 +4,14 @@ import {
   bakeCharacter2D,
   type IsoDir2D,
 } from "../lib/chibi2d";
-import type { BayerDitherSettings, SpriteSize } from "../lib/palette";
+import type {
+  BayerDitherSettings,
+  OutlineColors,
+  OutlinePassSettings,
+  SpriteSize,
+} from "../lib/palette";
+import type { EdgeOutlineSettings } from "../lib/edgeOutline";
+import type { RimLightSettings } from "../lib/rimLights";
 
 export type Sprite2DCanvasProps = {
   size: SpriteSize;
@@ -16,8 +23,10 @@ export type Sprite2DCanvasProps = {
   mirror?: boolean;
   partVisibility?: PartVisibility;
   displayPx: number;
-  silhouetteOutlineHex?: string;
-  outlineSilhouette?: boolean;
+  outlineColors: OutlineColors;
+  outlinePass: OutlinePassSettings;
+  edgeOutline?: EdgeOutlineSettings;
+  rimLights: RimLightSettings;
   bayerDither?: BayerDitherSettings | null;
   onCaptured?: (dataUrl: string) => void;
   onSourceCaptured?: (dataUrl: string) => void;
@@ -37,8 +46,10 @@ export function Sprite2DCanvas({
   mirror = false,
   partVisibility,
   displayPx,
-  silhouetteOutlineHex,
-  outlineSilhouette = true,
+  outlineColors,
+  outlinePass,
+  edgeOutline,
+  rimLights,
   bayerDither = null,
   onCaptured,
   onSourceCaptured,
@@ -61,8 +72,10 @@ export function Sprite2DCanvas({
       mirror,
       partVisibility,
       colors,
-      silhouetteOutlineHex,
-      outlineSilhouette,
+      outlineColors,
+      outlinePass,
+      edgeOutline,
+      rimLights,
       bayerDither,
     });
 
@@ -90,8 +103,10 @@ export function Sprite2DCanvas({
     mirror,
     partVisibility,
     displayPx,
-    silhouetteOutlineHex,
-    outlineSilhouette,
+    outlineColors,
+    outlinePass,
+    edgeOutline,
+    rimLights,
     bayerDither,
   ]);
 

@@ -18,6 +18,9 @@ type HairCtx = {
   face: boolean;
 };
 
+/** User-tuned: hair mass should read about 10% larger. */
+const HAIR_SIZE_MULT = 1.1;
+
 function hairBase(ctx: DrawCtx, a: Anchors): HairCtx | null {
   const hair = ctx.spec.hair;
   if (!hair || hair.style === "bald") return null;
@@ -36,12 +39,13 @@ function hairBase(ctx: DrawCtx, a: Anchors): HairCtx | null {
     -hp.r * 0.26,
   );
   const aPt = ctx.showFace ? front : back;
-  const r = u(ctx, hp.r);
+  const r = u(ctx, hp.r * HAIR_SIZE_MULT);
   const color = hair.color;
   return {
     g: ctx.ctx,
     cx: c.x * 0.45 + aPt.x * 0.55,
-    cy: c.y * 0.45 + aPt.y * 0.55,
+    // Requested nudge: raise hair by ~1 preview px (4x upscale => 0.25 native).
+    cy: c.y * 0.45 + aPt.y * 0.55 - 0.25,
     r,
     yScale: hp.yScale,
     color,

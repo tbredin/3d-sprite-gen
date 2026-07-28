@@ -1,6 +1,13 @@
 import type { NamedFacingId } from "../facing";
 import type { CharacterSpec, PartVisibility } from "../chibi";
-import type { SpriteSize } from "../palette";
+import type {
+  BayerDitherSettings,
+  OutlineColors,
+  OutlinePassSettings,
+  SpriteSize,
+} from "../palette";
+import type { EdgeOutlineSettings } from "../edgeOutline";
+import type { RimLightSettings } from "../rimLights";
 
 /**
  * Phase-1 isometric sprite facings — four screen-diagonal quarters.
@@ -41,9 +48,11 @@ export type DrawCharacterOptions = {
 
 export type Sprite2DBakeOptions = DrawCharacterOptions & {
   colors: string[];
-  silhouetteOutlineHex?: string;
-  outlineSilhouette?: boolean;
-  bayerDither?: { enabled: boolean; strength: number } | null;
+  outlineColors: OutlineColors;
+  outlinePass: OutlinePassSettings;
+  edgeOutline?: EdgeOutlineSettings;
+  rimLights: RimLightSettings;
+  bayerDither?: BayerDitherSettings | null;
 };
 
 /** Shared paint state for every 2D part drawer. */
