@@ -9,7 +9,7 @@
 Produce **SNES-era isometric chibi character sprites** from a text prompt by:
 
 1. Generating a **simple low-poly 3D character** on a **local, free** model stack
-2. Framing it with a **fixed isometric / low-top-down camera** (Sea of Stars / Lufia II / Breath of Fire DNA — character facing away / toward the top-right)
+2. Framing it with a **fixed isometric / low-top-down camera** (Lufia II / Breath of Fire DNA — character facing away / toward the top-right)
 3. Rendering with **toon lighting** and **low-res pixelation + palette lock**
 4. Exporting a **transparent PNG** (MVP: single frame; later: spritesheet / animation)
 
@@ -126,7 +126,7 @@ Classic approach: render scene into e.g. 64×64 / 96×96 `WebGLRenderTarget` wit
 | --- | --- |
 | App shell | Vite + React |
 | 3D | `@react-three/fiber` + `@react-three/drei` |
-| Camera | Orthographic, fixed **dimetric / quasi-iso** angle (tune to match BoF / Sea of Stars refs — not necessarily true 35.264°) |
+| Camera | Orthographic, fixed **dimetric / quasi-iso** angle (tune to match BoF refs — not necessarily true 35.264°) |
 | Material | `MeshToonMaterial` (or convert GLB materials on load) |
 | Pixelation | Start with **DIY low-res RT** *or* `RenderPixelatedPass`; add **RetroPass / custom palette** for colour lock |
 | Export | `renderer.domElement.toDataURL('image/png')` or readpixels from the pixel buffer (preserve alpha) |
@@ -314,7 +314,7 @@ Prompt bias for the concept stage:
 
 > “Low-poly chibi RPG character, oversized head, short limbs, simple flat colour armour, white background, full body, facing camera, no scenery”
 
-Then image-to-3D; then the **iso camera** does the Sea of Stars facing — we do **not** need the concept image to already be isometric.
+Then image-to-3D; then the **iso camera** does the SNES JRPG facing — we do **not** need the concept image to already be isometric.
 
 ---
 
@@ -392,7 +392,7 @@ MVP should not assume cloud GPUs. Spike on this Mac first; document wall-clock t
 
 ## Camera & art direction (locked contract)
 
-Target references (same family as `iso-sprite-gen` docs / Sea of Stars):
+Target references (same family as `iso-sprite-gen` docs):
 
 - Small **chibi** body (~½–⅔ “realistic” proportions)
 - **Back / three-quarter from behind**, facing **top-right** of screen
@@ -478,7 +478,7 @@ No API keys for generation. One Lean local server (or two if we keep SD and 3D i
 
 Success criteria for “good enough MVP still”:
 
-- Era match to Sea of Stars / BoF at a glance (not mushy SD smear, not shiny PBR hero render)  
+- Era match to BoF at a glance (not mushy SD smear, not shiny PBR hero render)  
 - Transparent BG, consistent framing  
 - **$0 per generation**, reproducible from prompt + seed on this machine  
 

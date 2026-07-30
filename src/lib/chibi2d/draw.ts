@@ -1,6 +1,6 @@
 import type { DrawCtx, Pt } from "./types";
 
-/** Classic Sea-of-Stars iso elevation (matches `isoCamera.tsx`). */
+/** Classic SNES JRPG iso elevation (matches `isoCamera.tsx`). */
 const EL = Math.atan(1 / Math.SQRT2);
 const SIN_EL = Math.sin(EL);
 const COS_EL = Math.cos(EL);

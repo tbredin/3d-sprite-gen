@@ -31,35 +31,35 @@ def device_name() -> str:
 FACING_HINTS = {
     "up": (
         "isometric low-top-down view, character facing toward the top of the frame "
-        "(screen-up), back view, Sea of Stars / SNES JRPG angle"
+        "(screen-up), back view, SNES JRPG angle"
     ),
     "away-tr": (
         "isometric low-top-down view, character facing away from camera toward the "
-        "top-right of the frame, back three-quarter, Sea of Stars / SNES JRPG angle"
+        "top-right of the frame, back three-quarter, SNES JRPG angle"
     ),
     "right": (
         "isometric low-top-down view, character facing toward the right of the frame "
-        "(screen-right), profile, Sea of Stars / SNES JRPG angle"
+        "(screen-right), profile, SNES JRPG angle"
     ),
     "toward-br": (
         "isometric low-top-down view, character facing toward the camera at the "
-        "bottom-right of the frame, front three-quarter, Sea of Stars / SNES JRPG angle"
+        "bottom-right of the frame, front three-quarter, SNES JRPG angle"
     ),
     "down": (
         "isometric low-top-down view, character facing toward the bottom of the frame "
-        "(screen-down), front view, Sea of Stars / SNES JRPG angle"
+        "(screen-down), front view, SNES JRPG angle"
     ),
     "toward-bl": (
         "isometric low-top-down view, character facing toward the camera at the "
-        "bottom-left of the frame, front three-quarter, Sea of Stars / SNES JRPG angle"
+        "bottom-left of the frame, front three-quarter, SNES JRPG angle"
     ),
     "left": (
         "isometric low-top-down view, character facing toward the left of the frame "
-        "(screen-left), profile, Sea of Stars / SNES JRPG angle"
+        "(screen-left), profile, SNES JRPG angle"
     ),
     "away-tl": (
         "isometric low-top-down view, character facing away from camera toward the "
-        "top-left of the frame, back three-quarter, Sea of Stars / SNES JRPG angle"
+        "top-left of the frame, back three-quarter, SNES JRPG angle"
     ),
 }
 

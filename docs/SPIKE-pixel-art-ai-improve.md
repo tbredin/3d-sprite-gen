@@ -133,7 +133,7 @@ fast vs quality.
 for the public LoRA — heavy JRPG name-dropping can fight the adapter. Our
 house trigger `thenvpixel` **should** stay (house LoRA needs it). Public
 pixel LoRA may prefer shorter prompts: subject + camera + palette size,
-less “Sea of Stars / Lufia II / Breath of Fire” laundry list.
+less “Lufia II / Breath of Fire” laundry list.
 
 **Experiment:**
 

@@ -32,7 +32,7 @@ export type FacingPadCell = {
 };
 
 /**
- * Camera is locked (Sea of Stars–style iso). Model +Z is “forward”.
+ * Camera is locked (classic SNES JRPG–style iso). Model +Z is “forward”.
  * Four diagonal presets sit on the screen corners; four cardinals sit on the
  * screen axes (up / right / down / left), 45° between the diagonals.
  * Default toward-br: facing toward the camera at the bottom-right of frame.
@@ -43,56 +43,56 @@ export const FACING_PRESETS: FacingPreset[] = [
     label: "Up",
     rotationY: (-3 * Math.PI) / 4,
     conceptHint:
-      "isometric low-top-down view, character facing toward the top of the frame (screen-up), back view, Sea of Stars / SNES JRPG angle",
+      "isometric low-top-down view, character facing toward the top of the frame (screen-up), back view, SNES JRPG angle",
   },
   {
     id: "away-tr",
     label: "Away · top-right",
     rotationY: Math.PI,
     conceptHint:
-      "isometric low-top-down view, character facing away from camera toward the top-right of the frame, back three-quarter, Sea of Stars / SNES JRPG angle",
+      "isometric low-top-down view, character facing away from camera toward the top-right of the frame, back three-quarter, SNES JRPG angle",
   },
   {
     id: "right",
     label: "Right",
     rotationY: (3 * Math.PI) / 4,
     conceptHint:
-      "isometric low-top-down view, character facing toward the right of the frame (screen-right), profile, Sea of Stars / SNES JRPG angle",
+      "isometric low-top-down view, character facing toward the right of the frame (screen-right), profile, SNES JRPG angle",
   },
   {
     id: "toward-br",
     label: "Toward · bottom-right (default)",
     rotationY: Math.PI / 2,
     conceptHint:
-      "isometric low-top-down view, character facing toward the camera at the bottom-right of the frame, front three-quarter, Sea of Stars / SNES JRPG angle",
+      "isometric low-top-down view, character facing toward the camera at the bottom-right of the frame, front three-quarter, SNES JRPG angle",
   },
   {
     id: "down",
     label: "Down",
     rotationY: Math.PI / 4,
     conceptHint:
-      "isometric low-top-down view, character facing toward the bottom of the frame (screen-down), front view, Sea of Stars / SNES JRPG angle",
+      "isometric low-top-down view, character facing toward the bottom of the frame (screen-down), front view, SNES JRPG angle",
   },
   {
     id: "toward-bl",
     label: "Toward · bottom-left",
     rotationY: 0,
     conceptHint:
-      "isometric low-top-down view, character facing toward the camera at the bottom-left of the frame, front three-quarter, Sea of Stars / SNES JRPG angle",
+      "isometric low-top-down view, character facing toward the camera at the bottom-left of the frame, front three-quarter, SNES JRPG angle",
   },
   {
     id: "left",
     label: "Left",
     rotationY: -Math.PI / 4,
     conceptHint:
-      "isometric low-top-down view, character facing toward the left of the frame (screen-left), profile, Sea of Stars / SNES JRPG angle",
+      "isometric low-top-down view, character facing toward the left of the frame (screen-left), profile, SNES JRPG angle",
   },
   {
     id: "away-tl",
     label: "Away · top-left",
     rotationY: -Math.PI / 2,
     conceptHint:
-      "isometric low-top-down view, character facing away from camera toward the top-left of the frame, back three-quarter, Sea of Stars / SNES JRPG angle",
+      "isometric low-top-down view, character facing away from camera toward the top-left of the frame, back three-quarter, SNES JRPG angle",
   },
 ];
 
@@ -137,7 +137,7 @@ export const CUSTOM_FACING: FacingPreset = {
   label: "Custom",
   rotationY: 0,
   conceptHint:
-    "isometric low-top-down view, custom free rotation, Sea of Stars / SNES JRPG angle",
+    "isometric low-top-down view, custom free rotation, SNES JRPG angle",
 };
 
 export const DEFAULT_FACING: FacingId = "toward-br";

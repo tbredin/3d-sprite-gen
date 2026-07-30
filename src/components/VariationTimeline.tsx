@@ -999,6 +999,24 @@ export function VariationTimeline({
                       {item.elapsed_s}s · cfg{" "}
                       {item.guidance != null ? item.guidance : "—"}
                     </span>
+                    {item.prompt ? (
+                      <p
+                        className="timeline-prompt"
+                        title={item.prompt}
+                      >
+                        <span
+                          className="timeline-prompt-scroll"
+                          style={{
+                            animationDuration: `${Math.max(
+                              28,
+                              Math.min(120, item.prompt.length * 0.22),
+                            )}s`,
+                          }}
+                        >
+                          {item.prompt}
+                        </span>
+                      </p>
+                    ) : null}
                   </div>
                   <div className="timeline-tile-actions">
                     <button
