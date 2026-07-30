@@ -136,6 +136,8 @@ export {
   EMPTY_FIELD_LOCKS,
   FIELD_LOCK_PART,
   isFieldLocked,
+  setFaction,
+  rerollFaction,
 } from "./random";
 export type {
   PartId,
@@ -145,6 +147,13 @@ export type {
   RandomOptions,
   HeadProportions,
 } from "./random";
+export {
+  FACTION_THEMES,
+  factionTheme,
+  factionPromptBit,
+  rollFactionGearBias,
+  factionMonsterHelmets,
+} from "./factions";
 export {
   loadCharacterPersist,
   saveCharacterPersist,
@@ -181,6 +190,8 @@ export {
   BROW_STYLES,
   HAIR_STYLES,
   HELMET_STYLES,
+  MONSTER_HELMETS,
+  isMonsterHelmet,
   TORSO_STYLES,
   BODY_DETAIL_STYLES,
   HEM_STYLES,
@@ -188,6 +199,8 @@ export {
   OFFHAND_TYPES,
   TWO_HANDED_TYPES,
   BACK_LOADOUTS,
+  FACTION_IDS,
+  FACTION_LABELS,
 } from "./types";
 export type {
   EyeStyle,
@@ -197,6 +210,7 @@ export type {
   TorsoStyle,
   BodyDetailStyle,
   WeaponType,
+  FactionId,
 } from "./types";
 export {
   setHeadShape,

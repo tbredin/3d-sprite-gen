@@ -965,6 +965,20 @@ button.ghost {
   flex: 0 0 auto;
 }
 
+.faction-control {
+  flex: 0 0 auto;
+  margin-left: 4px;
+}
+
+.faction-control.is-locked .faction-select {
+  opacity: 0.72;
+}
+
+.faction-select {
+  min-width: 7.5rem;
+  max-width: 11rem;
+}
+
 .panel label.part-chip {
   display: inline-flex;
   flex-direction: row;

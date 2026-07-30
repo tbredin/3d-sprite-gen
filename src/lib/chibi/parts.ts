@@ -14,6 +14,7 @@ import { toon, toonDetail } from "./materials";
 import { capsuleCylinderLength, CHIBI, LAYOUT } from "./units";
 import { armJointsForPose } from "./armPoses";
 import { legJointsForPose } from "./legPoses";
+import { buildMonsterHelmet } from "./monsterHeads";
 import type {
   ArmPose,
   BackLoadout,
@@ -1587,6 +1588,23 @@ export function generateHelmet(opts: {
     g.add(
       mesh(new ConeGeometry(r * 0.12, r * 0.3, 5), fur, 0, cy - r * 0.82 * tall, r * 0.5),
     );
+  }
+
+  if (
+    buildMonsterHelmet(g, opts.style, {
+      mat,
+      cy,
+      tall,
+      s,
+      skullR: CHIBI.skullR,
+      replaceBoost: REPLACE_HEAD_BOOST,
+      helmetShell: HELMET_SHELL,
+      shellEgg,
+      skullPos,
+      visor: opts.visor,
+    })
+  ) {
+    return g;
   }
 
   if (opts.style === "knightGreat") {

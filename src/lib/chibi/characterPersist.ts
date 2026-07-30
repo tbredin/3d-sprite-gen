@@ -24,6 +24,7 @@ import {
   BODY_DETAIL_STYLES,
   BROW_STYLES,
   EYE_STYLES,
+  FACTION_IDS,
   HAIR_STYLES,
   HEAD_SHAPES,
   HELMET_STYLES,
@@ -47,6 +48,7 @@ export type PersistedCharacter = {
   /** Per-row show/hide for eyes + body parts. */
   partVisibility: PartVisibility;
   allowHelmets: boolean;
+  factionLocked: boolean;
 };
 
 /**
@@ -259,6 +261,8 @@ export function sanitizeCharacterSpec(raw: unknown): CharacterSpec | null {
   if (weapon) spec.weapon = weapon;
   const offhand = sanitizeOffhand(o.offhand);
   if (offhand) spec.offhand = offhand;
+  const faction = oneOf(FACTION_IDS, o.faction);
+  if (faction) spec.faction = faction;
 
   return spec;
 }
@@ -318,6 +322,7 @@ export function loadCharacterPersist(): PersistedCharacter | null {
         parsed.showEyes,
       ),
       allowHelmets: bool(parsed.allowHelmets, false),
+      factionLocked: bool(parsed.factionLocked, false),
     };
   } catch {
     return null;

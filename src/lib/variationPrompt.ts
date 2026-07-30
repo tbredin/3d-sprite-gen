@@ -1,6 +1,7 @@
 /** Prompt template for AI sprite variations (no LLM in v1). */
 
 import type { CharacterSpec } from "./chibi";
+import { factionPromptBit } from "./chibi/factions";
 import { FACING_PRESETS, type FacingId } from "./facing";
 
 /** Trigger token for the local SDXL house LoRA (see server/app/house_lora.py). */
@@ -37,6 +38,9 @@ function humanizeToken(raw: string): string {
 /** Character bits that help the model invent costume/face charm. */
 function characterBits(spec: CharacterSpec): string[] {
   const bits: string[] = [];
+
+  const factionBit = factionPromptBit(spec.faction);
+  if (factionBit) bits.push(factionBit);
 
   if (spec.leadSide) {
     bits.push(`${spec.leadSide}-lead fighting stance`);
