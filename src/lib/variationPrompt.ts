@@ -13,8 +13,8 @@ export const HOUSE_LORA_TRIGGER = "thenvpixel";
  */
 const STYLE_GUIDELINES =
   `${HOUSE_LORA_TRIGGER}, a charming isometric low-top-down chibi character ` +
-  "sprite in the spirit of SNES-era JRPGs such as Sea of Stars, Lufia II, " +
-  "and Breath of Fire. Readable silhouette, hand-authored pixel details, " +
+  "sprite in the spirit of SNES-era JRPGs such as Lufia II and Breath of Fire. " +
+  "Readable silhouette, hand-authored pixel details, " +
   "single isolated character on a plain backdrop";
 
 function facingHint(facing?: FacingId): string | null {

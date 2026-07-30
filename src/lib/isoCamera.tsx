@@ -4,7 +4,7 @@ import { OrthographicCamera } from "three";
 import { CHIBI, CHARACTER_PIVOT_Y } from "./chibi/units";
 
 /**
- * Sea of Stars / BoF-ish low top-down isometric.
+ * BoF-ish low top-down isometric.
  * Character faces +Z (away / top-right under this camera).
  * Frustum fitted to the chibi (feet at y=0).
  *

@@ -542,6 +542,16 @@ export function VariationTimeline({
     });
   };
 
+  const selectAll = () => {
+    setSelectedIds(new Set(items.map((item) => item.id)));
+  };
+
+  const selectAllLocked = () => {
+    setSelectedIds(
+      new Set(items.filter((item) => item.locked).map((item) => item.id)),
+    );
+  };
+
   const deselectAll = () => {
     setSelectedIds(new Set());
   };
@@ -627,6 +637,11 @@ export function VariationTimeline({
   const lockedCount = items.filter((item) => item.locked).length;
   const unlockedCount = items.length - lockedCount;
   const selectedCount = selectedIds.size;
+  const allSelected =
+    items.length > 0 && items.every((item) => selectedIds.has(item.id));
+  const allLockedSelected =
+    lockedCount > 0 &&
+    items.every((item) => !item.locked || selectedIds.has(item.id));
   const visibleItems = filterAndSortItems(items, visibility, sort);
   const deadlineRemainingMs = getDeadlineRemainingMs(
     idleRerolling ? ["idleReroll"] : remixing ? ["remixing"] : [],
@@ -892,6 +907,25 @@ export function VariationTimeline({
           <button
             type="button"
             className="ghost-btn"
+            onClick={selectAll}
+            disabled={items.length === 0 || allSelected}
+            title="Select all variations for remix"
+          >
+            Select all{items.length > 0 ? ` (${items.length})` : ""}
+          </button>
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={selectAllLocked}
+            disabled={lockedCount === 0 || allLockedSelected}
+            title="Select all locked variations for remix"
+          >
+            Select all locked
+            {lockedCount > 0 ? ` (${lockedCount})` : ""}
+          </button>
+          <button
+            type="button"
+            className="ghost-btn"
             onClick={deselectAll}
             disabled={selectedCount === 0}
             title="Clear remix selection"
@@ -965,6 +999,24 @@ export function VariationTimeline({
                       {item.elapsed_s}s · cfg{" "}
                       {item.guidance != null ? item.guidance : "—"}
                     </span>
+                    {item.prompt ? (
+                      <p
+                        className="timeline-prompt"
+                        title={item.prompt}
+                      >
+                        <span
+                          className="timeline-prompt-scroll"
+                          style={{
+                            animationDuration: `${Math.max(
+                              28,
+                              Math.min(120, item.prompt.length * 0.22),
+                            )}s`,
+                          }}
+                        >
+                          {item.prompt}
+                        </span>
+                      </p>
+                    ) : null}
                   </div>
                   <div className="timeline-tile-actions">
                     <button
