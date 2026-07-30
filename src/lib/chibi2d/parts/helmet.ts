@@ -385,6 +385,16 @@ function drawHelmetStyle(h: HelmCtx) {
         fillEllipse(h.g, h.cx, h.cy + h.r * 0.2, h.r * 0.7, h.r * 0.5, h.dark);
       }
       break;
+    case "bird":
+    case "horse":
+    case "snake":
+    case "triceratops":
+    case "goblin":
+    case "goblinWide":
+    case "goblinPointy":
+      // 2D bake: closed shell until dedicated monster silhouettes exist.
+      closedShell(h, 1.2);
+      break;
     case "pilot":
       closedShell(h, 1.2);
       fillEllipse(h.g, h.cx, h.cy - h.r * 0.7, h.r * 0.7, h.r * 0.3, h.color);

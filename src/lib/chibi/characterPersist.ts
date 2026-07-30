@@ -49,6 +49,7 @@ export type PersistedCharacter = {
   partVisibility: PartVisibility;
   allowHelmets: boolean;
   factionLocked: boolean;
+  allowMonsters: boolean;
 };
 
 /**
@@ -323,6 +324,7 @@ export function loadCharacterPersist(): PersistedCharacter | null {
       ),
       allowHelmets: bool(parsed.allowHelmets, false),
       factionLocked: bool(parsed.factionLocked, false),
+      allowMonsters: bool(parsed.allowMonsters, false),
     };
   } catch {
     return null;

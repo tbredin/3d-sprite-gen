@@ -546,7 +546,7 @@ export const HELMET_STYLES: HelmetStyle[] = [
   "ninja",
 ];
 
-/** Animal / goblin head replacements (nature / demon rolls may inject these). */
+/** Animal / goblin head replacements — gated by the Monster checkbox, not Helmets. */
 export const MONSTER_HELMETS: readonly HelmetStyle[] = [
   "goat",
   "bird",

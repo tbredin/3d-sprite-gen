@@ -263,7 +263,7 @@ const HELMET: HelmetStyle[] = [
   "ninja",
 ];
 
-/** Extra monster weight when a faction monster bias fires. */
+/** Extra monster weight when Monster checkbox (or session allowMonsters) is on. */
 const MONSTER_HELMET_WEIGHTS: HelmetStyle[] = [
   "goat",
   "goat",
@@ -430,6 +430,34 @@ const SKINS = [
   "#c68642",
   "#e8b888",
 ];
+
+/** Monster-only skin tones — dull purples / reds / greens / browns / greys. */
+const MONSTER_SKINS = [
+  "#6a5a78",
+  "#5a4a68",
+  "#7a6a88",
+  "#8a5a62",
+  "#7a4a50",
+  "#6a5850",
+  "#4a6a52",
+  "#3d5c48",
+  "#5a7058",
+  "#6a5848",
+  "#5a4838",
+  "#4a4038",
+  "#6a6868",
+  "#5a5858",
+  "#7a7870",
+  "#5a4a58",
+  "#684848",
+  "#486058",
+  "#706050",
+  "#585068",
+];
+
+function skinPool(allowMonsters: boolean): readonly string[] {
+  return allowMonsters ? MONSTER_SKINS : SKINS;
+}
 
 /** Surface hair — avoid near-black so bake stays colorful. */
 const HAIR_COLORS = [
@@ -672,10 +700,12 @@ function randomHead(
   allowHelmets = false,
   bodyScale?: number,
   faction?: FactionId,
+  allowMonsters = false,
 ): HeadBits {
-  const skin = skinHint ?? pick(SKINS);
+  const skin = skinHint ?? pick(skinPool(allowMonsters));
   const gear = rollFactionGearBias(faction, allowHelmets);
-  const helmetPool = buildFactionHelmetPool(gear.allowHelmets, gear.allowMonsters);
+  // Session Monster checkbox gates animal/goblin heads; faction soft-gates helmets.
+  const helmetPool = buildFactionHelmetPool(gear.allowHelmets, allowMonsters);
   const helmetStyle = pick(
     helmetPool.length ? helmetPool : (["none"] as HelmetStyle[]),
   );
@@ -708,8 +738,8 @@ function randomHead(
 
 /**
  * Session Helmets + faction soft gates.
- * Monster heads stay out of the normal closed-helm path unless monster bias
- * (or a future Monster checkbox) opens them.
+ * Monster heads stay out of the normal closed-helm path unless the Monster
+ * checkbox (`allowMonsters`) opens them.
  */
 function buildFactionHelmetPool(
   allowHelmets: boolean,
@@ -999,10 +1029,13 @@ function applyFieldLocks(
  *
  * `allowHelmets` (default false) is a session preference, not a lock: when
  * false, closed / face-covering helms are skipped but overlay hats remain.
+ * `allowMonsters` gates animal / goblin head replacements (including goat).
  */
 export type RandomOptions = {
   /** Include closed/replacement helms. Default false. */
   allowHelmets?: boolean;
+  /** Include monster / animal head replacements. Default false. */
+  allowMonsters?: boolean;
   /** Current body scale — biases head size away from opposite extremes. */
   bodyScale?: number;
   /**
@@ -1023,6 +1056,7 @@ export function randomCharacter(
   const keep = locks ?? EMPTY_LOCKS;
   const prev = base;
   const allowHelmets = opts?.allowHelmets ?? false;
+  const allowMonsters = opts?.allowMonsters ?? false;
   const bodyScale = opts?.bodyScale;
   const faction: FactionId = opts?.keepFaction
     ? (prev?.faction ?? "none")
@@ -1034,7 +1068,13 @@ export function randomCharacter(
     hair: prev.hair,
     face: prev.face,
     helmet: prev.helmet,
-  } : randomHead(keep.head ? prev?.skin : undefined, allowHelmets, bodyScale, faction);
+  } : randomHead(
+    keep.head ? prev?.skin : undefined,
+    allowHelmets,
+    bodyScale,
+    faction,
+    allowMonsters,
+  );
 
   // Eyes lock overrides face whether or not the head was kept.
   if (keep.eyes && prev?.face) {
@@ -1125,6 +1165,7 @@ export function rerollPart(
       opts?.allowHelmets ?? false,
       opts?.bodyScale,
       spec.faction,
+      opts?.allowMonsters ?? false,
     );
     // Eyes are their own row — head 🎲 must never touch face / eye colour.
     head.face = spec.face;
@@ -1226,7 +1267,10 @@ export function rerollField(
         spec.faction,
         opts?.allowHelmets ?? false,
       );
-      const pool = buildFactionHelmetPool(gear.allowHelmets, gear.allowMonsters);
+      const pool = buildFactionHelmetPool(
+        gear.allowHelmets,
+        opts?.allowMonsters ?? false,
+      );
       return setHelmetStyle(
         spec,
         pickOther(
@@ -1287,14 +1331,16 @@ export function rerollPartColors(
   spec: CharacterSpec,
   part: PartId,
   _locks?: PartLocks,
+  opts?: Pick<RandomOptions, "allowMonsters">,
 ): CharacterSpec {
   const next = structuredClone(spec);
+  const skins = skinPool(opts?.allowMonsters ?? isMonsterHelmet(spec.helmet?.style));
   if (part === "head") {
     // Hands belong to arms — pin their tint before skin changes.
     if (next.arms.handColor == null) {
       next.arms = { ...next.arms, handColor: next.skin };
     }
-    next.skin = pick(SKINS);
+    next.skin = pick(skins);
     if (next.hair) next.hair.color = pick(HAIR_COLORS);
     // Eye colour is owned by the eyes row — never shuffle it from head colours.
     if (next.helmet && next.helmet.style !== "none") {
@@ -1339,7 +1385,7 @@ export function rerollPartColors(
     next.arms = {
       ...next.arms,
       sleeveColor: pick(CLOTH),
-      handColor: pick(SKINS),
+      handColor: pick(skins),
     };
     if (next.weapon && next.weapon.type !== "none") {
       next.weapon = { ...next.weapon, color: pick(CLOTH) };
@@ -1442,18 +1488,16 @@ function defaultHelmetColors(style: HelmetStyle): {
 } {
   if (style === "none") return { color: "#000000" };
   if (isMonsterHelmet(style)) {
+    const fur = pick([
+      ...MONSTER_SKINS,
+      "#5a4030",
+      "#8b5a2b",
+      "#433455",
+      "#c98a6a",
+      "#e8e4d8",
+    ]);
     return {
-      color: pick([
-        "#5a4030",
-        "#8b5a2b",
-        "#433455",
-        "#c98a6a",
-        "#6a5a78",
-        "#4a6a52",
-        "#5a4838",
-        "#6a6868",
-        "#e8e4d8",
-      ]),
+      color: fur,
       visor: pick(["#e8e4d8", "#c7cfcc", "#f0d48a", "#ffe0bd", "#8a7a6a", "#c7b446"]),
     };
   }
