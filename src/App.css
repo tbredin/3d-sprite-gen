@@ -3,9 +3,12 @@
   --panel: #262b44;
   --ink: #e4a672;
   --text: #c7cfcc;
-  --muted: #7a8090;
+  /* ≥3:1 on panel, page bg, and header gradient stops. */
+  --muted: #848a9c;
   --accent: #3d6e70;
-  --danger: #e83b3b;
+  /* Brighter than --accent so small accent text clears 3:1 on panels. */
+  --accent-text: #6aa8aa;
+  --danger: #f04545;
   --focus: #f5e07a;
   --control-h: 2rem;
   --gap: 0.55rem;
@@ -185,7 +188,7 @@ body {
 }
 
 .feature-boost-note.branch-not-main {
-  color: #c24f70;
+  color: #d45a7c;
 }
 
 .layout {
@@ -476,7 +479,7 @@ input[type="range"]::-moz-range-thumb {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent, #7ec8ff);
+  color: var(--accent-text, #7ec8ff);
   font: inherit;
   font-size: 0.65rem;
   line-height: 1;
@@ -1953,7 +1956,7 @@ button.swatch-btn {
 }
 
 .panel-timeline .timeline-steer-input::placeholder {
-  color: color-mix(in srgb, var(--muted) 85%, transparent);
+  color: var(--muted);
 }
 
 .timeline-steer-row .timeline-setting:not(.timeline-steer-field) {
