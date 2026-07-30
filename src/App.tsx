@@ -198,8 +198,6 @@ import {
   snapYawToIsoDir2D,
   type IsoDir2D,
 } from "./lib/chibi2d";
-import "./App.css";
-
 type ViewMode = "3d" | "2d";
 
 const PITCH_LIMIT = Math.PI / 2 - 0.05;
