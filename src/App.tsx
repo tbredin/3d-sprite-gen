@@ -47,6 +47,7 @@ import { normalizeEdgeOutlineSettings } from "./lib/edgeOutline";
 import { CollapseSection } from "./components/CollapseSection";
 import { FreeformColorButton } from "./components/FreeformColorButton";
 import { OutlineSwatchSelect } from "./components/OutlineSwatchSelect";
+import { DiceIcon, LockIcon } from "./components/UiIcons";
 import { PartColorMenu } from "./components/PartColorMenu";
 import { PaletteColorButton } from "./components/PaletteColorButton";
 import { VariationTimeline } from "./components/VariationTimeline";
@@ -204,8 +205,6 @@ import {
   snapYawToIsoDir2D,
   type IsoDir2D,
 } from "./lib/chibi2d";
-import "./App.css";
-
 type ViewMode = "3d" | "2d";
 
 const PITCH_LIMIT = Math.PI / 2 - 0.05;
@@ -293,7 +292,7 @@ function CompactSelect<T extends string>({
 }
 
 /**
- * Wraps one part-row dropdown with stacked 🔒 (top) + 🎲 (bottom). A pinned
+ * Wraps one part-row dropdown with stacked lock (top) + dice (bottom). A pinned
  * field keeps its value through Play random and both dice; the section lock
  * still pins everything.
  */
@@ -329,7 +328,7 @@ function FieldControlGroup({
           aria-label={lockAction}
           aria-pressed={locked}
         >
-          {locked ? "🔒" : "🔓"}
+          <LockIcon locked={locked} />
         </button>
         <button
           type="button"
@@ -339,7 +338,7 @@ function FieldControlGroup({
           title={rerollAction}
           aria-label={`Reroll ${label}`}
         >
-          🎲
+          <DiceIcon />
         </button>
       </div>
       {children}
@@ -1625,7 +1624,7 @@ export default function App() {
                       title="Random preset"
                       aria-label="Random preset"
                     >
-                      🎲
+                      <DiceIcon />
                     </button>
                   </div>
                   <span className="part-name">preset</span>
@@ -1658,7 +1657,7 @@ export default function App() {
                       aria-label={factionLocked ? "Unlock faction" : "Lock faction"}
                       aria-pressed={factionLocked}
                     >
-                      {factionLocked ? "🔒" : "🔓"}
+                      <LockIcon locked={factionLocked} />
                     </button>
                     <button
                       type="button"
@@ -1681,7 +1680,7 @@ export default function App() {
                       }
                       aria-label="Reroll faction"
                     >
-                      🎲
+                      <DiceIcon />
                     </button>
                   </div>
                   <select
@@ -1750,12 +1749,12 @@ export default function App() {
                 </label>
                 <button
                   type="button"
-                  className="field-matched char-reroll"
+                  className="char-reroll"
                   onClick={applyRandom}
                   title="Random character"
                   aria-label="Random character"
                 >
-                  🎲
+                  <DiceIcon />
                 </button>
               </div>
             </div>
@@ -1780,7 +1779,7 @@ export default function App() {
                         aria-label={locks.eyes ? "Unlock eyes" : "Lock eyes"}
                         aria-pressed={locks.eyes}
                       >
-                        {locks.eyes ? "🔒" : "🔓"}
+                        <LockIcon locked={locks.eyes} />
                       </button>
                       <button
                         type="button"
@@ -1794,7 +1793,7 @@ export default function App() {
                         }
                         aria-label="Reroll eyes"
                       >
-                        🎲
+                        <DiceIcon />
                       </button>
                     </div>
                     <span className="part-name">eyes</span>
@@ -1864,7 +1863,7 @@ export default function App() {
                     }
                     aria-pressed={locks.eyeLayout}
                   >
-                    {locks.eyeLayout ? "🔒" : "🔓"}
+                    <LockIcon locked={locks.eyeLayout} />
                   </button>
                   <div
                     className={`light-grid part-eye-sliders${eyeSlidersDisabled ? " is-disabled" : ""}`}
@@ -1977,7 +1976,7 @@ export default function App() {
                             }
                             aria-pressed={locked}
                           >
-                            {locked ? "🔒" : "🔓"}
+                            <LockIcon locked={locked} />
                           </button>
                           <button
                             type="button"
@@ -1991,13 +1990,15 @@ export default function App() {
                             }
                             aria-label={`Reroll ${part}`}
                           >
-                            🎲
+                            <DiceIcon />
                           </button>
                         </div>
                         <span className="part-name">{part}</span>
                       </div>
 
-                      <div className="part-inline-controls">
+                      <div
+                        className={`part-inline-controls${part === "torso" ? " part-inline-torso" : ""}`}
+                      >
                         {part === "head" ? (
                           <>
                             <FieldControlGroup
@@ -2314,7 +2315,7 @@ export default function App() {
                           }
                           aria-pressed={locks.headSize}
                         >
-                          {locks.headSize ? "🔒" : "🔓"}
+                          <LockIcon locked={locks.headSize} />
                         </button>
                         <div
                           className={`light-grid part-head-sliders${locks.headSize ? " is-disabled" : ""}`}
@@ -2394,7 +2395,7 @@ export default function App() {
                           }
                           aria-pressed={bodyScaleLocked}
                         >
-                          {bodyScaleLocked ? "🔒" : "🔓"}
+                          <LockIcon locked={bodyScaleLocked} />
                         </button>
                         <div className="light-grid part-torso-sliders">
                           <label
@@ -2575,20 +2576,21 @@ export default function App() {
               ))}
             </div>
             <div className="light-rim-head">
+              {RIM_COLOR_FIELDS.map((field) => (
+                <div
+                  key={field.key}
+                  className={`light-color-field light-color-field-${field.label.toLowerCase()}`}
+                >
+                  <span className="light-slider-label">{field.label}</span>
+                  <FreeformColorButton
+                    value={rimLights[field.key]}
+                    onChange={(hex) => patchRimLights({ [field.key]: hex })}
+                    title={`${field.label} colour`}
+                    ariaLabel={`${field.label} colour`}
+                  />
+                </div>
+              ))}
               <p className="light-subhead">Directional rims</p>
-              <div className="light-colors">
-                {RIM_COLOR_FIELDS.map((field) => (
-                  <div key={field.key} className="light-color-field">
-                    <span className="light-slider-label">{field.label}</span>
-                    <FreeformColorButton
-                      value={rimLights[field.key]}
-                      onChange={(hex) => patchRimLights({ [field.key]: hex })}
-                      title={`${field.label} colour`}
-                      ariaLabel={`${field.label} colour`}
-                    />
-                  </div>
-                ))}
-              </div>
             </div>
             <div className="light-grid light-rim-grid">
               {RIM_LIGHT_ROWS.map((row) => (

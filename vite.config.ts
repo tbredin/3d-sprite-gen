@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 function gitBranch(): string {
   try {
@@ -20,7 +21,7 @@ function gitBranch(): string {
 }
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   define: {
     __GIT_BRANCH__: JSON.stringify(gitBranch()),
   },

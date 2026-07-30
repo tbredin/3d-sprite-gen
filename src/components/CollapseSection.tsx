@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CaretIcon } from "./UiIcons";
 
 type Props = {
   title: string;
@@ -17,7 +18,7 @@ export function CollapseSection({
   children,
 }: Props) {
   return (
-    <div className={`collapse${open ? " is-open" : ""}`}>
+    <div className={`collapse-section${open ? " is-open" : ""}`}>
       <div className="collapse-header">
         <button
           type="button"
@@ -26,7 +27,7 @@ export function CollapseSection({
           onClick={onToggle}
         >
           <span className="collapse-caret" aria-hidden>
-            {open ? "▾" : "▸"}
+            <CaretIcon open={open} />
           </span>
           {title}
         </button>

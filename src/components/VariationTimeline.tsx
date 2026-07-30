@@ -570,6 +570,13 @@ export function VariationTimeline({
   };
 
   const onClear = async () => {
+    const n = items.filter((item) => !item.locked).length;
+    if (n === 0) return;
+    const ok = window.confirm(
+      `Clear ${n} unlocked variation${n === 1 ? "" : "s"}?\n\n` +
+        `Locked sprites are kept. This cannot be undone.`,
+    );
+    if (!ok) return;
     try {
       await clearUnlockedVariations();
       const next = await listVariations();
@@ -933,7 +940,7 @@ export function VariationTimeline({
             Deselect all{selectedCount > 0 ? ` (${selectedCount})` : ""}
           </button>
         </div>
-        <label className="timeline-setting timeline-sort" htmlFor="timeline-sort">
+        <label className="timeline-sort" htmlFor="timeline-sort">
           <span>Sort</span>
           <select
             id="timeline-sort"
