@@ -151,6 +151,8 @@ export {
   FACTION_THEMES,
   factionTheme,
   factionPromptBit,
+  rollFactionGearBias,
+  factionMonsterHelmets,
 } from "./factions";
 export {
   loadCharacterPersist,
@@ -188,6 +190,8 @@ export {
   BROW_STYLES,
   HAIR_STYLES,
   HELMET_STYLES,
+  MONSTER_HELMETS,
+  isMonsterHelmet,
   TORSO_STYLES,
   BODY_DETAIL_STYLES,
   HEM_STYLES,

@@ -202,6 +202,48 @@ export const HELMET_CATALOG: Record<HelmetStyle, HelmetMode> = {
     notes:
       "Animal head (×1.3 boost) — horns root in skull then curl out / up / forward; welded muzzle.",
   },
+  bird: {
+    style: "bird",
+    mount: "replace",
+    showFace: false,
+    notes: "Bird head — round skull, hooked beak, side eye pits.",
+  },
+  horse: {
+    style: "horse",
+    mount: "replace",
+    showFace: false,
+    notes: "Horse head — long box muzzle, upright ears, dark eye pits.",
+  },
+  snake: {
+    style: "snake",
+    mount: "replace",
+    showFace: false,
+    notes: "Snake head — flat elongated snout, hood flares, no ears.",
+  },
+  triceratops: {
+    style: "triceratops",
+    mount: "replace",
+    showFace: false,
+    notes: "Triceratops — broad frill, twin brow horns + nasal horn, beak tip.",
+  },
+  goblin: {
+    style: "goblin",
+    mount: "replace",
+    showFace: false,
+    notes: "Classic goblin — pointed ears, hooked nose, beady eye pits.",
+  },
+  goblinWide: {
+    style: "goblinWide",
+    mount: "replace",
+    showFace: false,
+    notes: "Wide goblin — flat broad skull, stubby nose, wide-set eyes.",
+  },
+  goblinPointy: {
+    style: "goblinPointy",
+    mount: "replace",
+    showFace: false,
+    notes: "Pointy goblin — tall narrow skull, long ears, sharp chin.",
+  },
 };
 
 export function helmetModeFor(style: HelmetStyle | undefined): HelmetMode {

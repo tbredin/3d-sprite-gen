@@ -7,7 +7,12 @@ import {
   BODY_SCALE_MAX,
   BODY_SCALE_MIN,
 } from "./units";
-import { factionTheme, pickFactionColor } from "./factions";
+import {
+  factionMonsterHelmets,
+  factionTheme,
+  pickFactionColor,
+  rollFactionGearBias,
+} from "./factions";
 import type {
   ArmPose,
   BackLoadout,
@@ -32,8 +37,8 @@ import {
   FACTION_IDS,
   HAIR_STYLES,
   HEAD_SHAPES,
-  HELMET_STYLES,
   HEM_STYLES,
+  isMonsterHelmet,
   OFFHAND_TYPES,
   TORSO_STYLES,
   TWO_HANDED_TYPES,
@@ -256,7 +261,34 @@ const HELMET: HelmetStyle[] = [
   "viking",
   "pharaoh",
   "ninja",
+];
+
+/** Extra monster weight when a faction monster bias fires. */
+const MONSTER_HELMET_WEIGHTS: HelmetStyle[] = [
   "goat",
+  "goat",
+  "bird",
+  "bird",
+  "horse",
+  "snake",
+  "triceratops",
+  "goblin",
+  "goblin",
+  "goblinWide",
+  "goblinPointy",
+];
+
+/** Extra royal weight when helmet bias fires. */
+const ROYAL_HELMET_WEIGHTS: HelmetStyle[] = [
+  "knight",
+  "knight",
+  "knightGreat",
+  "knightWinged",
+  "knightSallet",
+  "knightBarbute",
+  "knightBascinet",
+  "king",
+  "crown",
 ];
 
 const TORSO: TorsoStyle[] = [
@@ -642,12 +674,11 @@ function randomHead(
   faction?: FactionId,
 ): HeadBits {
   const skin = skinHint ?? pick(SKINS);
-  // When helmets are off, keep overlay hats (cap, crowns, wizard…) but skip
-  // closed / face-covering replacements (knight, samurai, sciFi…).
-  const helmetPool = allowHelmets
-    ? HELMET
-    : HELMET.filter((h) => h === "none" || !isHeadReplacement(h));
-  const helmetStyle = pick(helmetPool);
+  const gear = rollFactionGearBias(faction, allowHelmets);
+  const helmetPool = buildFactionHelmetPool(gear.allowHelmets, gear.allowMonsters);
+  const helmetStyle = pick(
+    helmetPool.length ? helmetPool : (["none"] as HelmetStyle[]),
+  );
   const hairColor = pick(HAIR_COLORS);
   // Overlay helmets (goggles, scouter, cap, crowns…) keep the hair; only
   // full head-replacement helms bald the skull.
@@ -673,6 +704,36 @@ function randomHead(
       ...defaultHelmetColors(helmetStyle),
     },
   };
+}
+
+/**
+ * Session Helmets + faction soft gates.
+ * Monster heads stay out of the normal closed-helm path unless monster bias
+ * (or a future Monster checkbox) opens them.
+ */
+function buildFactionHelmetPool(
+  allowHelmets: boolean,
+  allowMonsters: boolean,
+): HelmetStyle[] {
+  const monsters = new Set<string>(factionMonsterHelmets());
+  const base = HELMET.filter((h) => {
+    if (h === "none") return true;
+    if (monsters.has(h) || isMonsterHelmet(h)) return false;
+    if (isHeadReplacement(h)) return allowHelmets;
+    return true;
+  });
+
+  const pool = [...base];
+  if (allowHelmets) {
+    for (const h of ROYAL_HELMET_WEIGHTS) pool.push(h);
+  }
+  if (allowMonsters) {
+    const available = new Set(factionMonsterHelmets());
+    for (const h of MONSTER_HELMET_WEIGHTS) {
+      if (available.has(h)) pool.push(h);
+    }
+  }
+  return pool;
 }
 
 function randomTorso(
@@ -1161,13 +1222,17 @@ export function rerollField(
         pickOther(BROW_STYLES, spec.face?.browStyle ?? "none"),
       );
     case "helmetStyle": {
-      const allowHelmets = opts?.allowHelmets ?? false;
-      const pool = allowHelmets
-        ? HELMET_STYLES
-        : HELMET_STYLES.filter((h) => h === "none" || !isHeadReplacement(h));
+      const gear = rollFactionGearBias(
+        spec.faction,
+        opts?.allowHelmets ?? false,
+      );
+      const pool = buildFactionHelmetPool(gear.allowHelmets, gear.allowMonsters);
       return setHelmetStyle(
         spec,
-        pickOther(pool, spec.helmet?.style ?? "none"),
+        pickOther(
+          pool.length ? pool : (["none"] as HelmetStyle[]),
+          spec.helmet?.style ?? "none",
+        ),
       );
     }
     case "torsoStyle":
@@ -1376,10 +1441,20 @@ function defaultHelmetColors(style: HelmetStyle): {
   visor?: string;
 } {
   if (style === "none") return { color: "#000000" };
-  if (style === "goat") {
+  if (isMonsterHelmet(style)) {
     return {
-      color: pick(["#5a4030", "#8b5a2b", "#433455", "#c98a6a", "#e8e4d8"]),
-      visor: pick(["#e8e4d8", "#c7cfcc", "#f0d48a", "#ffe0bd"]),
+      color: pick([
+        "#5a4030",
+        "#8b5a2b",
+        "#433455",
+        "#c98a6a",
+        "#6a5a78",
+        "#4a6a52",
+        "#5a4838",
+        "#6a6868",
+        "#e8e4d8",
+      ]),
+      visor: pick(["#e8e4d8", "#c7cfcc", "#f0d48a", "#ffe0bd", "#8a7a6a", "#c7b446"]),
     };
   }
   if (style === "wizard") {
@@ -1400,7 +1475,7 @@ function defaultHelmetColors(style: HelmetStyle): {
 /** True when a style renders a visor/gem accent (keep a `visor` colour). */
 function helmetUsesVisor(style: HelmetStyle): boolean {
   return (
-    style === "goat" ||
+    isMonsterHelmet(style) ||
     CROWN_HELMETS.includes(style) ||
     VISOR_HELMETS.includes(style) ||
     SLIT_HELMETS.includes(style)

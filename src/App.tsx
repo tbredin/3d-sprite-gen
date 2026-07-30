@@ -1415,7 +1415,42 @@ export default function App() {
                 </select>
               </div>
               <div className="part-toggles">
-                <div className={`faction-control${factionLocked ? " is-locked" : ""}`}>
+                <div className={`part-field faction-control${factionLocked ? " is-locked" : ""}`}>
+                  <div className="part-field-controls">
+                    <button
+                      type="button"
+                      className={`part-icon-btn part-field-lock${factionLocked ? " is-locked" : ""}`}
+                      onClick={() => setFactionLocked((v) => !v)}
+                      title={factionLocked ? "Unlock faction" : "Lock faction"}
+                      aria-label={factionLocked ? "Unlock faction" : "Lock faction"}
+                      aria-pressed={factionLocked}
+                    >
+                      {factionLocked ? "🔒" : "🔓"}
+                    </button>
+                    <button
+                      type="button"
+                      className="part-icon-btn part-field-reroll"
+                      onClick={() => {
+                        if (factionLocked) return;
+                        setPresetId("random");
+                        setSpec((prev) => {
+                          const next = rerollFaction(prev);
+                          setSpecText(JSON.stringify(next, null, 2));
+                          setSpecParseError(null);
+                          return next;
+                        });
+                      }}
+                      disabled={factionLocked}
+                      title={
+                        factionLocked
+                          ? "Unlock to reroll faction"
+                          : "Reroll faction"
+                      }
+                      aria-label="Reroll faction"
+                    >
+                      🎲
+                    </button>
+                  </div>
                   <select
                     className="part-inline-select faction-select"
                     aria-label="Faction"
@@ -1434,39 +1469,6 @@ export default function App() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="button"
-                    className={`part-icon-btn part-row-lock${factionLocked ? " is-locked" : ""}`}
-                    onClick={() => setFactionLocked((v) => !v)}
-                    title={factionLocked ? "Unlock faction" : "Lock faction"}
-                    aria-label={factionLocked ? "Unlock faction" : "Lock faction"}
-                    aria-pressed={factionLocked}
-                  >
-                    {factionLocked ? "🔒" : "🔓"}
-                  </button>
-                  <button
-                    type="button"
-                    className="part-icon-btn part-row-reroll"
-                    onClick={() => {
-                      if (factionLocked) return;
-                      setPresetId("random");
-                      setSpec((prev) => {
-                        const next = rerollFaction(prev);
-                        setSpecText(JSON.stringify(next, null, 2));
-                        setSpecParseError(null);
-                        return next;
-                      });
-                    }}
-                    disabled={factionLocked}
-                    title={
-                      factionLocked
-                        ? "Unlock to reroll faction"
-                        : "Reroll faction"
-                    }
-                    aria-label="Reroll faction"
-                  >
-                    🎲
-                  </button>
                 </div>
                 <label className="part-chip">
                   <input

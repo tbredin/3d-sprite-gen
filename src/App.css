@@ -904,11 +904,8 @@ button.ghost {
 }
 
 .faction-control {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 2px;
   flex: 0 0 auto;
+  margin-left: 4px;
 }
 
 .faction-control.is-locked .faction-select {
@@ -918,10 +915,6 @@ button.ghost {
 .faction-select {
   min-width: 7.5rem;
   max-width: 11rem;
-}
-
-.faction-control .part-icon-btn {
-  align-self: center;
 }
 
 .panel label.part-chip {

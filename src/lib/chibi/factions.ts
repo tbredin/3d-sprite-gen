@@ -4,7 +4,8 @@
  * Subfactions: machine (royal+demon), goblin (nature+demon), light (solar+nature).
  */
 
-import type { FactionId } from "./types";
+import type { FactionId, HelmetStyle } from "./types";
+import { MONSTER_HELMETS } from "./types";
 
 export type FactionKind = "none" | "primary" | "sub";
 
@@ -22,7 +23,27 @@ export type FactionTheme = {
   capeBias: number;
   /** Soft bias toward armored torsos (0–1 extra weight). */
   armorBias: number;
+  /** Chance a full-character / head roll opens closed knight-style helms. */
+  helmetBias: number;
+  /** Chance a roll injects animal / monster head replacements. */
+  monsterBias: number;
 };
+
+/** Closed / royal knight shells favoured when helmet bias fires. */
+export const FACTION_ROYAL_HELMETS: readonly HelmetStyle[] = [
+  "knight",
+  "knightGreat",
+  "knightWinged",
+  "knightSallet",
+  "knightBarbute",
+  "knightBascinet",
+  "king",
+  "crown",
+];
+
+export function factionMonsterHelmets(): HelmetStyle[] {
+  return [...MONSTER_HELMETS];
+}
 
 export const FACTION_THEMES: Record<Exclude<FactionId, "none">, FactionTheme> = {
   solar: {
@@ -37,6 +58,8 @@ export const FACTION_THEMES: Record<Exclude<FactionId, "none">, FactionTheme> = 
     eye: ["#3a9bb5", "#5ad4a0", "#f5e07a", "#e8a04a"],
     capeBias: 0.35,
     armorBias: 0.25,
+    helmetBias: 0,
+    monsterBias: 0,
   },
   royal: {
     id: "royal",
@@ -50,6 +73,8 @@ export const FACTION_THEMES: Record<Exclude<FactionId, "none">, FactionTheme> = 
     eye: ["#3a9bb5", "#c7cfcc", "#5ad4a0", "#f5e07a"],
     capeBias: 0.85,
     armorBias: 0.7,
+    helmetBias: 0.55,
+    monsterBias: 0,
   },
   nature: {
     id: "nature",
@@ -63,6 +88,8 @@ export const FACTION_THEMES: Record<Exclude<FactionId, "none">, FactionTheme> = 
     eye: ["#e83b3b", "#e8a04a", "#3d5c40", "#5ad4a0"],
     capeBias: 0.45,
     armorBias: 0.2,
+    helmetBias: 0,
+    monsterBias: 0.5,
   },
   demon: {
     id: "demon",
@@ -76,6 +103,8 @@ export const FACTION_THEMES: Record<Exclude<FactionId, "none">, FactionTheme> = 
     eye: ["#e83b3b", "#5b3d8a", "#3a9bb5", "#e8a04a"],
     capeBias: 0.55,
     armorBias: 0.45,
+    helmetBias: 0,
+    monsterBias: 0.5,
   },
   machine: {
     id: "machine",
@@ -89,6 +118,8 @@ export const FACTION_THEMES: Record<Exclude<FactionId, "none">, FactionTheme> = 
     eye: ["#e83b3b", "#e8a04a", "#c7cfcc", "#3a9bb5"],
     capeBias: 0.75,
     armorBias: 0.8,
+    helmetBias: 0.4,
+    monsterBias: 0.3,
   },
   goblin: {
     id: "goblin",
@@ -102,6 +133,8 @@ export const FACTION_THEMES: Record<Exclude<FactionId, "none">, FactionTheme> = 
     eye: ["#e83b3b", "#e8a04a", "#8b5a2b"],
     capeBias: 0.3,
     armorBias: 0.4,
+    helmetBias: 0,
+    monsterBias: 0.55,
   },
   light: {
     id: "light",
@@ -115,8 +148,31 @@ export const FACTION_THEMES: Record<Exclude<FactionId, "none">, FactionTheme> = 
     eye: ["#f5e07a", "#e8a04a", "#3a9bb5", "#c7cfcc"],
     capeBias: 0.65,
     armorBias: 0.15,
+    helmetBias: 0,
+    monsterBias: 0,
   },
 };
+
+export type FactionGearBias = {
+  /** Open closed/replacement helms for this roll. */
+  allowHelmets: boolean;
+  /** Inject and favour animal / monster heads for this roll. */
+  allowMonsters: boolean;
+};
+
+/** Roll soft gear gates from faction theme (+ session Helmets preference). */
+export function rollFactionGearBias(
+  faction: FactionId | undefined,
+  sessionAllowHelmets: boolean,
+): FactionGearBias {
+  const theme = factionTheme(faction);
+  return {
+    allowHelmets:
+      sessionAllowHelmets ||
+      (theme != null && Math.random() < theme.helmetBias),
+    allowMonsters: theme != null && Math.random() < theme.monsterBias,
+  };
+}
 
 export function factionTheme(id: FactionId | undefined): FactionTheme | null {
   if (!id || id === "none") return null;

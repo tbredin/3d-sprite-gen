@@ -70,6 +70,13 @@ export type HelmetStyle =
   | "wizard"
   | "bandana"
   | "goat"
+  | "bird"
+  | "horse"
+  | "snake"
+  | "triceratops"
+  | "goblin"
+  | "goblinWide"
+  | "goblinPointy"
   | "pilot"
   | "samurai"
   | "viking"
@@ -525,12 +532,35 @@ export const HELMET_STYLES: HelmetStyle[] = [
   "wizard",
   "bandana",
   "goat",
+  "bird",
+  "horse",
+  "snake",
+  "triceratops",
+  "goblin",
+  "goblinWide",
+  "goblinPointy",
   "pilot",
   "samurai",
   "viking",
   "pharaoh",
   "ninja",
 ];
+
+/** Animal / goblin head replacements (nature / demon rolls may inject these). */
+export const MONSTER_HELMETS: readonly HelmetStyle[] = [
+  "goat",
+  "bird",
+  "horse",
+  "snake",
+  "triceratops",
+  "goblin",
+  "goblinWide",
+  "goblinPointy",
+];
+
+export function isMonsterHelmet(style: HelmetStyle | undefined): boolean {
+  return style != null && (MONSTER_HELMETS as readonly string[]).includes(style);
+}
 
 export const TORSO_STYLES: TorsoStyle[] = [
   "plain",
