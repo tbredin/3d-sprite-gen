@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { DiceIcon, PaletteIcon } from "./UiIcons";
 import {
   listPartColorSlots,
   setPartColorSlot,
@@ -15,24 +16,6 @@ type Props = {
   onReroll: () => void;
   disabled?: boolean;
 };
-
-/** Compact painter-palette glyph for the part colour trigger. */
-function PaletteGlyph() {
-  return (
-    <svg
-      className="part-color-palette-icon"
-      viewBox="0 0 16 16"
-      width="12"
-      height="12"
-      aria-hidden
-    >
-      <path
-        fill="currentColor"
-        d="M8 1.2C4.3 1.2 1.4 4 1.4 7.5c0 2.6 1.7 4.8 4.2 5.5.4.1.8-.2.8-.6v-.7c0-1 .8-1.8 1.8-1.8h2.1c2.3 0 4.3-1.9 4.3-4.2C14.6 3.6 11.7 1.2 8 1.2zm-3.2 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm2-2.6a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm2.5-.2a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm2.4 2.4a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"
-      />
-    </svg>
-  );
-}
 
 /** Palette icon + vertical mini-swatches — popover lists every colour slot. */
 export function PartColorMenu({
@@ -85,7 +68,7 @@ export function PartColorMenu({
         aria-label={`${part} colours`}
         onClick={() => setOpen((v) => !v)}
       >
-        <PaletteGlyph />
+        <PaletteIcon />
         <span className="part-color-mini-stack" aria-hidden>
           {slots.length === 0 ? (
             <span className="part-color-mini part-color-mini-empty" />
@@ -121,7 +104,7 @@ export function PartColorMenu({
               title="Reroll all colours for this part"
               aria-label="Reroll all colours for this part"
             >
-              🎲
+              <DiceIcon />
             </button>
           </div>
           {slots.length === 0 ? (
