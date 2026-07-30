@@ -133,3 +133,4 @@ First Play downloads SDXL / ControlNet / LoRA into the Hugging Face cache ($0).
 - 1024 HQ generate mode
 - House style LoRA trained on locked timeline winners
 - Optional part-seam outlines on AI results (v1 = silhouette only)
+- Pixel-art quality upgrades ranked in [`SPIKE-pixel-art-ai-improve.md`](./SPIKE-pixel-art-ai-improve.md) (depth CN, IP-Adapter, LCM, gen-size×8)
